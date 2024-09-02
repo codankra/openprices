@@ -21,7 +21,7 @@ auth.use(
     {
       clientId: process.env.AUTH_GITHUB_CLIENT_ID!,
       clientSecret: process.env.AUTH_GITHUB_CLIENT_SECRET!,
-      redirectURI: "http://localhost:3030/auth/callback?provider=github",
+      redirectURI: `${process.env.SITE_NAME}/auth/callback?provider=github`,
     },
     async ({ profile, tokens, request, context }) => {
       // Here you should create or find a user in your database
@@ -35,7 +35,7 @@ auth.use(
     {
       clientID: process.env.AUTH_GOOGLE_CLIENT_ID!,
       clientSecret: process.env.AUTH_GOOGLE_CLIENT_SECRET!,
-      callbackURL: "http://localhost:3030/auth/callback?provider=google",
+      callbackURL: `${process.env.SITE_NAME}/auth/callback?provider=google`,
     },
     async ({
       profile,

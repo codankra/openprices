@@ -39,25 +39,25 @@ export const loader: LoaderFunction = async () => {
       id: "1",
       name: "Costco Hot Dog",
       currentPrice: 1.5,
-      image: "/placeholder.svg?height=100&width=100",
+      image: "/placeholder.ico",
     },
     {
       id: "2",
       name: "Trader Joe's Sparkling Water",
       currentPrice: 0.99,
-      image: "/placeholder.svg?height=100&width=100",
+      image: "/placeholder.ico",
     },
     {
       id: "3",
       name: "HEB Lemon Juice",
       currentPrice: 2.49,
-      image: "/placeholder.svg?height=100&width=100",
+      image: "/placeholder.ico",
     },
     {
       id: "4",
       name: "CVS Hallmark Card",
       currentPrice: 3.99,
-      image: "/placeholder.svg?height=100&width=100",
+      image: "/placeholder.ico",
     },
   ];
   const faqs: FAQ[] = [
