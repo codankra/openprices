@@ -8,7 +8,9 @@ import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { useLoaderData, Link, Form } from "@remix-run/react";
 import { useState } from "react";
 import { FaSearch, FaArrowRight } from "react-icons/fa";
-
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { ChartConfig, ChartContainer } from "~/components/ui/chart";
+import { samplePriceData, type PriceSample } from "~/lib/data";
 type Product = {
   id: string;
   name: string;
@@ -24,7 +26,15 @@ type FAQ = {
 type LoaderData = {
   products: Product[];
   faqs: FAQ[];
+  samplePriceData: PriceSample[];
 };
+
+const chartConfig = {
+  price: {
+    label: "$USD",
+    color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig;
 
 export const meta: MetaFunction = () => {
   return [
@@ -83,48 +93,91 @@ export const loader: LoaderFunction = async () => {
     },
   ];
 
-  return json<LoaderData>({ products, faqs });
+  return json<LoaderData>({ products, faqs, samplePriceData });
 };
 
 export default function Index() {
-  const { products, faqs } = useLoaderData<LoaderData>();
+  const { products, faqs, samplePriceData } = useLoaderData<LoaderData>();
   const [searchTerm, setSearchTerm] = useState("");
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="bg-blue-600 text-white py-4">
-        <div className="container mx-auto px-4">
-          <h1 className="text-2xl font-bold">Open Price Data</h1>
+      <header className="bg-ogprime text-stone-900 py-4">
+        <div className="flex items-center space-x-4 container mx-auto px-4">
+          <Link to="/" className="flex items-center space-x-4">
+            <img
+              src="favicon.ico"
+              width={40}
+              height={40}
+              alt="Open Price Data Logo"
+              className="rounded"
+            />
+            <h1 className="text-2xl font-bold">Open Price Data</h1>
+          </Link>
         </div>
       </header>
 
       <main>
-        <section className="bg-blue-600 text-white py-20">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-4xl md:text-6xl font-bold mb-6">
-              How have Prices Really Changed?
-            </h2>
-            <p className="text-xl md:text-2xl mb-8">
-              Explore Crowdsourced Data
-            </p>
-            <Form method="get" action="/search" className="flex justify-center">
-              <input
-                type="text"
-                name="q"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search for a product"
-                className="px-4 py-2 w-64 text-gray-900 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                aria-label="Search for a product"
-              />
-              <button
-                type="submit"
-                className="bg-yellow-500 text-blue-900 px-4 py-2 rounded-r-md hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                aria-label="Search"
-              >
-                <FaSearch className="w-5 h-5" />
-              </button>
-            </Form>
+        <section className="bg-ogprime text-stone-700 py-20">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col lg:flex-row items-center">
+              <div className="w-full lg:w-1/2 text-center lg:text-left mb-8 lg:mb-0">
+                <h2 className="text-4xl md:text-5xl xl:text-6xl font-bold mb-6">
+                  How Have Prices Changed?
+                </h2>
+                <p className="text-xl md:text-3xl text-stone-600 mb-8">
+                  Explore Crowdsourced Data
+                </p>
+                <Form
+                  method="get"
+                  action="/search"
+                  className="flex justify-center lg:justify-start"
+                >
+                  <input
+                    type="text"
+                    name="q"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search for a product"
+                    className="px-4 py-2 w-64 text-stone-900 rounded-l-md focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    aria-label="Search for a product"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-orange-500 text-stone-700 px-4 py-2 rounded-r-md hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    aria-label="Search"
+                  >
+                    <FaSearch className="w-5 h-5" />
+                  </button>
+                </Form>
+              </div>
+              <div className="w-full lg:w-1/2">
+                <div className="mr-8 lg:mr-1">
+                  <ChartContainer
+                    config={chartConfig}
+                    className="min-h-[200px] w-full"
+                  >
+                    <AreaChart accessibilityLayer data={samplePriceData}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="month"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                      />
+                      <YAxis axisLine={false} tickLine={false} />
+                      <Area
+                        dataKey="price"
+                        type="natural"
+                        fill="var(--color-price)"
+                        fillOpacity={0.4}
+                        stroke="var(--color-price)"
+                      />
+                    </AreaChart>
+                  </ChartContainer>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
