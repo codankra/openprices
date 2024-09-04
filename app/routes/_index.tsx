@@ -8,7 +8,7 @@ import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { useLoaderData, Link, Form } from "@remix-run/react";
 import { useState } from "react";
 import { FaSearch, FaArrowRight } from "react-icons/fa";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
 import { ChartConfig, ChartContainer } from "~/components/ui/chart";
 import { samplePriceData, type PriceSample } from "~/lib/data";
 type Product = {
@@ -103,7 +103,7 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-ogprime text-stone-900 py-4">
-        <div className="flex items-center space-x-4 container mx-auto px-4">
+        <div className="flex items-center space-x-4 container mx-auto px-4 hover:text-stone-700">
           <Link to="/" className="flex items-center space-x-4">
             <img
               src="favicon.ico"
@@ -123,7 +123,7 @@ export default function Index() {
             <div className="flex flex-col lg:flex-row items-center">
               <div className="w-full lg:w-1/2 text-center lg:text-left mb-8 lg:mb-0">
                 <h2 className="text-4xl md:text-5xl xl:text-6xl font-bold mb-6">
-                  How Have Prices Changed?
+                  How Have Prices Really Changed?
                 </h2>
                 <p className="text-xl md:text-3xl text-stone-600 mb-8">
                   Explore Crowdsourced Data
@@ -144,7 +144,7 @@ export default function Index() {
                   />
                   <button
                     type="submit"
-                    className="bg-orange-500 text-stone-700 px-4 py-2 rounded-r-md hover:bg-orange-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    className="bg-ogfore text-stone-700 px-4 py-2 rounded-r-md hover:bg-ogfore-hover focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     aria-label="Search"
                   >
                     <FaSearch className="w-5 h-5" />
@@ -176,6 +176,10 @@ export default function Index() {
                     </AreaChart>
                   </ChartContainer>
                 </div>
+                <p className="text-center text-ogfore text-xs ml-4 lg:ml-16">
+                  ■ Tot. Cost of Food and Drink for 1 Person, Sample CPM (in
+                  USD)
+                </p>
               </div>
             </div>
           </div>

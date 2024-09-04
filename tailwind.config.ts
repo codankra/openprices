@@ -12,6 +12,8 @@ export default {
       },
       colors: {
         ogprime: "#f1ede8",
+        ogfore: "hsl(var(--chart-1))",
+        "ogfore-hover": "hsl(var(--chart-1-muted))",
       },
       keyframes: {
         "accordion-down": {

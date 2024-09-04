@@ -13,12 +13,12 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "YAYA Dashboard" },
-    { name: "description", content: "Welcome to Remix!" },
+    { title: "Open Price Dashboard" },
+    { name: "description", content: "Your User Section of Open Price Data" },
   ];
 };
 
-export default function Index() {
+export default function Dashboard() {
   const { user } = useLoaderData<typeof loader>();
   return (
     <div className="font-sans p-4 bg-gradient-to-b from-[#f7f2ec] to-[#efebe7] min-h-screen">
