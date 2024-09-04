@@ -8,7 +8,8 @@ import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { useLoaderData, Link, Form } from "@remix-run/react";
 import { useState } from "react";
 import { FaSearch, FaArrowRight } from "react-icons/fa";
-import { Area, AreaChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { AnimatedText } from "~/components/ui/animations";
 import { ChartConfig, ChartContainer } from "~/components/ui/chart";
 import { samplePriceData, type PriceSample } from "~/lib/data";
 type Product = {
@@ -177,8 +178,11 @@ export default function Index() {
                   </ChartContainer>
                 </div>
                 <p className="text-center text-ogfore text-xs ml-4 lg:ml-16">
-                  ■ Tot. Cost of Food and Drink for 1 Person, Sample CPM (in
-                  USD)
+                  <AnimatedText
+                    hold={1500}
+                    transition={500}
+                    text="■ Tot. Cost of Food and Drink for 1 Person, Sample CPM (in USD)"
+                  />
                 </p>
               </div>
             </div>
