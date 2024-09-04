@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
+import styles from "./animations.module.css";
 
 export const AnimatedText = ({
   text,
-  hold,
-  transition,
+  hold = 1000,
+  transition = 500,
 }: {
   text: string;
-  hold: number;
-  transition: number;
+  hold?: number;
+  transition?: number;
 }) => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -17,23 +18,15 @@ export const AnimatedText = ({
     }, hold);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [hold]);
 
   return (
     <div
-      className={`transition-opacity duration-[${transition}ms] ${
-        isVisible ? "opacity-100" : "opacity-0"
-      }`}
+      className={`${styles.animatedText} ${isVisible ? styles.visible : ""}`}
       style={{
-        animation: isVisible ? `fadeIn ${transition}ms ease-in-out` : "none",
+        transitionDuration: `${transition}ms`,
       }}
     >
-      <style>{`
-        @keyframes fadeIn {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
-        }
-      `}</style>
       {text}
     </div>
   );

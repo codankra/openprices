@@ -73,7 +73,7 @@ export default function NewPricePoint() {
           />
         </div>
         <div className="mb-4">
-          <Label htmlFor="proof">Proof (Image)</Label>
+          <Label htmlFor="proof">Proof (Images)</Label>
           <Input
             type="file"
             id="proof"
@@ -86,9 +86,9 @@ export default function NewPricePoint() {
           {navigation.state === "submitting" ? "Submitting..." : "Submit"}
         </Button>
       </Form>
-      {actionData?.error && (
-        <p className="text-red-500 mt-4">{actionData.error}</p>
-      )}
+      {/* {actionData?.error && ( */}
+      {/*   <p className="text-red-500 mt-4">{actionData.error}</p> */}
+      {/* )} */}
     </div>
   );
 }

@@ -1,0 +1,18 @@
+.animatedText {
+  opacity: 0;
+  transition-property: opacity;
+  transition-timing-function: ease-in-out;
+}
+
+.visible {
+  opacity: 1;
+}
+
+/* @keyframes fadeIn { */
+/*   0% { */
+/*     opacity: 0; */
+/*   } */
+/*   100% { */
+/*     opacity: 1; */
+/*   } */
+/* } */

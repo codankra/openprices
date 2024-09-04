@@ -5,11 +5,11 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
   server: {
     port: 3000,
-    hmr: { overlay: false },
   },
   css: {
-    postcss: {
-      plugins: [require("tailwindcss"), require("autoprefixer")],
+    modules: {
+      localsConvention: "camelCaseOnly",
+      generateScopedName: "[name]__[local]___[hash:base64:5]",
     },
   },
   plugins: [

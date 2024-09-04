@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/accordion";
 import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { useLoaderData, Link, Form } from "@remix-run/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaSearch, FaArrowRight } from "react-icons/fa";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { AnimatedText } from "~/components/ui/animations";
@@ -102,6 +102,13 @@ export default function Index() {
   const { products, faqs, samplePriceData } = useLoaderData<LoaderData>();
   const [searchTerm, setSearchTerm] = useState("");
 
+  // const [key, setKey] = useState(0);
+
+  // useEffect(() => {
+  //   // This effect will run on each hot reload
+  //   setKey((prevKey) => prevKey + 1);
+  // }, []);
+
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-ogprime text-stone-900 py-4">
@@ -179,12 +186,12 @@ export default function Index() {
                   </ChartContainer>
                 </div>
                 <p className="text-center text-ogfore text-xs ml-4 lg:ml-16">
-                  {/* <AnimatedText */}
-                  {/*   key={221} */}
-                  {/*   hold={1500} */}
-                  {/*   transition={500} */}
-                  {/*   text="■ Tot. Cost of Food and Drink for 1 Person, Sample CPM (in USD)" */}
-                  {/* /> */}
+                  <AnimatedText
+                    // key={key}
+                    hold={1500}
+                    transition={500}
+                    text="■ Tot. Cost of Food and Drink for 1 Person, Sample CPM (in USD)"
+                  />
                 </p>
               </div>
             </div>
