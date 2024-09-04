@@ -12,6 +12,7 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { AnimatedText } from "~/components/ui/animations";
 import { ChartConfig, ChartContainer } from "~/components/ui/chart";
 import { samplePriceData, type PriceSample } from "~/lib/data";
+
 type Product = {
   id: string;
   name: string;
@@ -178,11 +179,12 @@ export default function Index() {
                   </ChartContainer>
                 </div>
                 <p className="text-center text-ogfore text-xs ml-4 lg:ml-16">
-                  <AnimatedText
-                    hold={1500}
-                    transition={500}
-                    text="■ Tot. Cost of Food and Drink for 1 Person, Sample CPM (in USD)"
-                  />
+                  {/* <AnimatedText */}
+                  {/*   key={221} */}
+                  {/*   hold={1500} */}
+                  {/*   transition={500} */}
+                  {/*   text="■ Tot. Cost of Food and Drink for 1 Person, Sample CPM (in USD)" */}
+                  {/* /> */}
                 </p>
               </div>
             </div>
