@@ -9,7 +9,6 @@ export default defineConfig({
   css: {
     modules: {
       localsConvention: "camelCaseOnly",
-      generateScopedName: "[name]__[local]___[hash:base64:5]",
     },
   },
   plugins: [

@@ -44,6 +44,7 @@ export const meta: MetaFunction = () => {
     { name: "description", content: "Open Price Data" },
   ];
 };
+const newLocal = ``;
 export const loader: LoaderFunction = async () => {
   // In a real application, you would fetch this data from a database or API
   const products: Product[] = [
@@ -91,7 +92,7 @@ export const loader: LoaderFunction = async () => {
     {
       question: "How can I support Open Price Data?",
       answer:
-        "We welcome your contribution in any way! Here are three options:\n\n1. Contribute to the site by adding price data\n2. Help with the codebase by contributing to our open-source project\n3. Donate to the site owner through our <a href='https://ko-fi.com/thedank' target='_blank' rel='noopener noreferrer'>Ko-fi page</a>",
+        "<div>We welcome your contribution in any way! Here are three options:<br /><br /><ol><li>&emsp;1. Contribute to the site by adding price data</li><li>&emsp;2. Help with the codebase by contributing to our open-source project</li><li>&emsp;3. Donate to the site owner through our <a href='https://ko-fi.com/thedank' target='_blank' rel='noopener noreferrer'>Ko-fi page</a></li></div>",
     },
   ];
 
@@ -210,26 +211,25 @@ export default function Index() {
               {products.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden"
+                  className="bg-white rounded-lg shadow-sm overflow-hidden flex items-center p-4 hover:shadow-md transition-shadow"
                 >
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg mb-2">{product.name}</h3>
-                    <p className="text-gray-600 mb-4">
-                      Current Avg. Price: ${product.currentPrice.toFixed(2)}
-                    </p>
-                    <Link
-                      to={`/product/${product.id}`}
-                      className="text-blue-600 hover:text-blue-800 flex items-center"
-                    >
-                      View Details
-                      <FaArrowRight className="w-4 h-4 ml-2" />
-                    </Link>
-                  </div>
+                  <Link
+                    to={`/product/${product.id}`}
+                    className="flex items-center w-full text-inherit no-underline"
+                  >
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-16 h-16 object-cover rounded-full mr-4"
+                    />
+                    <div className="flex-grow">
+                      <h3 className="font-semibold text-lg">{product.name}</h3>
+                      <p className="text-gray-600 text-sm">
+                        ${product.currentPrice.toFixed(2)}
+                      </p>
+                    </div>
+                    <FaArrowRight className="w-4 h-4 text-blue-600" />
+                  </Link>
                 </div>
               ))}
             </div>
@@ -246,7 +246,9 @@ export default function Index() {
                 {faqs.map((item, index) => (
                   <AccordionItem key={index} value={`item-${index}`}>
                     <AccordionTrigger>{item.question}</AccordionTrigger>
-                    <AccordionContent>{item.answer}</AccordionContent>
+                    <AccordionContent>
+                      <div dangerouslySetInnerHTML={{ __html: item.answer }} />
+                    </AccordionContent>
                   </AccordionItem>
                 ))}
               </Accordion>

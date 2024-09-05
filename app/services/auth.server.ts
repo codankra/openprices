@@ -45,8 +45,8 @@ auth.use(
     },
     async ({ profile }) => {
       const user = await findOrCreateUser({
-        email: profile!.emails[0]!.value!,
-        name: profile!.displayName!,
+        email: profile.emails[0].value,
+        name: profile.displayName,
         provider: "google",
         providerId: profile.id!,
       });
