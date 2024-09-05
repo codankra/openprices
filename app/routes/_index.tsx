@@ -111,7 +111,7 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="bg-ogprime text-stone-900 py-4">
+      <header className="bg-ogprime text-stone-900 py-4 flex justify-between">
         <div className="flex items-center space-x-4 container mx-auto px-4 hover:text-stone-700">
           <Link to="/" className="flex items-center space-x-4">
             <img
@@ -123,6 +123,9 @@ export default function Index() {
             />
             <h1 className="text-2xl font-bold">Open Price Data</h1>
           </Link>
+        </div>
+        <div className="flex items-center container mx-auto px-4 mr-10 justify-end">
+          <Link to="/login">Log In AyAy!</Link>
         </div>
       </header>
 

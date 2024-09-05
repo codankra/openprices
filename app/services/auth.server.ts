@@ -1,7 +1,8 @@
 import { createCookieSessionStorage } from "@remix-run/node";
-import { Authenticator, AuthorizationError } from "remix-auth";
+import { Authenticator } from "remix-auth";
 import { GitHubStrategy } from "remix-auth-github";
 import { GoogleStrategy } from "remix-auth-google";
+import { findOrCreateUser, AuthUser } from "~/services/user.server";
 
 export const sessionStorage = createCookieSessionStorage({
   cookie: {
@@ -14,7 +15,7 @@ export const sessionStorage = createCookieSessionStorage({
   },
 });
 
-export const auth = new Authenticator<string>(sessionStorage);
+export const auth = new Authenticator<AuthUser>(sessionStorage);
 
 auth.use(
   new GitHubStrategy(
@@ -23,9 +24,14 @@ auth.use(
       clientSecret: process.env.AUTH_GITHUB_CLIENT_SECRET!,
       redirectURI: `${process.env.SITE_NAME}/auth/callback?provider=github`,
     },
-    async ({ profile, tokens, request, context }) => {
-      // Here you should create or find a user in your database
-      return profile.id;
+    async ({ profile }) => {
+      const user = await findOrCreateUser({
+        email: profile.emails![0].value,
+        name: profile.displayName,
+        provider: "github",
+        providerId: profile.id,
+      });
+      return user;
     }
   )
 );
@@ -37,16 +43,14 @@ auth.use(
       clientSecret: process.env.AUTH_GOOGLE_CLIENT_SECRET!,
       callbackURL: `${process.env.SITE_NAME}/auth/callback?provider=google`,
     },
-    async ({
-      profile,
-      request,
-      accessToken,
-      refreshToken,
-      extraParams,
-      context,
-    }) => {
-      // Here you should create or find a user in your database
-      return profile.id;
+    async ({ profile }) => {
+      const user = await findOrCreateUser({
+        email: profile!.emails[0]!.value!,
+        name: profile!.displayName!,
+        provider: "google",
+        providerId: profile.id!,
+      });
+      return user;
     }
   )
 );

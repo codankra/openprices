@@ -21,13 +21,13 @@ export const AnimatedText = ({
   }, [hold]);
 
   return (
-    <div
+    <span
       className={`${styles.animatedText} ${isVisible ? styles.visible : ""}`}
       style={{
         transitionDuration: `${transition}ms`,
       }}
     >
       {text}
-    </div>
+    </span>
   );
 };
