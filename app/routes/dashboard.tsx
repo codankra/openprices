@@ -38,7 +38,7 @@ export default function Dashboard() {
           </a>
         </li>
         <li>
-          <pre>ABC</pre>
+          <pre>{JSON.stringify(user, null, 2)}</pre>
         </li>
         <li>
           <Form method="post" action="/logout">
