@@ -10,6 +10,7 @@ import { useState } from "react";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
+import { DatePicker } from "~/components/ui/datepicker";
 
 export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
@@ -36,7 +37,9 @@ export const loader: LoaderFunction = async () => {
 export default function NewPricePoint() {
   const actionData = useActionData();
   const navigation = useNavigation();
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date()
+  );
 
   return (
     <div className="container mx-auto p-4">
@@ -58,20 +61,8 @@ export default function NewPricePoint() {
             required
           />
         </div>
-        <div className="mb-4">
-          <Label>Date</Label>
-          <Input
-            type="date"
-            min={`${new Date(1971, 0, 1)}`}
-            max={new Date().toISOString().split("T")[0]}
-            defaultValue={new Date().toISOString().split("T")[0]}
-          />
-          <input
-            type="hidden"
-            name="date"
-            value={selectedDate?.toISOString() ?? ""}
-          />
-        </div>
+        <DatePicker date={selectedDate} setDate={setSelectedDate} />
+
         <div className="mb-4">
           <Label htmlFor="proof">Proof (Images)</Label>
           <Input

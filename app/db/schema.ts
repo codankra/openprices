@@ -1,5 +1,24 @@
 import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
+
+// Define the UnitType enum
+export enum UnitType {
+  COUNT = "ct",
+  // Metric units
+  GRAM = "g",
+  KILOGRAM = "kg",
+  MILLILITER = "ml",
+  LITER = "l",
+  // Imperial units
+  OUNCE = "oz",
+  POUND = "lb",
+  FLUID_OUNCE = "fl oz",
+  GALLON = "g",
+  // Additional units
+  PIECE = "piece",
+  PACKAGE = "pkg",
+}
+
 export const users = sqliteTable("users", {
   id: text("id").primaryKey().notNull(), // This will be a UUID
   email: text("email").notNull().unique(),
@@ -15,24 +34,34 @@ export const users = sqliteTable("users", {
   defaultLocation: text("default_location"),
 });
 
-export const brands = sqliteTable("Brands", {
+export const productBrands = sqliteTable("ProductBrands", {
   name: text("name").primaryKey(),
   description: text("description"),
   headquarters: text("headquarters"),
   website: text("website"),
   image: text("image"),
 });
-
+export const storeBrands = sqliteTable("StoreBrands", {
+  name: text("name").primaryKey(),
+  description: text("description"),
+  headquarters: text("headquarters"),
+  website: text("website"),
+  image: text("image"),
+});
 export const products = sqliteTable("Products", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  unitPricing: integer("unit_pricing", { mode: "boolean" }),
+  unitPricing: integer("is_unitpriced", { mode: "boolean" }),
   latestPrice: real("latest_price"),
-  receiptIdentifier: text("receipt_identifier"),
-  quantity: real("quantity"),
-  unitType: text("unit_type"),
+  quantity: real("unit_qty"),
+  category: text("category"),
+  unitType: text("unit_type", {
+    enum: Object.values(UnitType) as [string, ...string[]],
+  }),
   image: text("image"),
-  brandName: text("brand_name").references(() => brands.name),
+  productBrandName: text("product_brand_name").references(
+    () => productBrands.name
+  ),
 });
 
 export const priceEntries = sqliteTable("PriceEntries", {
@@ -44,3 +73,13 @@ export const priceEntries = sqliteTable("PriceEntries", {
   proof: text("proof"),
   storeLocation: text("store_location"),
 });
+
+export const productReceiptIdentifiers = sqliteTable(
+  "ProductReceiptIdentifiers",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    productId: integer("product_id").references(() => products.id),
+    storeBrandName: text("store_brand_name").references(() => storeBrands.name),
+    receiptIdentifier: text("receipt_identifier").notNull(),
+  }
+);
