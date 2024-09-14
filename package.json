@@ -36,7 +36,8 @@
     "remix-auth-google": "^2.0.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@flydotio/dockerfile": "^0.5.8",
