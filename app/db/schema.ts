@@ -37,6 +37,7 @@ export const users = sqliteTable("users", {
 export const productBrands = sqliteTable("ProductBrands", {
   name: text("name").primaryKey(),
   description: text("description"),
+  isStoreOwner: integer("is_storeowner", { mode: "boolean" }),
   headquarters: text("headquarters"),
   website: text("website"),
   image: text("image"),
