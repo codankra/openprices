@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/accordion";
 import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { useLoaderData, Link, Form } from "@remix-run/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FaSearch, FaArrowRight } from "react-icons/fa";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { AnimatedText } from "~/components/ui/animations";
@@ -44,7 +44,6 @@ export const meta: MetaFunction = () => {
     { name: "description", content: "Open Price Data" },
   ];
 };
-const newLocal = ``;
 export const loader: LoaderFunction = async () => {
   // In a real application, you would fetch this data from a database or API
   const products: Product[] = [
@@ -77,17 +76,17 @@ export const loader: LoaderFunction = async () => {
     {
       question: "What's the purpose of open price data?",
       answer:
-        "Have you noticed that the change in your gas or grocery bill doesn't match the government-reported inflation rate? So it doesn't seem right for government agencies to be the main source for tracking price changes. Instead, we hope open price data can serve as a more accurate, crowdsourced, uncorruptable record of real current and historical prices - fueled by contributions on products us consumers actually buy.",
+        "<div>Have you noticed that the change in your gas or grocery bill doesn't match the government-reported inflation rate?<br /><br />We hope open price data can serve as a more <strong>accurate, crowdsourced, uncorruptable record of real current and historical prices</strong> - fueled by contributions on products us consumers actually buy. Let's see how this experiment plays out!</div>",
     },
     {
       question: "Do I need an account to use this site?",
       answer:
-        "No account is needed to browse, but you'll need one to contribute data.",
+        "No account is needed to browse, but you'll need one to contribute data (to prevent spam and abuse).",
     },
     {
       question: "How is Open Price Data 'open'?",
       answer:
-        "It's open for anyone to create an account and contribute, and the code is open source on GitHub (link here).",
+        "It's open for anyone to see and contribute, and the core website code is <a href='https://github.com/codankra/openprices' target='_blank' rel='noopener noreferrer'>open source on GitHub</a>. (Contributions Welcome!)",
     },
     {
       question: "How can I support Open Price Data?",
@@ -205,7 +204,7 @@ export default function Index() {
         <section className="py-16 bg-white">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold mb-8 text-center">
-              Featured Products
+              Recent Products
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {products.map((product) => (
