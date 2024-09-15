@@ -4,7 +4,7 @@
 
 Open Prices is a crowdsourced platform for tracking real-world prices of everyday products. The goal is to provide a more accurate, transparent, and uncorruptible record of current and historical prices. Right now the focus is grocery (and soon restaurant) prices.
 
-This is a new project under development, being built in public: Check out the live site at [openpricedata.com](https://openpricedata.com)
+This is a new project under development, being built in public: Check out the live site at [openpricedata.com](https://openpricedata.com) (also [openpricehistory.com](https://www.openpricehistory.com)) Tell me which site name you like better in the poll in Issues 📝
 
 ## 🛠 Built With
 
@@ -85,7 +85,7 @@ A: It's open for anyone to see and contribute, and the core website code is open
 If you find Open Prices useful, I'd be grateful if you could:
 
 1. Star this GitHub repo
-2. Tell your friends, family, and X (the everything app) followers about open price data
+2. Tell your friends, family, and X (the everything app) followers about the openprices website
 3. [Support the Developer Here](https://ko-fi.com/thedank)
 
 Your support keeps me going! ❤️ Thank You
