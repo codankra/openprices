@@ -4,19 +4,7 @@ import { users } from "~/db/schema";
 import { eq, or } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
-export type User = {
-  id: string;
-  email: string;
-  name: string | null;
-  githubId: string | null;
-  googleId: string | null;
-};
-
-export type AuthUser = {
-  id: string;
-  email: string;
-  name: string | null;
-};
+export type AuthUser = typeof users.$inferSelect;
 
 export async function findOrCreateUser(profile: {
   email: string;
@@ -53,7 +41,7 @@ export async function findOrCreateUser(profile: {
         .set({ googleId: profile.providerId })
         .where(eq(users.id, user.id));
     }
-    return { id: user.id, email: user.email, name: user.name };
+    return user;
   }
 
   const [newUser] = await db
@@ -67,10 +55,10 @@ export async function findOrCreateUser(profile: {
     })
     .returning();
 
-  return { id: newUser.id, email: newUser.email, name: newUser.name };
+  return newUser;
 }
 
 export async function getUserById(id: string): Promise<AuthUser | null> {
   const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
-  return user ? { id: user.id, email: user.email, name: user.name } : null;
+  return user;
 }

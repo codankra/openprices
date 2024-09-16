@@ -24,12 +24,13 @@ import { db } from "~/db/index";
 import { eq, like } from "drizzle-orm";
 import { auth } from "~/services/auth.server";
 import { z } from "zod";
+import { AuthUser } from "~/services/user.server";
 
 type LoaderData = {
   searchResults: (typeof products.$inferSelect)[];
   existingProduct: typeof products.$inferSelect | null;
-  user: typeof users.$inferSelect;
-  productBrands: (typeof productBrands.$inferSelect)[];
+  user: AuthUser;
+  productBrandsList: (typeof productBrands.$inferSelect)[];
 };
 
 const formSchema = z.object({
@@ -46,6 +47,7 @@ const formSchema = z.object({
   unitType: z.nativeEnum(UnitType).optional(),
   productBrandName: z.string().optional(),
   image: z.string().url("Image must be a valid URL").optional(),
+  storeLocation: z.string().optional(),
 });
 
 function debounce<T extends (...args: any[]) => any>(
@@ -90,13 +92,13 @@ export const loader: LoaderFunction = async ({ request }) => {
     existingProduct = result.length > 0 ? result[0] : null;
   }
 
-  const productBrands = await db.select().from(productBrands);
+  const productBrandsList = await db.select().from(productBrands);
 
   return json<LoaderData>({
     searchResults,
     existingProduct,
     user,
-    productBrands,
+    productBrandsList,
   });
 };
 
@@ -119,7 +121,7 @@ export const action: ActionFunction = async ({ request }) => {
         : undefined,
     });
 
-    let productId = validatedData.productId;
+    let productId = parseInt(validatedData.productId ?? "0");
 
     if (!productId) {
       // Insert new product
@@ -137,22 +139,23 @@ export const action: ActionFunction = async ({ request }) => {
         })
         .returning({ insertedId: products.id });
 
-      productId = newProduct.insertedId.toString();
+      productId = newProduct.insertedId;
     } else {
       // Update existing product's latest price
       await db
         .update(products)
         .set({ latestPrice: validatedData.price })
-        .where(eq(products.id, parseInt(productId)));
+        .where(eq(products.id, productId));
     }
 
     // Insert new price entry
     await db.insert(priceEntries).values({
       contributorId: user.id,
-      productId: parseInt(productId),
+      productId: productId,
       price: validatedData.price,
       date: validatedData.date,
-      proof: validatedData.proof,
+      proof: validatedData.proof ?? null,
+      storeLocation: validatedData.storeLocation ?? null,
     });
 
     return redirect("/success");
@@ -160,14 +163,18 @@ export const action: ActionFunction = async ({ request }) => {
     if (error instanceof z.ZodError) {
       return json({ errors: error.errors }, { status: 400 });
     }
-    return json({ error: "An unexpected error occurred" }, { status: 500 });
+    throw error;
   }
 };
 
+type ActionData = {
+  errors?: z.ZodIssue[];
+};
+
 export default function NewPricePoint() {
-  const { searchResults, existingProduct, user, productBrands } =
+  const { searchResults, existingProduct, user, productBrandsList } =
     useLoaderData<LoaderData>();
-  const actionData = useActionData();
+  const actionData = useActionData<ActionData>();
   const [searchParams, setSearchParams] = useSearchParams();
   const submit = useSubmit();
   const navigation = useNavigation();
@@ -217,6 +224,12 @@ export default function NewPricePoint() {
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search for a product"
             />
+            <div className="flex items-center space-x-4 mt-2">
+              <p>Or</p>{" "}
+              <Button onClick={() => setIsNewProduct(true)}>
+                Create New Product
+              </Button>
+            </div>
             {searchResults.length > 0 && (
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {searchResults.map((product) => (
@@ -238,22 +251,38 @@ export default function NewPricePoint() {
           </div>
         )}
 
+        {selectedProduct && (
+          <div className="border rounded-md p-4">
+            <input type="hidden" name="productId" value={selectedProduct.id} />
+            <h3 className="font-bold">{selectedProduct.name}</h3>
+            {selectedProduct.image && (
+              <img
+                src={selectedProduct.image}
+                alt={selectedProduct.name}
+                className="w-24 h-24 object-cover mt-2"
+              />
+            )}
+            <p>Price: ${selectedProduct.latestPrice?.toFixed(2)}</p>
+            <p>Category: {selectedProduct.category}</p>
+            {selectedProduct.unitPricing && (
+              <p>
+                Unit: {selectedProduct.unitQty} {selectedProduct.unitType}
+              </p>
+            )}
+            {selectedProduct.productBrandName && (
+              <p>Brand: {selectedProduct.productBrandName}</p>
+            )}
+          </div>
+        )}
+
         {(selectedProduct || isNewProduct) && (
           <>
-            <input type="hidden" name="productId" value={selectedProduct?.id} />
-            <div>
-              <Label htmlFor="name">Product Name</Label>
-              <Input
-                type="text"
-                id="name"
-                name="name"
-                defaultValue={selectedProduct?.name}
-                required
-                readOnly={!!selectedProduct}
-              />
-            </div>
             {!selectedProduct && (
               <>
+                <div>
+                  <Label htmlFor="name">Product Name</Label>
+                  <Input type="text" id="name" name="name" required />
+                </div>
                 <div>
                   <Label htmlFor="unitPricing">Unit Pricing</Label>
                   <Input type="checkbox" id="unitPricing" name="unitPricing" />
@@ -286,7 +315,7 @@ export default function NewPricePoint() {
                   <Label htmlFor="productBrandName">Brand Name</Label>
                   <select id="productBrandName" name="productBrandName">
                     <option value="">Select a brand</option>
-                    {productBrands.map((brand) => (
+                    {productBrandsList.map((brand) => (
                       <option key={brand.name} value={brand.name}>
                         {brand.name}
                       </option>
@@ -326,6 +355,10 @@ export default function NewPricePoint() {
               <Label htmlFor="proof">Proof (URL to image)</Label>
               <Input type="url" id="proof" name="proof" />
             </div>
+            <div>
+              <Label htmlFor="storeLocation">Store Location</Label>
+              <Input type="text" id="storeLocation" name="storeLocation" />
+            </div>
             <Button type="submit" disabled={navigation.state === "submitting"}>
               {navigation.state === "submitting" ? "Submitting..." : "Submit"}
             </Button>
@@ -336,7 +369,7 @@ export default function NewPricePoint() {
       {actionData?.errors && (
         <div className="mt-4 text-red-500">
           <ul>
-            {actionData.errors.map((error: z.ZodIssue) => (
+            {actionData.errors.map((error) => (
               <li key={error.path.join(".")}>
                 {error.path.join(".")}: {error.message}
               </li>

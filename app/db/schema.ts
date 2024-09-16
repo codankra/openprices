@@ -66,7 +66,7 @@ export const storeBrands = sqliteTable("StoreBrands", {
 
 export const priceEntries = sqliteTable("PriceEntries", {
   id: integer("id").primaryKey({ autoIncrement: true }).notNull(),
-  contributorId: integer("contributor_id").references(() => users.id),
+  contributorId: text("contributor_id").references(() => users.id),
   productId: integer("product_id").references(() => products.id),
   price: real("price").notNull(),
   date: text("date").notNull(),
