@@ -13,13 +13,15 @@ import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { DatePicker } from "~/components/ui/datepicker";
+import { Checkbox } from "~/components/ui/checkbox";
 import {
-  priceEntries,
-  products,
-  UnitType,
-  users,
-  productBrands,
-} from "~/db/schema";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { priceEntries, products, UnitType, productBrands } from "~/db/schema";
 import { db } from "~/db/index";
 import { eq, like } from "drizzle-orm";
 import { auth } from "~/services/auth.server";
@@ -213,37 +215,54 @@ export default function NewPricePoint() {
       <h1 className="text-2xl font-bold mb-4">Add New Price Point</h1>
       <p className="mb-4">Logged in as: {user.name || user.email}</p>
 
-      <Form method="post" encType="multipart/form-data" className="space-y-4">
+      <Form
+        method="post"
+        encType="multipart/form-data"
+        className="space-y-6 bg-stone-100 p-8 rounded-lg shadow-md max-w-3xl mx-auto"
+      >
         {!selectedProduct && !isNewProduct && (
-          <div>
-            <Label htmlFor="productSearch">Search for existing product</Label>
+          <div className="bg-white p-6 rounded-md shadow-sm">
+            <Label
+              htmlFor="productSearch"
+              className="text-stone-700 font-semibold"
+            >
+              Search for existing product
+            </Label>
             <Input
               type="text"
               id="productSearch"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search for a product"
+              className="mt-2 w-full max-w-md border-stone-300 focus:ring-stone-500 focus:border-stone-500"
             />
-            <div className="flex items-center space-x-4 mt-2">
-              <p>Or</p>{" "}
-              <Button onClick={() => setIsNewProduct(true)}>
+            <div className="flex items-center space-x-4 mt-4">
+              <p className="text-stone-600">Or</p>{" "}
+              <Button
+                onClick={() => setIsNewProduct(true)}
+                className="bg-stone-600 hover:bg-stone-700 text-white"
+              >
                 Create New Product
               </Button>
             </div>
             {searchResults.length > 0 && (
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {searchResults.map((product) => (
                   <div
                     key={product.id}
-                    className="border rounded-md p-4 cursor-pointer hover:bg-gray-100"
+                    className="bg-white border border-stone-200 rounded-md p-4 cursor-pointer hover:bg-stone-50 transition duration-150 ease-in-out"
                     onClick={() => {
                       setSelectedProduct(product);
                       setSearchTerm(product.name);
                     }}
                   >
-                    <h3 className="font-bold">{product.name}</h3>
-                    <p>Price: ${product.latestPrice?.toFixed(2)}</p>
-                    <p>Category: {product.category}</p>
+                    <h3 className="font-bold text-stone-800">{product.name}</h3>
+                    <p className="text-stone-600">
+                      Price: ${product.latestPrice?.toFixed(2)}
+                    </p>
+                    <p className="text-stone-500">
+                      Category: {product.category}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -252,117 +271,244 @@ export default function NewPricePoint() {
         )}
 
         {selectedProduct && (
-          <div className="border rounded-md p-4">
+          <div className="bg-white border border-stone-200 rounded-md p-6 shadow-sm relative">
+            <button
+              onClick={() => {
+                setSelectedProduct(null);
+                setIsNewProduct(false);
+                setSearchTerm("");
+              }}
+              className="absolute top-2 right-2 text-stone-500 hover:text-stone-700"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
             <input type="hidden" name="productId" value={selectedProduct.id} />
-            <h3 className="font-bold">{selectedProduct.name}</h3>
+            <h3 className="font-bold text-stone-800 text-xl mb-2">
+              {selectedProduct.name}
+            </h3>
             {selectedProduct.image && (
               <img
                 src={selectedProduct.image}
                 alt={selectedProduct.name}
-                className="w-24 h-24 object-cover mt-2"
+                className="w-32 h-32 object-cover mt-2 rounded-md shadow-sm"
               />
             )}
-            <p>Price: ${selectedProduct.latestPrice?.toFixed(2)}</p>
-            <p>Category: {selectedProduct.category}</p>
+            <p className="text-stone-700 mt-2">
+              Price: ${selectedProduct.latestPrice?.toFixed(2)}
+            </p>
+            <p className="text-stone-600">
+              Category: {selectedProduct.category}
+            </p>
             {selectedProduct.unitPricing && (
-              <p>
+              <p className="text-stone-600">
                 Unit: {selectedProduct.unitQty} {selectedProduct.unitType}
               </p>
             )}
             {selectedProduct.productBrandName && (
-              <p>Brand: {selectedProduct.productBrandName}</p>
+              <p className="text-stone-600">
+                Brand: {selectedProduct.productBrandName}
+              </p>
             )}
           </div>
         )}
 
-        {(selectedProduct || isNewProduct) && (
-          <>
-            {!selectedProduct && (
-              <>
-                <div>
-                  <Label htmlFor="name">Product Name</Label>
-                  <Input type="text" id="name" name="name" required />
-                </div>
-                <div>
-                  <Label htmlFor="unitPricing">Unit Pricing</Label>
-                  <Input type="checkbox" id="unitPricing" name="unitPricing" />
-                </div>
-                <div>
-                  <Label htmlFor="unitQty">Unit Quantity</Label>
-                  <Input
-                    type="number"
-                    id="unitQty"
-                    name="unitQty"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Input type="text" id="category" name="category" />
-                </div>
-                <div>
-                  <Label htmlFor="unitType">Unit Type</Label>
-                  <select id="unitType" name="unitType">
-                    {Object.values(UnitType).map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="productBrandName">Brand Name</Label>
-                  <select id="productBrandName" name="productBrandName">
-                    <option value="">Select a brand</option>
-                    {productBrandsList.map((brand) => (
-                      <option key={brand.name} value={brand.name}>
-                        {brand.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="image">Product Image URL</Label>
-                  <Input type="url" id="image" name="image" />
-                </div>
-              </>
-            )}
-            <div>
-              <Label htmlFor="price">Price (USD)</Label>
-              <Input
-                type="number"
-                id="price"
-                name="price"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                required
-              />
+        {isNewProduct && (
+          <div className="bg-white p-6 rounded-md shadow-sm space-y-4">
+            <div className="flex flex-col justify-center space-y-4 w-full md:w-1/2">
+              <Button
+                onClick={() => setIsNewProduct(false)}
+                className="bg-stone-600 hover:bg-stone-700 text-white"
+              >
+                Search for Existing Product
+              </Button>
+              <p className="text-stone-600">Or</p>{" "}
             </div>
-            <div>
-              <Label htmlFor="datepickerPE">Date of Purchase</Label>
-              <div id="datepickerPE">
-                <DatePicker date={selectedDate} setDate={setSelectedDate} />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name" className="text-stone-700 font-semibold">
+                  Product Name
+                </Label>
+                <Input
+                  type="text"
+                  id="name"
+                  name="name"
+                  required
+                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                />
               </div>
-              <input
-                type="hidden"
-                name="date"
-                value={selectedDate?.toISOString()}
-              />
+              <div className="flex items-center space-x-2">
+                <Checkbox id="unitPricing" name="unitPricing" />
+                <Label
+                  htmlFor="unitPricing"
+                  className="text-stone-700 font-semibold"
+                >
+                  Unit Pricing
+                </Label>
+              </div>
+              <div>
+                <Label
+                  htmlFor="unitQty"
+                  className="text-stone-700 font-semibold"
+                >
+                  Unit Quantity
+                </Label>
+                <Input
+                  type="number"
+                  id="unitQty"
+                  name="unitQty"
+                  step="0.01"
+                  min="0"
+                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                />
+              </div>
+              <div>
+                <Label
+                  htmlFor="category"
+                  className="text-stone-700 font-semibold"
+                >
+                  Category
+                </Label>
+                <Input
+                  type="text"
+                  id="category"
+                  name="category"
+                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                />
+              </div>
+              <div>
+                <Label
+                  htmlFor="unitType"
+                  className="text-stone-700 font-semibold"
+                >
+                  Unit Type
+                </Label>
+                <Select name="unitType">
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select unit type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(UnitType).map((unitTypes) => (
+                      <SelectItem key={unitTypes[1]} value={unitTypes[1]}>
+                        {`${unitTypes[0][0]}${unitTypes[0]
+                          .substring(1)
+                          .toLowerCase()} (${unitTypes[1]})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label
+                  htmlFor="productBrandName"
+                  className="text-stone-700 font-semibold"
+                >
+                  Brand Name
+                </Label>
+                <Select name="productBrandName">
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a brand" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {productBrandsList.map((brand) => (
+                      <SelectItem key={brand.name} value={brand.name}>
+                        {brand.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="image" className="text-stone-700 font-semibold">
+                  Product Image URL
+                </Label>
+                <Input
+                  type="url"
+                  id="image"
+                  name="image"
+                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="proof">Proof (URL to image)</Label>
-              <Input type="url" id="proof" name="proof" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <Label htmlFor="price" className="text-stone-700 font-semibold">
+                  Price (USD)
+                </Label>
+                <Input
+                  type="number"
+                  id="price"
+                  name="price"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  required
+                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                />
+              </div>
+              <div>
+                <Label
+                  htmlFor="datepickerPE"
+                  className="text-stone-700 font-semibold"
+                >
+                  Date of Purchase
+                </Label>
+                <div id="datepickerPE" className="mt-1">
+                  <DatePicker date={selectedDate} setDate={setSelectedDate} />
+                </div>
+                <input
+                  type="hidden"
+                  name="date"
+                  value={selectedDate?.toISOString()}
+                />
+              </div>
+              <div>
+                <Label htmlFor="proof" className="text-stone-700 font-semibold">
+                  Proof (URL to image)
+                </Label>
+                <Input
+                  type="url"
+                  id="proof"
+                  name="proof"
+                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                />
+              </div>
+              <div>
+                <Label
+                  htmlFor="storeLocation"
+                  className="text-stone-700 font-semibold"
+                >
+                  Store Location
+                </Label>
+                <Input
+                  type="text"
+                  id="storeLocation"
+                  name="storeLocation"
+                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="storeLocation">Store Location</Label>
-              <Input type="text" id="storeLocation" name="storeLocation" />
-            </div>
-            <Button type="submit" disabled={navigation.state === "submitting"}>
+            <Button
+              type="submit"
+              disabled={navigation.state === "submitting"}
+              className="w-full mt-6 bg-stone-600 hover:bg-stone-700 text-white font-semibold py-2 px-4 rounded-md transition duration-150 ease-in-out"
+            >
               {navigation.state === "submitting" ? "Submitting..." : "Submit"}
             </Button>
-          </>
+          </div>
         )}
       </Form>
 
