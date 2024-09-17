@@ -8,16 +8,20 @@ import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { useLoaderData, Link, Form } from "@remix-run/react";
 import { useState } from "react";
 import { FaSearch, FaArrowRight } from "react-icons/fa";
+import { FaArrowTrendUp } from "react-icons/fa6";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { AnimatedText } from "~/components/ui/animations";
+import { AnimatedText } from "~/components/custom/animations";
 import { ChartConfig, ChartContainer } from "~/components/ui/chart";
 import { samplePriceData, type PriceSample } from "~/lib/data";
 
-type Product = {
+type ProductPreview = {
   id: string;
   name: string;
   currentPrice: number;
-  image: string;
+  trend?: "up" | "down" | "stable";
+  trendPc?: number;
+  storeImg: string;
+  prodImg: string;
 };
 
 type FAQ = {
@@ -26,7 +30,7 @@ type FAQ = {
 };
 
 type LoaderData = {
-  products: Product[];
+  products: ProductPreview[];
   faqs: FAQ[];
   samplePriceData: PriceSample[];
 };
@@ -45,31 +49,40 @@ export const meta: MetaFunction = () => {
   ];
 };
 export const loader: LoaderFunction = async () => {
-  // In a real application, you would fetch this data from a database or API
-  const products: Product[] = [
+  const products: ProductPreview[] = [
     {
       id: "1",
-      name: "Costco Hot Dog",
+      name: "Costco Hot Dog & Soda",
       currentPrice: 1.5,
-      image: "/placeholder.ico",
-    },
-    {
-      id: "2",
-      name: "Trader Joe's Sparkling Water",
-      currentPrice: 0.99,
-      image: "/placeholder.ico",
-    },
-    {
-      id: "3",
-      name: "HEB Lemon Juice",
-      currentPrice: 2.49,
-      image: "/placeholder.ico",
+      trend: "stable",
+      storeImg: "/homepage/costco.png",
+      prodImg: "/homepage/hotdog.webp",
     },
     {
       id: "4",
-      name: "CVS Hallmark Card",
-      currentPrice: 3.99,
-      image: "/placeholder.ico",
+      name: "Banana",
+      currentPrice: 0.23,
+      trend: "up",
+      trendPc: 17,
+      storeImg: "/homepage/traderjoes.png",
+      prodImg: "/homepage/banana.jpg",
+    },
+    {
+      id: "5",
+      name: "Sparkling Water",
+      currentPrice: 0.99,
+      trend: "stable",
+      storeImg: "/homepage/traderjoes.png",
+      prodImg: "/homepage/swater.jpg",
+    },
+    {
+      id: "2",
+      name: "Dawn Platinum Liquid Dish Soap",
+      currentPrice: 11.99,
+      trend: "up",
+      trendPc: 8,
+      storeImg: "/homepage/costco.png",
+      prodImg: "/homepage/dawn.webp",
     },
   ];
   const faqs: FAQ[] = [
@@ -103,13 +116,6 @@ export default function Index() {
   const { products, faqs, samplePriceData } = useLoaderData<LoaderData>();
   const [searchTerm, setSearchTerm] = useState("");
 
-  // const [key, setKey] = useState(0);
-
-  // useEffect(() => {
-  //   // This effect will run on each hot reload
-  //   setKey((prevKey) => prevKey + 1);
-  // }, []);
-
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-ogprime text-stone-900 py-4 flex justify-between">
@@ -126,7 +132,7 @@ export default function Index() {
           </Link>
         </div>
         <div className="flex items-center container mx-auto px-4 mr-10 justify-end">
-          <Link to="/login">Log In AyAy!</Link>
+          <Link to="/login">Log In</Link>
         </div>
       </header>
 
@@ -191,7 +197,6 @@ export default function Index() {
                 </div>
                 <p className="text-center text-ogfore text-xs ml-4 lg:ml-16">
                   <AnimatedText
-                    // key={key}
                     hold={1500}
                     transition={500}
                     text="■ Tot. Cost of Food and Drink for 1 Person, Sample CPM (in USD)"
@@ -211,24 +216,44 @@ export default function Index() {
               {products.map((product) => (
                 <div
                   key={product.id}
-                  className="bg-white rounded-lg shadow-sm overflow-hidden flex items-center p-4 hover:shadow-md transition-shadow"
+                  className="bg-stone-100 border-black border-1 rounded-lg shadow-md overflow-hidden flex flex-col p-4 hover:shadow-xl transition-shadow transform hover:scale-105 relative"
                 >
+                  <div className="absolute top-2 right-2 flex items-center">
+                    {product.trend === "up" && (
+                      <span className="font-semibold text-ogfore flex items-center space-x-1">
+                        <span>{product.trendPc && `${product.trendPc}%`}</span>
+                        <FaArrowTrendUp className="text-ogfore" />
+                      </span>
+                    )}
+                    {product.trend === "stable" && (
+                      <span className="font-semibold text-black text-sm flex items-center space-x-1">
+                        <span>Stable</span>
+                      </span>
+                    )}
+                  </div>
                   <Link
                     to={`/product/${product.id}`}
-                    className="flex items-center w-full text-inherit no-underline"
+                    className="flex flex-grow items-center justify-center w-full text-inherit no-underline"
                   >
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-16 h-16 object-cover rounded-full mr-4"
-                    />
+                    <div className="relative mt-4 mr-2 w-24 h-22 flex-shrink-0">
+                      <img
+                        src={product.prodImg}
+                        alt={product.name}
+                        className="w-16 h-16 object-cover rounded-full mb-4"
+                      />
+                      <img
+                        src={product.storeImg}
+                        alt="Store logo"
+                        className="absolute bottom-0 right-0 w-12 h-12 p-1 mr-2 object-contain rounded-full bg-white shadow-sm"
+                      />
+                    </div>
                     <div className="flex-grow">
-                      <h3 className="font-semibold text-lg">{product.name}</h3>
+                      <h3 className="font-semibold">{product.name}</h3>
                       <p className="text-gray-600 text-sm">
                         ${product.currentPrice.toFixed(2)}
                       </p>
                     </div>
-                    <FaArrowRight className="w-4 h-4 text-blue-600" />
+                    <FaArrowRight className="self-end w-4 h-4 text-stone-600 flex-shrink-0" />
                   </Link>
                 </div>
               ))}
@@ -236,7 +261,7 @@ export default function Index() {
           </div>
         </section>
 
-        <section className="py-16 bg-gray-100">
+        <section className="py-16 bg-stone-100">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold mb-8 text-center">
               Frequently Asked Questions
@@ -257,7 +282,7 @@ export default function Index() {
         </section>
       </main>
 
-      <footer className="bg-gray-800 text-white py-8">
+      <footer className="bg-stone-800 text-white py-8">
         <div className="container mx-auto px-4 text-center">
           <p>
             &copy; {new Date().getFullYear()} Daniel Kramer. All rights
