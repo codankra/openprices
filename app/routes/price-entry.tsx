@@ -27,6 +27,11 @@ import { eq, like } from "drizzle-orm";
 import { auth } from "~/services/auth.server";
 import { z } from "zod";
 import { AuthUser } from "~/services/user.server";
+import {
+  getAllProductBrands,
+  getProductsBySearch,
+  getProductById,
+} from "~/services/product.server";
 
 type LoaderData = {
   searchResults: (typeof products.$inferSelect)[];
@@ -70,32 +75,20 @@ export const loader: LoaderFunction = async ({ request }) => {
   }
 
   const url = new URL(request.url);
+
   const searchTerm = url.searchParams.get("search") || "";
-  const existingProductId = url.searchParams.get("existingProductId");
-
   let searchResults: (typeof products.$inferSelect)[] = [];
-  let existingProduct: typeof products.$inferSelect | null = null;
-
   if (searchTerm.length > 2) {
-    searchResults = await db
-      .select()
-      .from(products)
-      .where(like(products.name, `%${searchTerm}%`))
-      .limit(10);
+    searchResults = await getProductsBySearch(searchTerm);
   }
 
+  const existingProductId = url.searchParams.get("existingProductId");
+  let existingProduct: typeof products.$inferSelect | null = null;
   if (existingProductId) {
-    const result = await db
-      .select()
-      .from(products)
-      .where(eq(products.id, parseInt(existingProductId)))
-      .limit(1);
-
-    existingProduct = result.length > 0 ? result[0] : null;
+    existingProduct = await getProductById(existingProductId);
   }
 
-  const productBrandsList = await db.select().from(productBrands);
-
+  const productBrandsList = await getAllProductBrands();
   return json<LoaderData>({
     searchResults,
     existingProduct,
@@ -195,6 +188,15 @@ export default function NewPricePoint() {
     }
   }, [existingProduct]);
 
+  const clearSearch = () => {
+    setSearchTerm("");
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      newParams.delete("search");
+      return newParams;
+    });
+  };
+
   const debouncedSearch = debounce((term: string) => {
     setSearchParams((prev) => {
       const newParams = new URLSearchParams(prev);
@@ -276,7 +278,7 @@ export default function NewPricePoint() {
               onClick={() => {
                 setSelectedProduct(null);
                 setIsNewProduct(false);
-                setSearchTerm("");
+                clearSearch();
               }}
               className="absolute top-2 right-2 text-stone-500 hover:text-stone-700"
             >

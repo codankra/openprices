@@ -78,14 +78,14 @@ A: I'm aiming to provide a more accurate, crowdsourced, uncorruptable record of 
 A: Nope! No account is needed to browse, but you'll need one to contribute data (to prevent spam and abuse).
 
 **Q: How is Open Prices 'open'?**  
-A: It's open for anyone to see and contribute, and the core website code is open source (you are here!)
+A: It's open for anyone to see and contribute, and my hope is also to open source future stable services the website will use, so if I develop a budgeting tool for example people can just run that locally/independently. For the moment, the core website code is open source (you are here!)
 
 ## 💖 Support the Project
 
 If you find Open Prices useful, I'd be grateful if you could:
 
 1. Star this GitHub repo
-2. Tell your friends, family, and X (the everything app) followers about the openprices website
+2. Tell your friends and family about the openprices project
 3. [Support the Developer Here](https://ko-fi.com/thedank)
 
 Your support keeps me going! ❤️ Thank You

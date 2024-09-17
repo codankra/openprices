@@ -86,12 +86,13 @@ export const loader: LoaderFunction = async () => {
     {
       question: "How is Open Price Data 'open'?",
       answer:
-        "It's open for anyone to see and contribute, and the core website code is <a href='https://github.com/codankra/openprices' target='_blank' rel='noopener noreferrer'>open source on GitHub</a>. (Contributions Welcome!)",
+        "It's open for anyone to see and contribute price data, much more than can be said for government data sources. <br /> <br /> My hope is also to open source future stable services the website will use, so if I develop a budgeting tool for example people can just run that locally/independently.",
     },
+    //  If you're seeing this I believe in FOSS - I can't guarentee to open source all site/product development always but for the moment, the core website code is <a href='https://github.com/codankra/openprices' target='_blank' rel='noopener noreferrer' style='color: blue;'>open source on GitHub</a>. (Contributions Welcome!)
     {
       question: "How can I support Open Price Data?",
       answer:
-        "<div>We welcome your contribution in any way! Here are three options:<br /><br /><ol><li>&emsp;1. Contribute to the site by adding price data</li><li>&emsp;2. Help with the codebase by contributing to our open-source project</li><li>&emsp;3. Donate to the site owner through our <a href='https://ko-fi.com/thedank' target='_blank' rel='noopener noreferrer'>Ko-fi page</a></li></div>",
+        "<div>We welcome your contribution in any way! Here are three options:<br /><br /><ol><li>&emsp;1. Contribute to the site by adding price data</li><li>&emsp;2. Spread the word about project to friends and family</li><li>&emsp;3. Support to the site maintainer through our <a href='https://ko-fi.com/thedank' target='_blank' rel='noopener noreferrer' style='color: blue;'>Ko-fi page</a></li></div>",
     },
   ];
 
