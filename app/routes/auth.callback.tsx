@@ -1,4 +1,4 @@
-import { redirect, type LoaderFunctionArgs } from "@remix-run/node";
+import { type LoaderFunctionArgs } from "@remix-run/node";
 import { auth, sessionStorage } from "~/services/auth.server";
 
 export let loader = async ({ request }: LoaderFunctionArgs) => {
@@ -11,7 +11,7 @@ export let loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const provider = url.searchParams.get("provider") as string;
   return await auth.authenticate(provider, request, {
-    successRedirect: "/dashboard",
+    successRedirect: "/price-entry",
     failureRedirect: "/login?error=auth_failed",
   });
 };

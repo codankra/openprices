@@ -8,7 +8,7 @@ import { auth } from "../services/auth.server";
 export async function loader({ request }: LoaderFunctionArgs) {
   // If the user is already authenticated redirect to /dashboard directly
   return await auth.isAuthenticated(request, {
-    successRedirect: "/dashboard",
+    successRedirect: "/price-entry",
   });
 }
 
