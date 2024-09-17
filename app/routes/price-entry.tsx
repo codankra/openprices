@@ -215,7 +215,7 @@ export default function NewPricePoint() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Add New Price Point</h1>
-      <p className="mb-4">Logged in as: {user.name || user.email}</p>
+      <p className="mb-4">Logged in as: {user.email}</p>
 
       <Form
         method="post"
