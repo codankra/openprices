@@ -60,7 +60,7 @@ export const loader: LoaderFunction = async () => {
     },
     {
       id: "4",
-      name: "Banana",
+      name: "Banana, each",
       currentPrice: 0.23,
       trend: "up",
       trendPc: 17,
@@ -212,7 +212,7 @@ export default function Index() {
             <h2 className="text-3xl font-bold mb-8 text-center">
               Recent Products
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
               {products.map((product) => (
                 <div
                   key={product.id}

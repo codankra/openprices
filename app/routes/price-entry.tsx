@@ -3,7 +3,6 @@ import {
   useActionData,
   useNavigation,
   useLoaderData,
-  useSubmit,
   useSearchParams,
 } from "@remix-run/react";
 import { json, redirect } from "@remix-run/node";
@@ -32,6 +31,14 @@ import {
   getProductsBySearch,
   getProductById,
 } from "~/services/product.server";
+import { debounce } from "~/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
+import { FaCircleInfo, FaInfo } from "react-icons/fa6";
 
 type LoaderData = {
   searchResults: (typeof products.$inferSelect)[];
@@ -56,17 +63,6 @@ const formSchema = z.object({
   image: z.string().url("Image must be a valid URL").optional(),
   storeLocation: z.string().optional(),
 });
-
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
 
 export const loader: LoaderFunction = async ({ request }) => {
   const user = await auth.isAuthenticated(request);
@@ -167,11 +163,10 @@ type ActionData = {
 };
 
 export default function NewPricePoint() {
-  const { searchResults, existingProduct, user, productBrandsList } =
+  const { searchResults, existingProduct, productBrandsList } =
     useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const submit = useSubmit();
   const navigation = useNavigation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
@@ -213,238 +208,283 @@ export default function NewPricePoint() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Add New Price Point</h1>
-      <p className="mb-4">Logged in as: {user.email}</p>
+    <div className="bg-white">
+      {" "}
+      <div className="container mx-auto p-4">
+        <Form
+          method="post"
+          encType="multipart/form-data"
+          className="space-y-6 bg-stone-100 p-8 rounded-lg shadow-md max-w-3xl mx-auto"
+        >
+          <h1 className="text-2xl font-bold mb-4 text-center">
+            New Price Entry
+          </h1>
 
-      <Form
-        method="post"
-        encType="multipart/form-data"
-        className="space-y-6 bg-stone-100 p-8 rounded-lg shadow-md max-w-3xl mx-auto"
-      >
-        {!selectedProduct && !isNewProduct && (
-          <div className="bg-white p-6 rounded-md shadow-sm">
-            <Label
-              htmlFor="productSearch"
-              className="text-stone-700 font-semibold"
-            >
-              Search for existing product
-            </Label>
-            <Input
-              type="text"
-              id="productSearch"
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search for a product"
-              className="mt-2 w-full max-w-md border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-            />
-            <div className="flex items-center space-x-4 mt-4">
-              <p className="text-stone-600">Or</p>{" "}
-              <Button
-                onClick={() => setIsNewProduct(true)}
-                className="bg-stone-600 hover:bg-stone-700 text-white"
-              >
-                Create New Product
-              </Button>
-            </div>
-            {searchResults.length > 0 && (
-              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {searchResults.map((product) => (
-                  <div
-                    key={product.id}
-                    className="bg-white border border-stone-200 rounded-md p-4 cursor-pointer hover:bg-stone-50 transition duration-150 ease-in-out"
-                    onClick={() => {
-                      setSelectedProduct(product);
-                      setSearchTerm(product.name);
-                    }}
-                  >
-                    <h3 className="font-bold text-stone-800">{product.name}</h3>
-                    <p className="text-stone-600">
-                      Price: ${product.latestPrice?.toFixed(2)}
-                    </p>
-                    <p className="text-stone-500">
-                      Category: {product.category}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {selectedProduct && (
-          <div className="bg-white border border-stone-200 rounded-md p-6 shadow-sm relative">
-            <button
-              onClick={() => {
-                setSelectedProduct(null);
-                setIsNewProduct(false);
-                clearSearch();
-              }}
-              className="absolute top-2 right-2 text-stone-500 hover:text-stone-700"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <input type="hidden" name="productId" value={selectedProduct.id} />
-            <h3 className="font-bold text-stone-800 text-xl mb-2">
-              {selectedProduct.name}
-            </h3>
-            {selectedProduct.image && (
-              <img
-                src={selectedProduct.image}
-                alt={selectedProduct.name}
-                className="w-32 h-32 object-cover mt-2 rounded-md shadow-sm"
-              />
-            )}
-            <p className="text-stone-700 mt-2">
-              Price: ${selectedProduct.latestPrice?.toFixed(2)}
-            </p>
-            <p className="text-stone-600">
-              Category: {selectedProduct.category}
-            </p>
-            {selectedProduct.unitPricing && (
-              <p className="text-stone-600">
-                Unit: {selectedProduct.unitQty} {selectedProduct.unitType}
-              </p>
-            )}
-            {selectedProduct.productBrandName && (
-              <p className="text-stone-600">
-                Brand: {selectedProduct.productBrandName}
-              </p>
-            )}
-          </div>
-        )}
-
-        {isNewProduct && (
-          <div className="bg-white p-6 rounded-md shadow-sm space-y-4">
-            <div className="flex flex-col justify-center space-y-4 w-full md:w-1/2">
-              <Button
-                onClick={() => setIsNewProduct(false)}
-                className="bg-stone-600 hover:bg-stone-700 text-white"
+          {!selectedProduct && !isNewProduct && (
+            <div className="bg-white p-6 rounded-md shadow-sm">
+              <h2 className="text-xl font-semibold mb-4">Product Details</h2>
+              <Label
+                htmlFor="productSearch"
+                className="text-stone-700 font-semibold"
               >
                 Search for Existing Product
-              </Button>
-              <p className="text-stone-600">Or</p>{" "}
+              </Label>
+              <Input
+                type="text"
+                id="productSearch"
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Search for a product"
+                className="mt-2 w-full max-w-md border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+              />
+              <div className="flex items-center space-x-4 mt-4">
+                <p className="text-stone-600">Or</p>{" "}
+                <Button
+                  onClick={() => setIsNewProduct(true)}
+                  className="bg-stone-600 hover:bg-stone-700 text-white"
+                >
+                  Create New Product
+                </Button>
+              </div>
+              {searchResults.length > 0 && (
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {searchResults.map((product) => (
+                    <div
+                      key={product.id}
+                      className="bg-white border border-stone-200 rounded-md p-4 cursor-pointer hover:bg-stone-50 transition duration-150 ease-in-out"
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setSearchTerm(product.name);
+                      }}
+                    >
+                      <h3 className="font-bold text-stone-800">
+                        {product.name}
+                      </h3>
+                      <p className="text-stone-600">
+                        Price: ${product.latestPrice?.toFixed(2)}
+                      </p>
+                      <p className="text-stone-500">
+                        Category: {product.category}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+          )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name" className="text-stone-700 font-semibold">
-                  Product Name
-                </Label>
-                <Input
-                  type="text"
-                  id="name"
-                  name="name"
-                  required
-                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+          {selectedProduct && (
+            <div className="bg-white border border-stone-200 rounded-md p-6 shadow-sm relative">
+              <h2 className="text-xl font-semibold mb-4">Product Details</h2>
+
+              <button
+                onClick={() => {
+                  setSelectedProduct(null);
+                  setIsNewProduct(false);
+                  clearSearch();
+                }}
+                className="absolute top-2 right-2 text-stone-500 hover:text-stone-700"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+              <input
+                type="hidden"
+                name="productId"
+                value={selectedProduct.id}
+              />
+              <h3 className="font-bold text-stone-800 text-xl mb-2">
+                {selectedProduct.name}
+              </h3>
+              {selectedProduct.image && (
+                <img
+                  src={selectedProduct.image}
+                  alt={selectedProduct.name}
+                  className="w-32 h-32 object-cover mt-2 rounded-md shadow-sm"
                 />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox id="unitPricing" name="unitPricing" />
-                <Label
-                  htmlFor="unitPricing"
-                  className="text-stone-700 font-semibold"
+              )}
+              <p className="text-stone-700 mt-2">
+                Price: ${selectedProduct.latestPrice?.toFixed(2)}
+              </p>
+              <p className="text-stone-600">
+                Category: {selectedProduct.category}
+              </p>
+              {selectedProduct.unitPricing && (
+                <p className="text-stone-600">
+                  Unit: {selectedProduct.unitQty} {selectedProduct.unitType}
+                </p>
+              )}
+              {selectedProduct.productBrandName && (
+                <p className="text-stone-600">
+                  Brand: {selectedProduct.productBrandName}
+                </p>
+              )}
+            </div>
+          )}
+          {isNewProduct && (
+            <div className="bg-white p-6 rounded-md shadow-sm space-y-4">
+              <h2 className="text-xl font-semibold mb-4">Product Details</h2>
+
+              <div className="flex flex-col justify-center space-y-4 w-full md:w-1/2">
+                <Button
+                  onClick={() => setIsNewProduct(false)}
+                  className="bg-stone-600 hover:bg-stone-700 text-white"
                 >
-                  Unit Pricing
-                </Label>
+                  Search for Existing Product
+                </Button>
+                <p className="text-stone-600">Or</p>{" "}
               </div>
-              <div>
-                <Label
-                  htmlFor="unitQty"
-                  className="text-stone-700 font-semibold"
-                >
-                  Unit Quantity
-                </Label>
-                <Input
-                  type="number"
-                  id="unitQty"
-                  name="unitQty"
-                  step="0.01"
-                  min="0"
-                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                />
-              </div>
-              <div>
-                <Label
-                  htmlFor="category"
-                  className="text-stone-700 font-semibold"
-                >
-                  Category
-                </Label>
-                <Input
-                  type="text"
-                  id="category"
-                  name="category"
-                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                />
-              </div>
-              <div>
-                <Label
-                  htmlFor="unitType"
-                  className="text-stone-700 font-semibold"
-                >
-                  Unit Type
-                </Label>
-                <Select name="unitType">
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select unit type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(UnitType).map((unitTypes) => (
-                      <SelectItem key={unitTypes[1]} value={unitTypes[1]}>
-                        {`${unitTypes[0][0]}${unitTypes[0]
-                          .substring(1)
-                          .toLowerCase()} (${unitTypes[1]})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label
-                  htmlFor="productBrandName"
-                  className="text-stone-700 font-semibold"
-                >
-                  Brand Name
-                </Label>
-                <Select name="productBrandName">
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a brand" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {productBrandsList.map((brand) => (
-                      <SelectItem key={brand.name} value={brand.name}>
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="image" className="text-stone-700 font-semibold">
-                  Product Image URL
-                </Label>
-                <Input
-                  type="url"
-                  id="image"
-                  name="image"
-                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label
+                    htmlFor="name"
+                    className="text-stone-700 font-semibold"
+                  >
+                    Product Name
+                  </Label>
+                  <Input
+                    type="text"
+                    id="name"
+                    name="name"
+                    required
+                    className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                  />
+                </div>
+                <div>
+                  <Label
+                    htmlFor="productBrandName"
+                    className="text-stone-700 font-semibold"
+                  >
+                    Brand Name
+                  </Label>
+                  <div className="mt-1">
+                    <Select name="productBrandName">
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a brand" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productBrandsList.map((brand) => (
+                          <SelectItem key={brand.name} value={brand.name}>
+                            {brand.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label
+                    htmlFor="category"
+                    className="text-stone-700 font-semibold"
+                  >
+                    Category
+                  </Label>
+                  <Input
+                    type="text"
+                    id="category"
+                    name="category"
+                    className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                  />
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor="proofFiles"
+                    className="text-stone-700 font-semibold"
+                  >
+                    Product Image
+                  </Label>
+                  <Input
+                    type="file"
+                    id="productImage"
+                    name="productImage"
+                    accept="image/*"
+                    className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                  />{" "}
+                </div>
+                <div className="h-1"></div>
+                <div className="h-1 hidden md:block"></div>
+                <div>
+                  <Label
+                    htmlFor="unitType"
+                    className="text-stone-700 font-semibold"
+                  >
+                    Unit Type
+                  </Label>
+
+                  <div className="mt-1">
+                    <Select name="unitType">
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select unit type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(UnitType).map((unitTypes) => (
+                          <SelectItem key={unitTypes[1]} value={unitTypes[1]}>
+                            {`${unitTypes[0][0]}${unitTypes[0]
+                              .substring(1)
+                              .toLowerCase()} (${unitTypes[1]})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label
+                    htmlFor="unitQty"
+                    className="text-stone-700 font-semibold"
+                  >
+                    Quantity of Unit
+                  </Label>
+                  <Input
+                    type="number"
+                    id="unitQty"
+                    name="unitQty"
+                    step="0.01"
+                    min="0"
+                    className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                  />
+                </div>
+                <div className="flex self-center space-x-2 ">
+                  <Checkbox id="unitPricing" name="unitPricing" />
+                  <Label
+                    htmlFor="unitPricing"
+                    className="text-stone-700 font-semibold"
+                  >
+                    Is it Priced by Weight/Volume?{" "}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <FaCircleInfo />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            Common with Produce, Meats/Cheeses, and Deli
+                            Prepared Food{" "}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </Label>
+                </div>
               </div>
             </div>
+          )}
+          <div className="bg-white p-6 rounded-md shadow-sm space-y-4">
+            <h2 className="text-xl font-semibold">Price Entry</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div>
                 <Label htmlFor="price" className="text-stone-700 font-semibold">
@@ -457,6 +497,7 @@ export default function NewPricePoint() {
                   step="0.01"
                   min="0"
                   placeholder="0.00"
+                  defaultValue={selectedProduct?.latestPrice ?? undefined}
                   required
                   className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
                 />
@@ -468,24 +509,13 @@ export default function NewPricePoint() {
                 >
                   Date of Purchase
                 </Label>
-                <div id="datepickerPE" className="mt-1">
+                <div id="datepickerPE" className="mt-1 w-full">
                   <DatePicker date={selectedDate} setDate={setSelectedDate} />
                 </div>
                 <input
                   type="hidden"
                   name="date"
                   value={selectedDate?.toISOString()}
-                />
-              </div>
-              <div>
-                <Label htmlFor="proof" className="text-stone-700 font-semibold">
-                  Proof (URL to image)
-                </Label>
-                <Input
-                  type="url"
-                  id="proof"
-                  name="proof"
-                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
                 />
               </div>
               <div>
@@ -499,32 +529,61 @@ export default function NewPricePoint() {
                   type="text"
                   id="storeLocation"
                   name="storeLocation"
+                  placeholder="Store Name and City/State"
                   className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
                 />
               </div>
+
+              <div>
+                <Label htmlFor="proof" className="text-stone-700 font-semibold">
+                  <span>Proof (Upload Images) </span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <FaCircleInfo />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          Verify your price entry (Optional, but adds validity)
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                <Input
+                  type="file"
+                  multiple
+                  id="proofFiles"
+                  name="proofFiles"
+                  accept="image/*"
+                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={navigation.state === "submitting"}
+                className="w-full mt-6 bg-ogfore hover:bg-ogfore-hover text-white font-semibold py-2 px-4 rounded-md transition duration-150 ease-in-out"
+              >
+                {navigation.state === "submitting"
+                  ? "Submitting..."
+                  : "Save Price"}
+              </Button>
             </div>
-            <Button
-              type="submit"
-              disabled={navigation.state === "submitting"}
-              className="w-full mt-6 bg-stone-600 hover:bg-stone-700 text-white font-semibold py-2 px-4 rounded-md transition duration-150 ease-in-out"
-            >
-              {navigation.state === "submitting" ? "Submitting..." : "Submit"}
-            </Button>
+          </div>
+        </Form>
+
+        {actionData?.errors && (
+          <div className="mt-4 text-red-500">
+            <ul>
+              {actionData.errors.map((error) => (
+                <li key={error.path.join(".")}>
+                  {error.path.join(".")}: {error.message}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
-      </Form>
-
-      {actionData?.errors && (
-        <div className="mt-4 text-red-500">
-          <ul>
-            {actionData.errors.map((error) => (
-              <li key={error.path.join(".")}>
-                {error.path.join(".")}: {error.message}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

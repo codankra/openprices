@@ -6,10 +6,11 @@ import { findOrCreateUser, AuthUser } from "~/services/user.server";
 
 export const sessionStorage = createCookieSessionStorage({
   cookie: {
-    name: "__session",
+    name: "__session_opd",
     httpOnly: true,
     path: "/",
     sameSite: "lax",
+    expires: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000),
     secrets: [process.env.AUTH_COOKIE_SECRET!],
     secure: process.env.NODE_ENV === "production",
   },
