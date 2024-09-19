@@ -23,25 +23,19 @@ export default function Login() {
             className="flex items-center justify-center w-64 px-4 py-2 text-gray-700 bg-white rounded-md border border-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 shadow-sm hover:shadow-md transition-all duration-200"
           >
             <FcGoogle className="mr-2" />
-            Login with Google
+            Sign in with Google
           </button>
         </Form>
-        <Form action="/auth" method="post" className="mb-4">
+        <Form action="/auth" method="post">
           <button
             name="authtype"
             value="github"
             className="flex items-center justify-center w-64 px-4 py-2 text-white bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-opacity-50 shadow-sm hover:shadow-md transition-all duration-200"
           >
             <FaGithub className="mr-2" />
-            Login with GitHub
+            Sign in with GitHub
           </button>
         </Form>
-        <a
-          href="/signup"
-          className="flex text-center items-center justify-center text-blue-600 hover:text-blue-800 text-sm font-medium underline"
-        >
-          Create Account
-        </a>
       </div>
     </div>
   );
