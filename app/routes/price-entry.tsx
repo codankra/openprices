@@ -6,7 +6,11 @@ import {
   useSearchParams,
 } from "@remix-run/react";
 import { json, redirect } from "@remix-run/node";
-import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import type {
+  ActionFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
 import { useState, useEffect } from "react";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
@@ -38,7 +42,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { FaCircleInfo, FaInfo } from "react-icons/fa6";
+import { FaCircleInfo } from "react-icons/fa6";
+
+export const meta: MetaFunction = () => {
+  return [
+    { title: "New Price Entry" },
+    {
+      name: "description",
+      content: "Contribute a new price history entry on Open Price Data",
+    },
+  ];
+};
 
 type LoaderData = {
   searchResults: (typeof products.$inferSelect)[];

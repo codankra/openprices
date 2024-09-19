@@ -21,9 +21,9 @@ export const auth = new Authenticator<AuthUser>(sessionStorage);
 auth.use(
   new GitHubStrategy(
     {
-      clientId: process.env.AUTH_GITHUB_CLIENT_ID!,
+      clientID: process.env.AUTH_GITHUB_CLIENT_ID!,
       clientSecret: process.env.AUTH_GITHUB_CLIENT_SECRET!,
-      redirectURI: `${process.env.SITE_NAME}/auth/callback?provider=github`,
+      callbackURL: `${process.env.SITE_NAME}/auth/callback?provider=github`,
     },
     async ({ profile }) => {
       const user = await findOrCreateUser({
