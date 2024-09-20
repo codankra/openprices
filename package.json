@@ -23,6 +23,7 @@
     "@remix-run/node": "^2.11.2",
     "@remix-run/react": "^2.11.2",
     "@remix-run/serve": "^2.11.2",
+    "aws-sdk": "^2.1691.0",
     "cache-manager": "^5.7.6",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

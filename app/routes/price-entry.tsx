@@ -4,12 +4,18 @@ import {
   useNavigation,
   useLoaderData,
   useSearchParams,
+  Link,
 } from "@remix-run/react";
-import { json, redirect } from "@remix-run/node";
+import {
+  json,
+  redirect,
+  unstable_parseMultipartFormData,
+} from "@remix-run/node";
 import type {
   ActionFunction,
   LoaderFunction,
   MetaFunction,
+  UploadHandler,
 } from "@remix-run/node";
 import { useState, useEffect } from "react";
 import { Input } from "~/components/ui/input";
@@ -26,7 +32,7 @@ import {
 } from "~/components/ui/select";
 import { priceEntries, products, UnitType, productBrands } from "~/db/schema";
 import { db } from "~/db/index";
-import { eq, like } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { auth } from "~/services/auth.server";
 import { z } from "zod";
 import { AuthUser } from "~/services/user.server";
@@ -43,6 +49,7 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { FaCircleInfo } from "react-icons/fa6";
+import { uploadToR2 } from "~/services/r2.server";
 
 export const meta: MetaFunction = () => {
   return [
@@ -61,22 +68,46 @@ type LoaderData = {
   productBrandsList: (typeof productBrands.$inferSelect)[];
 };
 
-const formSchema = z.object({
-  productId: z.string().optional(),
-  name: z.string().min(1, "Product name is required"),
-  price: z.number().positive("Price must be a positive number"),
-  date: z
-    .string()
-    .refine((val: any) => !isNaN(Date.parse(val)), "Invalid date"),
-  proof: z.string().url("Proof must be a valid URL").optional(),
-  unitPricing: z.boolean().optional(),
-  unitQty: z.number().positive().optional(),
-  category: z.string().optional(),
-  unitType: z.nativeEnum(UnitType).optional(),
-  productBrandName: z.string().optional(),
-  image: z.string().url("Image must be a valid URL").optional(),
-  storeLocation: z.string().optional(),
-});
+const formSchema = z
+  .object({
+    // PriceEntry Details
+    price: z.number().positive("Price must be a positive number"),
+    date: z
+      .string()
+      .refine((val: any) => !isNaN(Date.parse(val)), "Invalid date"),
+    storeLocation: z.string().optional(),
+    proofFiles: z.array(z.any()).optional(),
+    // Product Details
+    productId: z.string().optional(),
+    name: z.string().min(1, "Product name is required"),
+    unitQty: z.number().positive().optional(),
+    unitPricing: z.boolean().optional(),
+    unitType: z.nativeEnum(UnitType).optional(),
+    category: z.string().optional(),
+    productBrandName: z.string().optional(),
+    productImage: z.string().url("Image must be a valid URL").optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.productId) {
+        return true;
+      }
+      return (
+        data.name !== undefined &&
+        data.unitPricing !== undefined &&
+        data.unitQty !== undefined &&
+        data.category !== undefined &&
+        data.unitType !== undefined &&
+        data.productBrandName !== undefined &&
+        data.productImage !== undefined
+      );
+    },
+    {
+      message:
+        "Either an existing product must be selected, or all product details must be provided",
+      path: ["productId"],
+    }
+  );
 
 export const loader: LoaderFunction = async ({ request }) => {
   const user = await auth.isAuthenticated(request);
@@ -112,8 +143,56 @@ export const action: ActionFunction = async ({ request }) => {
   if (!user) {
     return redirect("/login");
   }
+  const uploadHandler: UploadHandler = async ({
+    name,
+    filename,
+    data,
+    contentType,
+  }) => {
+    if (name == "proofFiles") {
+      const chunks = [];
+      for await (const chunk of data) {
+        chunks.push(chunk);
+      }
+      const buffer = Buffer.concat(chunks);
 
-  const formData = await request.formData();
+      // Perform additional checks here (file size, type, etc.)
+      if (buffer.length > 3 * 1024 * 1024) {
+        // 3MB limit
+        throw new Error("Files too large");
+      }
+
+      if (!["image/jpeg", "image/png", "image/gif"].includes(contentType)) {
+        throw new Error("Invalid file type for Proof Images");
+      }
+      return await uploadToR2(`scan-${filename}`, buffer, "proofs");
+    } else if (name == "prooductImage") {
+      const chunks = [];
+      for await (const chunk of data) {
+        chunks.push(chunk);
+      }
+      const buffer = Buffer.concat(chunks);
+
+      // Perform additional checks here (file size, type, etc.)
+      if (buffer.length > 3 * 1024 * 1024) {
+        // 3MB limit
+        throw new Error("Files too large");
+      }
+
+      if (!["image/jpeg", "image/png", "image/gif"].includes(contentType)) {
+        throw new Error("Invalid file type for Product Image");
+      }
+
+      return await uploadToR2(`plu-${filename}`, buffer, "products");
+    } else {
+      return undefined;
+    }
+  };
+
+  const formData = await unstable_parseMultipartFormData(
+    request,
+    uploadHandler
+  );
   const rawFormData = Object.fromEntries(formData);
 
   try {
@@ -124,6 +203,8 @@ export const action: ActionFunction = async ({ request }) => {
       unitQty: rawFormData.unitQty
         ? parseFloat(rawFormData.unitQty as string)
         : undefined,
+      proofFiles: formData.getAll("proofFiles"),
+      productImage: formData.get("productImage"),
     });
 
     let productId = parseInt(validatedData.productId ?? "0");
@@ -140,7 +221,7 @@ export const action: ActionFunction = async ({ request }) => {
           category: validatedData.category,
           unitType: validatedData.unitType,
           productBrandName: validatedData.productBrandName,
-          image: validatedData.image,
+          image: validatedData.productImage,
         })
         .returning({ insertedId: products.id });
 
@@ -159,7 +240,7 @@ export const action: ActionFunction = async ({ request }) => {
       productId: productId,
       price: validatedData.price,
       date: validatedData.date,
-      proof: validatedData.proof ?? null,
+      proof: validatedData.proofFiles?.join(",") ?? null,
       storeLocation: validatedData.storeLocation ?? null,
     });
 
@@ -168,7 +249,7 @@ export const action: ActionFunction = async ({ request }) => {
     if (error instanceof z.ZodError) {
       return json({ errors: error.errors }, { status: 400 });
     }
-    throw error;
+    return json({ errors: [{ message: error.message }] }, { status: 400 });
   }
 };
 
@@ -180,7 +261,7 @@ export default function NewPricePoint() {
   const { searchResults, existingProduct, productBrandsList } =
     useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [_searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
@@ -223,7 +304,23 @@ export default function NewPricePoint() {
 
   return (
     <div className="bg-white">
-      {" "}
+      <header className="bg-ogprime text-stone-900 py-4 flex justify-between">
+        <div className="flex items-center space-x-4 container mx-auto px-4 hover:text-stone-700 flex-grow">
+          <Link to="/" className="flex items-center space-x-4">
+            <img
+              src="favicon.ico"
+              width={40}
+              height={40}
+              alt="Open Price Data Logo"
+              className="rounded"
+            />
+            <h1 className="text-2xl font-bold">Open Price Data</h1>
+          </Link>
+        </div>
+        <div className="flex items-center px-4 whitespace-nowrap">
+          <Link to="/logout">Log Out</Link>
+        </div>
+      </header>{" "}
       <div className="container mx-auto p-4">
         <Form
           method="post"
@@ -329,9 +426,6 @@ export default function NewPricePoint() {
                   className="w-32 h-32 object-cover mt-2 rounded-md shadow-sm"
                 />
               )}
-              <p className="text-stone-700 mt-2">
-                Price: ${selectedProduct.latestPrice?.toFixed(2)}
-              </p>
               <p className="text-stone-600">
                 Category: {selectedProduct.category}
               </p>
