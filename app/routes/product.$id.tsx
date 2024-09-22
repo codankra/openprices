@@ -1,9 +1,12 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
+import { getProductById } from "~/services/product.server";
 
-export const loader: LoaderFunction = async ({ request }) => {
-  return null;
+export const loader: LoaderFunction = async ({ params }) => {
+  const product = await getProductById(params.id!);
+  if (!product) return redirect("/productNotFound");
+  return product;
 };
 
 export const meta: MetaFunction = () => {
