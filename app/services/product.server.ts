@@ -77,7 +77,7 @@ export async function getProductAndBrandByID(id: string) {
   if (!productInfo) return null;
   else {
     const brandInfo = productInfo.productBrandName
-      ? getProductBrandInfo(productInfo.productBrandName)
+      ? await getProductBrandInfo(productInfo.productBrandName)
       : null;
     return { productInfo, brandInfo };
   }

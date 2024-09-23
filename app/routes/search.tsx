@@ -17,7 +17,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export default function Dashboard() {
+export default function ProductSearch() {
   return (
     <div className="font-sans p-4 bg-gradient-to-b from-[#f7f2ec] to-[#efebe7] min-h-screen">
       <h1 className="text-3xl">

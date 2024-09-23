@@ -8,3 +8,6 @@ export const action: ActionFunction = async ({ request }) => {
 export const loader: LoaderFunction = async ({ request }) => {
   await auth.logout(request, { redirectTo: "/login" });
 };
+export default function Logout() {
+  return <div>Logging out...</div>;
+}
