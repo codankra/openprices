@@ -1,12 +1,17 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
-import { getProductById } from "~/services/product.server";
-
+import { redirect, defer } from "@remix-run/node";
+import { Await, Form, useLoaderData } from "@remix-run/react";
+import { Suspense } from "react";
+import { getPriceEntriesByProductID } from "~/services/price.server";
+import {
+  getProductAndBrandByID,
+  getProductById,
+} from "~/services/product.server";
 export const loader: LoaderFunction = async ({ params }) => {
-  const product = await getProductById(params.id!);
+  const priceEntries = getPriceEntriesByProductID(params.id!); //intentionally stream
+  const product = await getProductAndBrandByID(params.id!);
   if (!product) return redirect("/productNotFound");
-  return product;
+  return defer({ product, priceEntries });
 };
 
 export const meta: MetaFunction = () => {
@@ -17,6 +22,7 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Dashboard() {
+  const { product, priceEntries } = useLoaderData<typeof loader>();
   return (
     <div className="font-sans p-4 bg-gradient-to-b from-[#f7f2ec] to-[#efebe7] min-h-screen">
       <h1 className="text-3xl">

@@ -3,6 +3,7 @@ import { caching, MemoryCache } from "cache-manager";
 let productSearchCache: MemoryCache;
 let productInfoCache: MemoryCache;
 let productBrandsCache: MemoryCache;
+let priceEntriesCache: MemoryCache;
 
 async function initializeCaches() {
   productSearchCache = await caching("memory", {
@@ -19,6 +20,10 @@ async function initializeCaches() {
     max: 5,
     ttl: 24 * 60 * 60 * 1000, // 24 hours
   });
+  priceEntriesCache = await caching("memory", {
+    max: 100,
+    ttl: 10 * 60 * 1000, // 10 minutes
+  });
 }
 
 export async function ensureCachesInitialized() {
@@ -26,4 +31,9 @@ export async function ensureCachesInitialized() {
     await initializeCaches();
   }
 }
-export { productSearchCache, productInfoCache, productBrandsCache };
+export {
+  priceEntriesCache,
+  productSearchCache,
+  productInfoCache,
+  productBrandsCache,
+};

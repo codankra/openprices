@@ -1,6 +1,6 @@
-import { products, productBrands } from "~/db/schema";
+import { products, productBrands, priceEntries, users } from "~/db/schema";
 import { db } from "~/db/index";
-import { eq, like } from "drizzle-orm";
+import { eq, like, desc } from "drizzle-orm";
 import {
   productInfoCache,
   productSearchCache,
@@ -70,5 +70,15 @@ export async function getAllProductBrands() {
     const allBrands = await db.select().from(productBrands);
     await productBrandsCache.set(ALL_BRANDS_CACHE_KEY, allBrands);
     return allBrands;
+  }
+}
+export async function getProductAndBrandByID(id: string) {
+  const productInfo = await getProductById(id);
+  if (!productInfo) return null;
+  else {
+    const brandInfo = productInfo.productBrandName
+      ? getProductBrandInfo(productInfo.productBrandName)
+      : null;
+    return { productInfo, brandInfo };
   }
 }

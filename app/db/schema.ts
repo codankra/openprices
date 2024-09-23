@@ -4,6 +4,7 @@ import {
   integer,
   real,
   uniqueIndex,
+  index,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
@@ -64,15 +65,22 @@ export const storeBrands = sqliteTable("StoreBrands", {
   image: text("image"),
 });
 
-export const priceEntries = sqliteTable("PriceEntries", {
-  id: integer("id").primaryKey({ autoIncrement: true }).notNull(),
-  contributorId: text("contributor_id").references(() => users.id),
-  productId: integer("product_id").references(() => products.id),
-  price: real("price").notNull(),
-  date: text("date").notNull(),
-  proof: text("proof"),
-  storeLocation: text("store_location"),
-});
+export const priceEntries = sqliteTable(
+  "PriceEntries",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }).notNull(),
+    contributorId: text("contributor_id").references(() => users.id),
+    productId: integer("product_id").references(() => products.id),
+    price: real("price").notNull(),
+    date: text("date").notNull(),
+    proof: text("proof"),
+    storeLocation: text("store_location"),
+  },
+  (table) => ({
+    productIdIdx: index("price_entries_product_id_idx").on(table.productId),
+    dateIdx: index("price_entries_date_idx").on(table.date),
+  })
+);
 
 export const productReceiptIdentifiers = sqliteTable(
   "ProductReceiptIdentifiers",
@@ -84,18 +92,26 @@ export const productReceiptIdentifiers = sqliteTable(
   }
 );
 
-export const products = sqliteTable("Products", {
-  id: integer("id").primaryKey({ autoIncrement: true }).notNull(),
-  name: text("name").notNull(),
-  category: text("category"),
-  latestPrice: real("latest_price"),
-  unitPricing: integer("is_unitpriced", { mode: "boolean" }),
-  unitQty: real("unit_qty"),
-  unitType: text("unit_type", {
-    enum: Object.values(UnitType) as [string, ...string[]],
-  }),
-  image: text("image"),
-  productBrandName: text("product_brand_name").references(
-    () => productBrands.name
-  ),
-});
+export const products = sqliteTable(
+  "Products",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }).notNull(),
+    name: text("name").notNull(),
+    category: text("category"),
+    latestPrice: real("latest_price"),
+    unitPricing: integer("is_unitpriced", { mode: "boolean" }),
+    unitQty: real("unit_qty"),
+    unitType: text("unit_type", {
+      enum: Object.values(UnitType) as [string, ...string[]],
+    }),
+    image: text("image"),
+    productBrandName: text("product_brand_name").references(
+      () => productBrands.name
+    ),
+  },
+  (table) => ({
+    productBrandNameIdx: index("product_brand_name_idx").on(
+      table.productBrandName
+    ),
+  })
+);
