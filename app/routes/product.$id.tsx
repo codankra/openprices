@@ -97,17 +97,17 @@ export default function ProductPage() {
           )}
           <CollapsibleContent className="w-full mx-auto p-6">
             <div className="w-full md:w-96 mx-auto border border-stone-300 rounded-lg p-4">
-              <div className="flex justify-between border-b border-stone-300 pb-2 mb-2">
+              <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
                 <span className="text-stone-600 ml-1">Category:</span>
                 <span className="text-stone-800 font-medium mr-1">
                   {product?.productInfo.category || "N/A"}
                 </span>
               </div>
-              <div className="flex justify-between border-b border-stone-300 pb-2 mb-2">
+              <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
                 <span className="text-stone-600 ml-1">Views:</span>
                 <span className="text-stone-800 font-medium mr-1">{"-"}</span>
               </div>
-              <div className="flex justify-between border-b border-stone-300 pb-2 mb-2">
+              <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
                 <span className="text-stone-600 ml-1">Price Records:</span>
                 <span className="text-stone-800 font-medium mr-1">
                   {priceEntries?.length || "-"}
@@ -115,7 +115,7 @@ export default function ProductPage() {
               </div>
 
               {product?.brandInfo?.name && (
-                <div className="flex justify-between border-b border-stone-300 pb-2 mb-2">
+                <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
                   <span className="text-stone-600 self-end ml-1">Brand:</span>
                   {product?.brandInfo?.image ? (
                     <img

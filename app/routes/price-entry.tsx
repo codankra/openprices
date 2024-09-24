@@ -79,13 +79,13 @@ const formSchema = z
     proofFiles: z.array(z.any()).optional(),
     // Product Details
     productId: z.string().optional(),
-    name: z.string().min(1, "Product name is required"),
+    name: z.string().min(1, "Product name is required").optional(),
     unitQty: z.number().positive().optional(),
     unitPricing: z.boolean().optional(),
     unitType: z.nativeEnum(UnitType).optional(),
     category: z.string().optional(),
     productBrandName: z.string().optional(),
-    productImage: z.string().url("Image must be a valid URL").optional(),
+    productImage: z.any().optional(),
   })
   .refine(
     (data) => {
@@ -98,8 +98,7 @@ const formSchema = z
         data.unitQty !== undefined &&
         data.category !== undefined &&
         data.unitType !== undefined &&
-        data.productBrandName !== undefined &&
-        data.productImage !== undefined
+        data.productBrandName !== undefined
       );
     },
     {
@@ -143,59 +142,12 @@ export const action: ActionFunction = async ({ request }) => {
   if (!user) {
     return redirect("/login");
   }
-  const uploadHandler: UploadHandler = async ({
-    name,
-    filename,
-    data,
-    contentType,
-  }) => {
-    if (name == "proofFiles") {
-      const chunks = [];
-      for await (const chunk of data) {
-        chunks.push(chunk);
-      }
-      const buffer = Buffer.concat(chunks);
 
-      // Perform additional checks here (file size, type, etc.)
-      if (buffer.length > 3 * 1024 * 1024) {
-        // 3MB limit
-        throw new Error("Files too large");
-      }
-
-      if (!["image/jpeg", "image/png", "image/gif"].includes(contentType)) {
-        throw new Error("Invalid file type for Proof Images");
-      }
-      return await uploadToR2(`scan-${filename}`, buffer, "proofs");
-    } else if (name == "prooductImage") {
-      const chunks = [];
-      for await (const chunk of data) {
-        chunks.push(chunk);
-      }
-      const buffer = Buffer.concat(chunks);
-
-      // Perform additional checks here (file size, type, etc.)
-      if (buffer.length > 3 * 1024 * 1024) {
-        // 3MB limit
-        throw new Error("Files too large");
-      }
-
-      if (!["image/jpeg", "image/png", "image/gif"].includes(contentType)) {
-        throw new Error("Invalid file type for Product Image");
-      }
-
-      return await uploadToR2(`plu-${filename}`, buffer, "products");
-    } else {
-      return undefined;
-    }
-  };
-
-  const formData = await unstable_parseMultipartFormData(
-    request,
-    uploadHandler
-  );
+  const formData = await request.formData();
   const rawFormData = Object.fromEntries(formData);
 
   try {
+    // Validate form data first, without processing files
     const validatedData = formSchema.parse({
       ...rawFormData,
       price: parseFloat(rawFormData.price as string),
@@ -207,21 +159,71 @@ export const action: ActionFunction = async ({ request }) => {
       productImage: formData.get("productImage"),
     });
 
-    let productId = parseInt(validatedData.productId ?? "0");
+    // If validation passes, proceed with file uploads
+    const uploadHandler: UploadHandler = async ({
+      name,
+      filename,
+      data,
+      contentType,
+    }) => {
+      if (name === "proofFiles" || name === "productImage") {
+        const chunks = [];
+        for await (const chunk of data) {
+          chunks.push(chunk);
+        }
+        const buffer = Buffer.concat(chunks);
+
+        // Perform additional checks here (file size, type, etc.)
+        if (buffer.length > 3 * 1024 * 1024) {
+          // 3MB limit
+          throw new Error(`File ${filename} is too large`);
+        }
+
+        if (
+          !["image/jpeg", "image/png", "image/gif", "image/webp"].includes(
+            contentType
+          )
+        ) {
+          throw new Error(`Invalid file type for ${filename}`);
+        }
+
+        const uploadPath = name === "proofFiles" ? "proofs" : "plu";
+        return await uploadToR2(
+          `${uploadPath}/${Date.now()}-${filename}`,
+          buffer
+        );
+      }
+      return undefined;
+    };
+
+    // Process multipart form data with validated uploadHandler
+    const processedFormData = await unstable_parseMultipartFormData(
+      request,
+      uploadHandler
+    );
+
+    // Re-validate data after file uploads
+    const finalValidatedData = {
+      ...validatedData,
+      proofFiles: processedFormData.getAll("proofFiles"),
+      productImage: processedFormData.getAll("productImage"),
+    };
+
+    let productId = parseInt(finalValidatedData.productId ?? "0");
 
     if (!productId) {
       // Insert new product
       const [newProduct] = await db
         .insert(products)
         .values({
-          name: validatedData.name,
-          latestPrice: validatedData.price,
-          unitPricing: validatedData.unitPricing,
-          unitQty: validatedData.unitQty,
-          category: validatedData.category,
-          unitType: validatedData.unitType,
-          productBrandName: validatedData.productBrandName,
-          image: validatedData.productImage,
+          name: finalValidatedData.name,
+          latestPrice: finalValidatedData.price,
+          unitPricing: finalValidatedData.unitPricing,
+          unitQty: finalValidatedData.unitQty,
+          category: finalValidatedData.category,
+          unitType: finalValidatedData.unitType,
+          productBrandName: finalValidatedData.productBrandName,
+          image: finalValidatedData.productImage.join(",") ?? null,
         })
         .returning({ insertedId: products.id });
 
@@ -230,7 +232,7 @@ export const action: ActionFunction = async ({ request }) => {
       // Update existing product's latest price
       await db
         .update(products)
-        .set({ latestPrice: validatedData.price })
+        .set({ latestPrice: finalValidatedData.price })
         .where(eq(products.id, productId));
     }
 
@@ -238,10 +240,10 @@ export const action: ActionFunction = async ({ request }) => {
     await db.insert(priceEntries).values({
       contributorId: user.id,
       productId: productId,
-      price: validatedData.price,
-      date: validatedData.date,
-      proof: validatedData.proofFiles?.join(",") ?? null,
-      storeLocation: validatedData.storeLocation ?? null,
+      price: finalValidatedData.price,
+      date: finalValidatedData.date,
+      proof: finalValidatedData.proofFiles?.join(",") ?? null,
+      storeLocation: finalValidatedData.storeLocation ?? null,
     });
 
     return redirect("/success");
