@@ -1,6 +1,6 @@
-import { products, productBrands, priceEntries, users } from "~/db/schema";
+import { products, productBrands } from "~/db/schema";
 import { db } from "~/db/index";
-import { eq, like, desc } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import {
   productInfoCache,
   productSearchCache,
@@ -55,7 +55,7 @@ export async function getProductBrandInfo(brandName: string) {
       .where(eq(productBrands.name, brandName))
       .limit(1);
     if (result.length > 0) {
-      await productInfoCache.set(brandName, result[0]);
+      await productBrandsCache.set(brandName, result[0]);
       return result[0];
     }
     return null;

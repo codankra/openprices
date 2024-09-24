@@ -26,7 +26,7 @@ export async function getSinglePriceEntryByID(id: string) {
 export async function getPriceEntriesByProductID(id: string) {
   return withRetry(async () => {
     try {
-      const cached: typeof priceEntries.$inferSelect | undefined =
+      const cached: (typeof priceEntries.$inferSelect)[] | undefined =
         await priceEntriesCache.get(`product-${id}`);
       if (cached) return cached;
       else {
