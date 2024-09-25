@@ -54,3 +54,27 @@ export async function getPriceEntriesByProductID(id: string) {
     }
   });
 }
+export async function addNewPriceEntry(
+  priceEntryDetails: typeof priceEntries.$inferInsert
+) {
+  const newPriceEntry = await db
+    .insert(priceEntries)
+    .values({
+      contributorId: priceEntryDetails.contributorId,
+      productId: priceEntryDetails.productId,
+      price: priceEntryDetails.price,
+      date: priceEntryDetails.date,
+      proof: priceEntryDetails.proof,
+      storeLocation: priceEntryDetails.storeLocation,
+      entrySource: priceEntryDetails.entrySource ?? "manual",
+      receiptId: priceEntryDetails.receiptId ?? null,
+    })
+    .returning();
+
+  if (newPriceEntry.length > 0) {
+    const addedPriceEntry = newPriceEntry[0];
+    await priceEntriesCache.set(addedPriceEntry.id.toString(), addedPriceEntry);
+    return addedPriceEntry.id;
+  }
+  return 0;
+}

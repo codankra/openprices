@@ -75,10 +75,20 @@ export const priceEntries = sqliteTable(
     date: text("date").notNull(),
     proof: text("proof"),
     storeLocation: text("store_location"),
+    entrySource: text("entry_source", {
+      enum: ["manual", "receipt"],
+    }).notNull(),
+    receiptId: integer("receipt_id").references(
+      () => productReceiptIdentifiers.id
+    ),
   },
   (table) => ({
     productIdIdx: index("price_entries_product_id_idx").on(table.productId),
     dateIdx: index("price_entries_date_idx").on(table.date),
+    receiptIdIdx: index("price_entries_receipt_id_idx").on(table.receiptId),
+    contributorIdx: index("price_entries_contributor_id_idx").on(
+      table.contributorId
+    ),
   })
 );
 
@@ -113,5 +123,6 @@ export const products = sqliteTable(
     productBrandNameIdx: index("product_brand_name_idx").on(
       table.productBrandName
     ),
+    productNameIdx: index("product_name_idx").on(table.name),
   })
 );

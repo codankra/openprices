@@ -82,3 +82,41 @@ export async function getProductAndBrandByID(id: string) {
     return { productInfo, brandInfo };
   }
 }
+
+export async function addNewProduct(productDetails: {
+  name: string;
+  category: string;
+  latestPrice: number;
+  unitPricing: boolean;
+  unitQty: number;
+  unitType: string;
+  productBrandName: string;
+  image?: string;
+}) {
+  const newProduct = await db
+    .insert(products)
+    .values(productDetails)
+    .returning();
+
+  if (newProduct.length > 0) {
+    const addedProduct = newProduct[0];
+    await productInfoCache.set(addedProduct.id.toString(), addedProduct);
+    return addedProduct.id;
+  }
+  return 0;
+}
+
+export async function updateProductLatestPrice(id: number, newPrice: number) {
+  const updatedProduct = await db
+    .update(products)
+    .set({ latestPrice: newPrice })
+    .where(eq(products.id, id))
+    .returning();
+
+  if (updatedProduct.length > 0) {
+    const product = updatedProduct[0];
+    await productInfoCache.set(id.toString(), product);
+    return product;
+  }
+  return null;
+}

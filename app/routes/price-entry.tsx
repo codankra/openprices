@@ -40,6 +40,8 @@ import {
   getAllProductBrands,
   getProductsBySearch,
   getProductById,
+  addNewProduct,
+  updateProductLatestPrice,
 } from "~/services/product.server";
 import { debounce } from "~/lib/utils";
 import {
@@ -50,6 +52,7 @@ import {
 } from "~/components/ui/tooltip";
 import { FaCircleInfo } from "react-icons/fa6";
 import { uploadToR2 } from "~/services/r2.server";
+import { addNewPriceEntry } from "~/services/price.server";
 
 export const meta: MetaFunction = () => {
   return [
@@ -212,39 +215,31 @@ export const action: ActionFunction = async ({ request }) => {
     let productId = parseInt(finalValidatedData.productId ?? "0");
 
     if (!productId) {
-      // Insert new product
-      const [newProduct] = await db
-        .insert(products)
-        .values({
-          name: finalValidatedData.name,
-          latestPrice: finalValidatedData.price,
-          unitPricing: finalValidatedData.unitPricing,
-          unitQty: finalValidatedData.unitQty,
-          category: finalValidatedData.category,
-          unitType: finalValidatedData.unitType,
-          productBrandName: finalValidatedData.productBrandName,
-          image: finalValidatedData.productImage.join(",") ?? null,
-        })
-        .returning({ insertedId: products.id });
+      const productDetails = {
+        name: finalValidatedData.name!,
+        latestPrice: finalValidatedData.price!,
+        unitPricing: finalValidatedData.unitPricing!,
+        unitQty: finalValidatedData.unitQty!,
+        category: finalValidatedData.category!,
+        unitType: finalValidatedData.unitType!,
+        productBrandName: finalValidatedData.productBrandName!,
+        image: validatedData.productImage,
+      };
 
-      productId = newProduct.insertedId;
+      productId = await addNewProduct(productDetails);
     } else {
       // Update existing product's latest price
-      await db
-        .update(products)
-        .set({ latestPrice: finalValidatedData.price })
-        .where(eq(products.id, productId));
+      await updateProductLatestPrice(productId, finalValidatedData.price!);
     }
-
-    // Insert new price entry
-    await db.insert(priceEntries).values({
+    const priceEntryDetails = {
       contributorId: user.id,
       productId: productId,
       price: finalValidatedData.price,
       date: finalValidatedData.date,
       proof: finalValidatedData.proofFiles?.join(",") ?? null,
       storeLocation: finalValidatedData.storeLocation ?? null,
-    });
+    }; // Insert new price entry
+    await addNewPriceEntry(priceEntryDetails);
 
     return redirect("/success");
   } catch (error: any) {
