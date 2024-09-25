@@ -11,6 +11,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.658.0",
     "@libsql/client": "^0.10.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-checkbox": "^1.1.1",
@@ -24,7 +25,6 @@
     "@remix-run/node": "^2.11.2",
     "@remix-run/react": "^2.11.2",
     "@remix-run/serve": "^2.11.2",
-    "aws-sdk": "^2.1691.0",
     "cache-manager": "^5.7.6",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

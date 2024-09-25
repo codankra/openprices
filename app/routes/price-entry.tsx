@@ -6,16 +6,11 @@ import {
   useSearchParams,
   Link,
 } from "@remix-run/react";
-import {
-  json,
-  redirect,
-  unstable_parseMultipartFormData,
-} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import type {
   ActionFunction,
   LoaderFunction,
   MetaFunction,
-  UploadHandler,
 } from "@remix-run/node";
 import { useState, useEffect } from "react";
 import { Input } from "~/components/ui/input";
@@ -30,9 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { priceEntries, products, UnitType, productBrands } from "~/db/schema";
-import { db } from "~/db/index";
-import { eq } from "drizzle-orm";
+import { products, UnitType, productBrands } from "~/db/schema";
 import { auth } from "~/services/auth.server";
 import { z } from "zod";
 import { AuthUser } from "~/services/user.server";
@@ -79,7 +72,6 @@ const formSchema = z
       .string()
       .refine((val: any) => !isNaN(Date.parse(val)), "Invalid date"),
     storeLocation: z.string().optional(),
-    proofFiles: z.array(z.any()).optional(),
     // Product Details
     productId: z.string().optional(),
     name: z.string().min(1, "Product name is required").optional(),
@@ -88,7 +80,6 @@ const formSchema = z
     unitType: z.nativeEnum(UnitType).optional(),
     category: z.string().optional(),
     productBrandName: z.string().optional(),
-    productImage: z.any().optional(),
   })
   .refine(
     (data) => {
@@ -158,90 +149,70 @@ export const action: ActionFunction = async ({ request }) => {
       unitQty: rawFormData.unitQty
         ? parseFloat(rawFormData.unitQty as string)
         : undefined,
-      proofFiles: formData.getAll("proofFiles"),
-      productImage: formData.get("productImage"),
     });
 
-    // If validation passes, proceed with file uploads
-    const uploadHandler: UploadHandler = async ({
-      name,
-      filename,
-      data,
-      contentType,
-    }) => {
-      if (name === "proofFiles" || name === "productImage") {
-        const chunks = [];
-        for await (const chunk of data) {
-          chunks.push(chunk);
+    // Step 2: Handle file uploads
+    const uploadFiles = async (files: File[], path: string) => {
+      const urls = [];
+      for (const file of files) {
+        if (file.size > 3 * 1024 * 1024) {
+          throw new Error(`File ${file.name} is too large (max 3MB)`);
         }
-        const buffer = Buffer.concat(chunks);
-
-        // Perform additional checks here (file size, type, etc.)
-        if (buffer.length > 3 * 1024 * 1024) {
-          // 3MB limit
-          throw new Error(`File ${filename} is too large`);
-        }
-
         if (
           !["image/jpeg", "image/png", "image/gif", "image/webp"].includes(
-            contentType
+            file.type
           )
         ) {
-          throw new Error(`Invalid file type for ${filename}`);
+          throw new Error(`Invalid file type for ${file.name}`);
         }
-
-        const uploadPath = name === "proofFiles" ? "proofs" : "plu";
-        return await uploadToR2(
-          `${uploadPath}/${Date.now()}-${filename}`,
-          buffer
+        const buffer = await file.arrayBuffer();
+        const url = await uploadToR2(
+          `${path}/${Date.now()}-${file.name}`,
+          Buffer.from(buffer)
         );
+        urls.push(url);
       }
-      return undefined;
+      return urls;
     };
+    const productImageFile = formData.get("productImage") as File;
+    const proofFiles = formData.getAll("proofFiles") as File[];
 
-    // Process multipart form data with validated uploadHandler
-    const processedFormData = await unstable_parseMultipartFormData(
-      request,
-      uploadHandler
-    );
+    const productImageUrl = productImageFile
+      ? (await uploadFiles([productImageFile], "plu"))[0]
+      : undefined;
+    const proofUrls =
+      proofFiles.length > 0 ? await uploadFiles(proofFiles, "proofs") : [];
 
-    // Re-validate data after file uploads
-    const finalValidatedData = {
-      ...validatedData,
-      proofFiles: processedFormData.getAll("proofFiles"),
-      productImage: processedFormData.getAll("productImage"),
-    };
-
-    let productId = parseInt(finalValidatedData.productId ?? "0");
+    let productId = parseInt(validatedData.productId ?? "0");
 
     if (!productId) {
       const productDetails = {
-        name: finalValidatedData.name!,
-        latestPrice: finalValidatedData.price!,
-        unitPricing: finalValidatedData.unitPricing!,
-        unitQty: finalValidatedData.unitQty!,
-        category: finalValidatedData.category!,
-        unitType: finalValidatedData.unitType!,
-        productBrandName: finalValidatedData.productBrandName!,
-        image: validatedData.productImage,
+        name: validatedData.name!,
+        latestPrice: validatedData.price!,
+        unitPricing: validatedData.unitPricing!,
+        unitQty: validatedData.unitQty!,
+        category: validatedData.category!,
+        unitType: validatedData.unitType!,
+        productBrandName: validatedData.productBrandName!,
+        image: productImageUrl,
       };
 
       productId = await addNewProduct(productDetails);
     } else {
       // Update existing product's latest price
-      await updateProductLatestPrice(productId, finalValidatedData.price!);
+      await updateProductLatestPrice(productId, validatedData.price!);
     }
     const priceEntryDetails = {
       contributorId: user.id,
       productId: productId,
-      price: finalValidatedData.price,
-      date: finalValidatedData.date,
-      proof: finalValidatedData.proofFiles?.join(",") ?? null,
-      storeLocation: finalValidatedData.storeLocation ?? null,
+      price: validatedData.price,
+      date: validatedData.date,
+      proof: proofUrls.join(","),
+      storeLocation: validatedData.storeLocation ?? null,
     }; // Insert new price entry
     await addNewPriceEntry(priceEntryDetails);
 
-    return redirect("/success");
+    return redirect(`/product/${productId}`);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return json({ errors: error.errors }, { status: 400 });
@@ -280,6 +251,7 @@ export default function NewPricePoint() {
     setSearchParams((prev) => {
       const newParams = new URLSearchParams(prev);
       newParams.delete("search");
+      newParams.delete("existingProductId");
       return newParams;
     });
   };
@@ -391,6 +363,7 @@ export default function NewPricePoint() {
                   setIsNewProduct(false);
                   clearSearch();
                 }}
+                type="button"
                 className="absolute top-2 right-2 text-stone-500 hover:text-stone-700"
               >
                 <svg

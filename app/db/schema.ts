@@ -77,7 +77,9 @@ export const priceEntries = sqliteTable(
     storeLocation: text("store_location"),
     entrySource: text("entry_source", {
       enum: ["manual", "receipt"],
-    }).notNull(),
+    })
+      .notNull()
+      .default("manual"),
     receiptId: integer("receipt_id").references(
       () => productReceiptIdentifiers.id
     ),
