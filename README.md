@@ -4,7 +4,7 @@
 
 Open Prices is a crowdsourced platform for tracking real-world prices of everyday products. The goal is to provide a more accurate, transparent, and uncorruptible record of current and historical prices. Right now the focus is grocery (and soon restaurant) prices.
 
-This is a new project under early development, being built in public, to the point I'm embarrassed about being vulnerable by showing it. Check out the live site at [openpricedata.com](https://openpricedata.com) (also [openpricehistory.com](https://www.openpricehistory.com)) Tell me which site name you like better in the poll in Issues 📝
+This is a new project under early development, being built in public, to the point I'm embarrassed about being vulnerable by showing it. Check out the live site at [openpricedata.com](https://openpricedata.com) (also [openpricehistory.com](https://www.openpricehistory.com)) Tell me which site name you like better in the [poll in Issues 📝](https://github.com/codankra/openprices/issues/1)
 
 ## 🛠 Built With
 
@@ -21,7 +21,8 @@ Hosted on [Fly.io](https://fly.io/)
 ### Prerequisites
 
 - Node.js v18 or later
-- npm or yarn
+- npm, yarn, or pnpm
+- Set up your own environment variables for Cloudflare, Google/Github Auth, and Turso
 
 ### Installation
 
