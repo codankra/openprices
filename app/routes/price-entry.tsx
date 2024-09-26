@@ -320,6 +320,7 @@ export default function NewPricePoint() {
               <div className="flex items-center space-x-4 mt-4">
                 <p className="text-stone-600">Or</p>{" "}
                 <Button
+                  type="button"
                   onClick={() => setIsNewProduct(true)}
                   className="bg-stone-600 hover:bg-stone-700 text-white"
                 >
@@ -417,6 +418,7 @@ export default function NewPricePoint() {
 
               <div className="flex flex-col justify-center space-y-4 w-full md:w-1/2">
                 <Button
+                  type="button"
                   onClick={() => setIsNewProduct(false)}
                   className="bg-stone-600 hover:bg-stone-700 text-white"
                 >
@@ -545,7 +547,7 @@ export default function NewPricePoint() {
                     Is it Priced by Weight/Volume?{" "}
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger>
+                        <TooltipTrigger type="button">
                           <FaCircleInfo />
                         </TooltipTrigger>
                         <TooltipContent>
@@ -617,7 +619,7 @@ export default function NewPricePoint() {
                   <span>Proof (Upload Images) </span>
                   <TooltipProvider>
                     <Tooltip>
-                      <TooltipTrigger>
+                      <TooltipTrigger type="button">
                         <FaCircleInfo />
                       </TooltipTrigger>
                       <TooltipContent>
