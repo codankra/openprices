@@ -73,8 +73,22 @@ export async function addNewPriceEntry(
 
   if (newPriceEntry.length > 0) {
     const addedPriceEntry = newPriceEntry[0];
-    await priceEntriesCache.set(addedPriceEntry.id.toString(), addedPriceEntry);
-    return addedPriceEntry.id;
+    const productId = addedPriceEntry.productId?.toString();
+    if (!!productId) {
+      const cached: (typeof priceEntries.$inferSelect)[] | undefined =
+        await priceEntriesCache.get(`product-${productId}`);
+
+      if (cached) {
+        await priceEntriesCache.set(`product-${productId}`, [
+          addedPriceEntry,
+          ...cached,
+        ]);
+      } else {
+        await priceEntriesCache.set(`product-${productId}`, [addedPriceEntry]);
+      }
+    }
+
+    return addedPriceEntry.id.toString();
   }
   return 0;
 }

@@ -1,7 +1,7 @@
 import { PiCaretDoubleDown, PiCaretDoubleUp } from "react-icons/pi";
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { redirect, defer } from "@remix-run/node";
-import { Await, useLoaderData } from "@remix-run/react";
+import { Await, Link, useLoaderData } from "@remix-run/react";
 import { Suspense, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
 } from "~/components/ui/collapsible";
 import { getPriceEntriesByProductID } from "~/services/price.server";
 import { getProductAndBrandByID } from "~/services/product.server";
+import PriceChart from "~/components/custom/PriceEntryChart";
 type LoaderData = {
   product: Awaited<ReturnType<typeof getProductAndBrandByID>>;
   priceEntries: Awaited<ReturnType<typeof getPriceEntriesByProductID>>;
@@ -51,8 +52,23 @@ export default function ProductPage() {
         p.unitType
       })`;
   return (
-    <div className="font-sans p-4 bg-ogprime min-h-screen">
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6 mb-2">
+    <div className="font-sans bg-ogprime min-h-screen">
+      <header className="bg-stone-300 text-stone-900 self-start py-4 mb-4 border-stone-800 border-b-2 flex justify-between">
+        <div className="flex items-center container mx-auto hover:text-stone-700 ">
+          <Link to="/" className="flex items-center space-x-4">
+            <img
+              src="/favicon.ico"
+              width={40}
+              height={40}
+              alt="Open Price Data Logo"
+              className="rounded"
+            />
+            <h1 className="text-2xl font-bold">Open Price Data</h1>
+          </Link>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6 mb-4">
         <div className="flex items-center">
           {product?.productInfo.image && (
             <img
@@ -153,11 +169,19 @@ export default function ProductPage() {
         </Collapsible>
       </div>
 
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-2xl font-bold mb-4 text-stone-900">
-          Price History
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="max-w-4xl mx-auto pb-4">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-stone-900">Price History</h2>
+          <Button asChild className="bg-ogfore hover:bg-ogfore-hover">
+            <Link
+              to={`/price-entry?existingProductId=${product?.productInfo.id}`}
+              className="text-lg"
+            >
+              Add Price
+            </Link>
+          </Button>
+        </div>
+        <div className="flex flex-col ">
           <Suspense
             fallback={
               <div className="text-stone-700">Loading price entries...</div>
@@ -167,32 +191,37 @@ export default function ProductPage() {
               resolve={priceEntries}
               errorElement={<div>Error loading price entries</div>}
             >
-              {(resolvedPriceEntries) => {
-                if (
-                  !resolvedPriceEntries ||
-                  resolvedPriceEntries.length === 0
-                ) {
-                  return (
+              {(resolvedPriceEntries) => (
+                <>
+                  {(!resolvedPriceEntries ||
+                    resolvedPriceEntries.length === 0) && (
                     <div className="text-stone-700">No price entries found</div>
-                  );
-                }
-                return resolvedPriceEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="bg-white rounded-lg shadow-md p-4"
-                  >
-                    <p className="text-xl font-bold mb-2 text-stone-900">
-                      ${entry.price.toFixed(2)}
-                    </p>
-                    <p className="text-stone-600">
-                      Date: {new Date(entry.date).toLocaleDateString()}
-                    </p>
-                    <p className="text-stone-600">
-                      Store: {entry.storeLocation}
-                    </p>
-                  </div>
-                ));
-              }}
+                  )}
+                  {resolvedPriceEntries.length > 1 && (
+                    <PriceChart priceEntries={resolvedPriceEntries} />
+                  )}
+                  {resolvedPriceEntries.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {resolvedPriceEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="bg-white rounded-lg shadow-md p-4"
+                        >
+                          <p className="text-xl font-bold mb-2 text-stone-900">
+                            ${entry.price.toFixed(2)}
+                          </p>
+                          <p className="text-stone-600">
+                            Date: {new Date(entry.date).toLocaleDateString()}
+                          </p>
+                          <p className="text-stone-600">
+                            Store: {entry.storeLocation}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </Await>
           </Suspense>
         </div>
