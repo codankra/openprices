@@ -217,12 +217,13 @@ export const action: ActionFunction = async ({ request }) => {
     if (error instanceof z.ZodError) {
       return json({ errors: error.errors }, { status: 400 });
     }
-    return json({ errors: [{ message: error.message }] }, { status: 400 });
+    return json({ otherErrors: [error.message] }, { status: 400 });
   }
 };
 
 type ActionData = {
   errors?: z.ZodIssue[];
+  otherErrors?: string[];
 };
 
 export default function NewPricePoint() {
@@ -659,6 +660,16 @@ export default function NewPricePoint() {
                 <li key={error.path.join(".")}>
                   {error.path.join(".")}: {error.message}
                 </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {actionData?.otherErrors && (
+          <div className="mt-4 text-red-500">
+            <h3 className="font-semibold">Other Errors:</h3>
+            <ul>
+              {actionData.otherErrors.map((error, index) => (
+                <li key={index}>{error}</li>
               ))}
             </ul>
           </div>
