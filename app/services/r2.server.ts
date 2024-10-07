@@ -15,12 +15,14 @@ const s3Client = new S3({
   // Cloudflare R2 doesn't use regions, but this is required by the SDK
   region: "auto",
 });
-
+export function createR2URL(key: string): string {
+  return `${CDN_HOST}/${key}`;
+}
 export async function uploadToR2(
   filename: string,
   fileData: Buffer
 ): Promise<string> {
-  const key = `${filename}`;
+  const key = filename;
 
   try {
     await s3Client.putObject({
@@ -30,7 +32,7 @@ export async function uploadToR2(
       ContentType: getContentType(filename),
     });
     // Supply the function caller with the new resource URL
-    return `${CDN_HOST}/${key}`;
+    return createR2URL(key);
   } catch (error) {
     console.error("Error uploading to R2:", error);
     throw new Error(`Failed to upload to R2: ${error}`);
