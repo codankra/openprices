@@ -101,7 +101,11 @@ export const productReceiptIdentifiers = sqliteTable(
     productId: integer("product_id").references(() => products.id),
     storeBrandName: text("store_brand_name").references(() => storeBrands.name),
     receiptIdentifier: text("receipt_identifier").notNull(),
-  }
+  },
+  (table) => ({
+    productIdIdx: index("product_receipt_id_idx").on(table.productId),
+    storeBrandsIdx: index("store_brands_idx").on(table.storeBrandName),
+  })
 );
 
 export const products = sqliteTable(
@@ -126,5 +130,73 @@ export const products = sqliteTable(
       table.productBrandName
     ),
     productNameIdx: index("product_name_idx").on(table.name),
+  })
+);
+
+export const receipts = sqliteTable(
+  "Receipts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    storeBrandName: text("store_brand_name").references(() => storeBrands.name),
+    storeLocation: text("store_location"),
+    purchaseDate: text("purchase_date").notNull(),
+    totalAmount: real("total_amount"),
+    taxAmount: real("tax_amount"),
+    imageUrl: text("image_url").notNull(), // Cloudflare URL
+    rawOcrText: text("raw_ocr_text"), // Full OCR text for reference
+    status: text("status", {
+      enum: ["pending", "processed", "completed", "error"],
+    })
+      .notNull()
+      .default("pending"),
+    processingErrors: text("processing_errors"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    userIdIdx: index("receipts_user_id_idx").on(table.userId),
+    dateIdx: index("receipts_date_idx").on(table.purchaseDate),
+    statusIdx: index("receipts_status_idx").on(table.status),
+    storeBrandNameIdx: index("receipts_store_brand_name_idx").on(
+      table.storeBrandName
+    ),
+  })
+);
+
+export const draftItems = sqliteTable(
+  "DraftItems",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    receiptId: integer("receipt_id")
+      .notNull()
+      .references(() => receipts.id),
+    receiptText: text("receipt_text").notNull(), // Original text from receipt
+    price: real("price").notNull(),
+    unitQuantity: real("unit_quantity"),
+    unitPrice: real("unit_price"),
+    status: text("status", {
+      enum: ["pending", "matched", "created", "ignored"],
+    })
+      .notNull()
+      .default("pending"),
+    confidence: real("confidence"), // OCR confidence score
+    notes: text("notes"), // For user annotations
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    receiptIdIdx: index("draft_items_receipt_id_idx").on(table.receiptId),
+    statusIdx: index("draft_items_status_idx").on(table.status),
   })
 );
