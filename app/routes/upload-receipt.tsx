@@ -11,6 +11,7 @@ import { Upload, X, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { createR2URL, uploadToR2 } from "~/services/r2.server";
 import { detectReceiptText } from "~/services/vision.server";
+import { processReceiptItems } from "~/services/receipt.server";
 
 interface UploadState {
   preview: string | null;
@@ -34,6 +35,8 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export const action: ActionFunction = async ({ request }) => {
+  const user = await auth.isAuthenticated(request);
+  if (!user) return redirect("/login");
   const formData = await request.formData();
   const receipt = formData.get("receipt");
 
@@ -58,8 +61,25 @@ export const action: ActionFunction = async ({ request }) => {
     const imageBuffer = Buffer.from(await receipt.arrayBuffer());
     const cloudflareResponse = uploadToR2(receiptURL, imageBuffer);
     const receiptText = await detectReceiptText(imageBuffer);
+
     console.log(receiptText);
-    await Promise.all([cloudflareResponse]);
+    const receiptInfo = {
+      imageUrl: receiptURL,
+      ocrResult: receiptText.rawText,
+      storeBrandName: receiptText.storeInfo.name,
+      storeLocation: receiptText.storeInfo.location,
+      purchaseDate: receiptText.storeInfo.date,
+      totalAmount: receiptText.total ?? undefined,
+    };
+    const receiptItems = receiptText.items.map((item) => {
+      return { receiptText: item.name, price: item.price, receiptId: 0 };
+    });
+    const receiptProcessingResponse = processReceiptItems(
+      receiptItems,
+      receiptInfo,
+      user.id
+    );
+    await Promise.all([cloudflareResponse, receiptProcessingResponse]);
 
     return json({ success: true, url: cloudflareResponse });
   } catch (error) {

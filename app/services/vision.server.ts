@@ -1,11 +1,9 @@
-// app/utils/receiptParser.server.js
-import { ImageAnnotatorClient, protos } from "@google-cloud/vision";
-import invariant from "tiny-invariant";
+import { ImageAnnotatorClient } from "@google-cloud/vision";
 
 interface StoreInfo {
   name: string;
   location: string;
-  date?: string | null;
+  date: string;
 }
 
 interface ReceiptItem {
@@ -22,19 +20,17 @@ interface ParsedReceipt {
 
 const createVisionClient = () => {
   if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
-    // Decode the base64 credentials
     const credentials = JSON.parse(
       Buffer.from(process.env.GOOGLE_CLOUD_CREDENTIALS, "base64").toString()
     );
-
     return new ImageAnnotatorClient({
       credentials,
     });
   }
-
   // When running on Google Cloud Platform, this will use ADC automatically
   return new ImageAnnotatorClient();
 };
+
 // Common patterns for finding store information
 const STORE_PATTERNS: {
   storeName: RegExp[];
@@ -106,9 +102,10 @@ const parseReceiptText = (text: string): ParsedReceipt => {
       ?.trim() || "";
 
   // Find date
-  const date = lines
+  let date = lines
     .find((line) => STORE_PATTERNS.date.some((pattern) => pattern.test(line)))
     ?.trim();
+  if (!date) date = new Date().toISOString();
 
   // Extract items and prices
   const items: ReceiptItem[] = [];

@@ -1,36 +1,54 @@
 import { db } from "~/db/index";
-import { 
-  products, 
-  priceEntries, 
+import {
+  products,
+  priceEntries,
   productReceiptIdentifiers,
-  draftItems 
+  draftItems,
+  receipts,
 } from "~/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
-import { SQLiteTransaction } from "drizzle-orm/sqlite-core";
 
-// Type for receipt items
-interface ReceiptItem {
-  identifier: string;
-  price: number;
-  date: string;
-  storeLocation: string;
+interface ReceiptContext {
+  imageUrl: string;
+  ocrResult: string;
   storeBrandName: string;
+  storeLocation: string;
+  purchaseDate: string;
+  totalAmount?: number;
+  taxAmount?: number;
 }
 
 interface ProcessedResults {
-  processed: number;
+  receiptId: number;
+  priceEntriesCreated: number;
   matchedUnitPriced: number;
   unmatched: number;
 }
 
 export async function processReceiptItems(
-  items: ReceiptItem[],
+  items: (typeof draftItems.$inferInsert)[],
+  receiptInfo: ReceiptContext,
   contributorId: string
 ): Promise<ProcessedResults> {
   return await db.transaction(async (tx) => {
+    // 1. Create the receipt record
+    const [receipt] = await tx
+      .insert(receipts)
+      .values({
+        userId: contributorId,
+        imageUrl: receiptInfo.imageUrl,
+        rawOcrText: receiptInfo.ocrResult,
+        storeBrandName: receiptInfo.storeBrandName,
+        storeLocation: receiptInfo.storeLocation,
+        purchaseDate: receiptInfo.purchaseDate,
+        totalAmount: receiptInfo.totalAmount,
+        status: "processed",
+      })
+      .returning({ id: receipts.id });
+
     // Get all unique identifiers from the receipt
-    const identifiers = [...new Set(items.map(item => item.identifier))];
-    
+    const identifiers = [...new Set(items.map((item) => item.receiptText))];
+
     // Batch query to get all matching product identifiers
     const matchedIdentifiers = await tx
       .select({
@@ -41,13 +59,16 @@ export async function processReceiptItems(
       .where(
         and(
           inArray(productReceiptIdentifiers.receiptIdentifier, identifiers),
-          eq(productReceiptIdentifiers.storeBrandName, items[0].storeBrandName)
+          eq(
+            productReceiptIdentifiers.storeBrandName,
+            receiptInfo.storeBrandName
+          )
         )
       );
 
     // Create lookup map for quick access
     const identifierToProductId = new Map(
-      matchedIdentifiers.map(m => [m.receiptIdentifier, m.productId])
+      matchedIdentifiers.map((m) => [m.receiptIdentifier, m.productId])
     );
 
     // Get product details for all matched products in one query
@@ -57,41 +78,43 @@ export async function processReceiptItems(
       .where(
         inArray(
           products.id,
-          matchedIdentifiers.map(m => m.productId)
+          matchedIdentifiers
+            .filter((m) => m.productId !== null)
+            .map((m) => m.productId!)
         )
       );
 
     // Create lookup map for product details
-    const productDetails = new Map(
-      matchedProducts.map(p => [p.id, p])
-    );
+    const productDetails = new Map(matchedProducts.map((p) => [p.id, p]));
 
     const results: ProcessedResults = {
-      processed: 0,
+      receiptId: receipt.id,
+      priceEntriesCreated: 0,
       matchedUnitPriced: 0,
-      unmatched: 0
+      unmatched: 0,
     };
 
     // Process items in batches
     const batchSize = 100;
     for (let i = 0; i < items.length; i += batchSize) {
       const batch = items.slice(i, i + batchSize);
-      
-      const priceEntriesToInsert = [];
-      const draftItemsToInsert = [];
+
+      const priceEntriesToInsert: (typeof priceEntries.$inferInsert)[] = [];
+      const draftItemsToInsert: (typeof draftItems.$inferInsert)[] = [];
 
       for (const item of batch) {
-        const productId = identifierToProductId.get(item.identifier);
-        
+        const productId = identifierToProductId.get(item.receiptText);
+
         if (!productId) {
           // No matching product found - add to draft items as pending
           draftItemsToInsert.push({
-            identifier: item.identifier,
+            receiptId: receipt.id,
+            receiptText: item.receiptText,
             price: item.price,
-            date: item.date,
-            storeLocation: item.storeLocation,
-            storeBrandName: item.storeBrandName,
-            status: 'pending'
+            unitQuantity: item.unitQuantity,
+            unitPrice: item.unitPrice,
+            status: "pending",
+            confidence: item.confidence,
           });
           results.unmatched++;
           continue;
@@ -103,13 +126,14 @@ export async function processReceiptItems(
         if (product.unitPricing) {
           // Product is unit priced - add to draft items as matched
           draftItemsToInsert.push({
-            identifier: item.identifier,
+            receiptId: receipt.id,
+            receiptText: item.receiptText,
             price: item.price,
-            date: item.date,
-            storeLocation: item.storeLocation,
-            storeBrandName: item.storeBrandName,
-            status: 'matched',
-            productId: productId
+            unitQuantity: item.unitQuantity,
+            unitPrice: item.unitPrice,
+            status: "matched",
+            confidence: item.confidence,
+            notes: `Customer bought a specific amount of this item.`,
           });
           results.matchedUnitPriced++;
         } else {
@@ -117,12 +141,26 @@ export async function processReceiptItems(
           priceEntriesToInsert.push({
             productId: productId,
             price: item.price,
-            date: item.date,
-            storeLocation: item.storeLocation,
-            contributorId: contributorId,
-            entrySource: 'receipt'
+            date: receiptInfo.purchaseDate,
+            storeLocation: receiptInfo.storeLocation,
+            contributorId,
+            entrySource: "receipt",
+            receiptId: receipt.id,
+            proof: receiptInfo.imageUrl,
           });
-          results.processed++;
+          // Also add completed draft item
+          draftItemsToInsert.push({
+            receiptId: receipt.id,
+            receiptText: item.receiptText,
+            price: item.price,
+            unitQuantity: item.unitQuantity,
+            unitPrice: item.unitPrice,
+            status: "completed",
+            confidence: item.confidence,
+            notes: `Product and price Auto-Detected`,
+          });
+
+          results.priceEntriesCreated++;
         }
       }
 
@@ -140,3 +178,5 @@ export async function processReceiptItems(
     return results;
   });
 }
+// TODO: for all items, if their id is in the productReceiptIdentifiers table, then get the associated product. If product is not unitpriced, then we'll insert the priceEntry and mark the item complete. If unitpriced, we'll need to mark the item matched, but confirm quantity before inserting the priceEntry.
+// all other items are drafts. what I want to do is get the couple closest productReceiptIdentifiers that exist and suggest them. if the product does not exist, the user will need to create the product, and we'll then do 4 things: add the product, add the price entry, add the productReceiptIdentifier, and mark the draftItem as complete.

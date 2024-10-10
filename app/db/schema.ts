@@ -182,7 +182,7 @@ export const draftItems = sqliteTable(
     unitQuantity: real("unit_quantity"),
     unitPrice: real("unit_price"),
     status: text("status", {
-      enum: ["pending", "matched", "created", "ignored"],
+      enum: ["pending", "matched", "completed", "ignored"],
     })
       .notNull()
       .default("pending"),
