@@ -57,10 +57,18 @@ export const action: ActionFunction = async ({ request }) => {
   }
 
   try {
+    console.log("Starting receipt processing");
     const receiptURL = createR2URL(`receipts/${Date.now()}-${receipt.name}`);
+    console.log("Receipt URL created:", receiptURL);
+
     const imageBuffer = Buffer.from(await receipt.arrayBuffer());
+    console.log("Image buffer created");
+
     const cloudflareResponse = uploadToR2(receiptURL, imageBuffer);
+    console.log("Upload to R2 initiated");
+
     const receiptText = await detectReceiptText(imageBuffer);
+    console.log("Receipt text detected:", receiptText);
 
     console.log(receiptText);
     const receiptInfo = {
@@ -71,17 +79,30 @@ export const action: ActionFunction = async ({ request }) => {
       purchaseDate: receiptText.storeInfo.date,
       totalAmount: receiptText.total ?? undefined,
     };
+    console.log("Receipt info created:", receiptInfo);
+
     const receiptItems = receiptText.items.map((item) => {
       return { receiptText: item.name, price: item.price, receiptId: 0 };
     });
-    const receiptProcessingResponse = processReceiptItems(
+    console.log("Receipt items mapped:", receiptItems);
+
+    const receiptProcessingResponse = await processReceiptItems(
       receiptItems,
       receiptInfo,
       user.id
     );
-    await Promise.all([cloudflareResponse, receiptProcessingResponse]);
+    console.log("Receipt items processed:", receiptProcessingResponse);
 
-    return json({ success: true, url: cloudflareResponse });
+    const [cloudflareConf] = await Promise.all([cloudflareResponse]);
+    console.log("Cloudflare upload completed:", cloudflareConf);
+
+    console.log("Preparing response");
+    return json({
+      success: true,
+      url: receiptURL,
+      process: receiptProcessingResponse,
+      cloudflareResponse: cloudflareConf,
+    });
   } catch (error) {
     return json({ error: "Failed to process receipt", status: 500 });
   }

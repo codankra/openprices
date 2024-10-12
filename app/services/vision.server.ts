@@ -1,4 +1,5 @@
 import { ImageAnnotatorClient } from "@google-cloud/vision";
+import { determineReceiptBrand } from "./receipt.server";
 
 interface StoreInfo {
   name: string;
@@ -84,14 +85,16 @@ const cleanItemName = (name: string): string => {
 
 const parseReceiptText = (text: string): ParsedReceipt => {
   const lines = text.split("\n").map((line) => line.trim());
-
-  // Find store information
-  const storeName =
-    lines
-      .find((line) =>
-        STORE_PATTERNS.storeName.some((pattern) => pattern.test(line))
-      )
-      ?.trim() || "Unknown Store";
+  const storeName = determineReceiptBrand(lines[0].trim());
+  if (storeName) {
+    // parseReceipt(storeName) // TODO: specific parsing for each receipt type!
+    console.log("Detected Receipt from supported store ", storeName);
+  } else {
+    let msg =
+      "Error Determining Store: Could not determine store, or processing receipts from this store is not yet supported.";
+    console.error(msg);
+    throw new Error(msg);
+  }
 
   // Find address
   const address =
