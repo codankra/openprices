@@ -36,21 +36,11 @@ export function determineReceiptBrand(header: string) {
 
 export function determineReceiptLocation(
   storeBrandName: string,
-  storeAddress: string,
-  storeNumber: string
+  storeNumber: string,
+  storeAddress: string
 ) {
   // At the moment of writing, all the app expects is a descriptive string.
-  return `${storeBrandName} ${storeNumber} ${storeAddress}`;
-}
-
-interface ReceiptContext {
-  imageUrl: string;
-  ocrResult: string;
-  storeBrandName: string;
-  storeLocation: string;
-  purchaseDate: string;
-  totalAmount?: number;
-  taxAmount?: number;
+  return `${storeBrandName} ${storeNumber} - ${storeAddress}`;
 }
 
 interface ProcessedResults {
@@ -62,8 +52,7 @@ interface ProcessedResults {
 
 export async function processReceiptItems(
   items: (typeof draftItems.$inferInsert)[],
-  receiptInfo: ReceiptContext,
-  contributorId: string
+  receiptInfo: typeof receipts.$inferInsert
 ): Promise<ProcessedResults> {
   console.log("Starting processReceiptItems");
   return await db.transaction(async (tx) => {
@@ -75,9 +64,9 @@ export async function processReceiptItems(
       const [receipt] = await tx
         .insert(receipts)
         .values({
-          userId: contributorId,
+          userId: receiptInfo.userId,
           imageUrl: receiptInfo.imageUrl,
-          rawOcrText: receiptInfo.ocrResult,
+          rawOcrText: receiptInfo.rawOcrText,
           storeBrandName: receiptInfo.storeBrandName,
           storeLocation: receiptInfo.storeLocation,
           purchaseDate: receiptInfo.purchaseDate,
@@ -103,7 +92,7 @@ export async function processReceiptItems(
             inArray(productReceiptIdentifiers.receiptIdentifier, identifiers),
             eq(
               productReceiptIdentifiers.storeBrandName,
-              receiptInfo.storeBrandName
+              receiptInfo.storeBrandName!
             )
           )
         );
@@ -200,7 +189,7 @@ export async function processReceiptItems(
                 price: item.price,
                 date: receiptInfo.purchaseDate,
                 storeLocation: receiptInfo.storeLocation,
-                contributorId,
+                contributorId: receiptInfo.userId,
                 entrySource: "receipt",
                 receiptId: receipt.id,
                 proof: receiptInfo.imageUrl,
@@ -255,6 +244,5 @@ export async function processReceiptItems(
     }
   });
 }
-console.log("Exiting processReceiptItems");
 // TODO: for all items, if their id is in the productReceiptIdentifiers table, then get the associated product. If product is not unitpriced, then we'll insert the priceEntry and mark the item complete. If unitpriced, we'll need to mark the item matched, but confirm quantity before inserting the priceEntry.
 // all other items are drafts. what I want to do is get the couple closest productReceiptIdentifiers that exist and suggest them. if the product does not exist, the user will need to create the product, and we'll then do 4 things: add the product, add the price entry, add the productReceiptIdentifier, and mark the draftItem as complete.

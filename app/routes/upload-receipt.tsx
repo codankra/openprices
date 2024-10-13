@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { createR2URL, uploadToR2 } from "~/services/r2.server";
 import { detectReceiptText } from "~/services/vision.server";
 import { processReceiptItems } from "~/services/receipt.server";
+import { receipts } from "~/db/schema";
 
 interface UploadState {
   preview: string | null;
@@ -68,29 +69,25 @@ export const action: ActionFunction = async ({ request }) => {
     const cloudflareResponse = uploadToR2(receiptFilename, imageBuffer);
     console.log("Upload to R2 initiated");
 
-    const receiptText = await detectReceiptText(imageBuffer);
-    console.log("Receipt text detected:", receiptText);
+    const parsedReceipt = await detectReceiptText(imageBuffer);
+    console.log("Receipt text detected:", parsedReceipt);
 
-    console.log(receiptText);
-    const receiptInfo = {
+    console.log(parsedReceipt);
+    const receiptInfo: typeof receipts.$inferInsert = {
       imageUrl: receiptURL,
-      ocrResult: receiptText.rawText,
-      storeBrandName: receiptText.storeInfo.name,
-      storeLocation: receiptText.storeInfo.location,
-      purchaseDate: receiptText.storeInfo.date,
-      totalAmount: receiptText.total ?? undefined,
+      userId: user.id,
+      ...parsedReceipt,
     };
     console.log("Receipt info created:", receiptInfo);
 
-    const receiptItems = receiptText.items.map((item) => {
-      return { receiptText: item.name, price: item.price, receiptId: 0 };
+    const receiptItems = parsedReceipt.items.map((item) => {
+      return { receiptId: 0, ...item, receiptText: item.name };
     });
     console.log("Receipt items mapped:", receiptItems);
 
     const receiptProcessingResponse = await processReceiptItems(
       receiptItems,
-      receiptInfo,
-      user.id
+      receiptInfo
     );
     console.log("Receipt items processed:", receiptProcessingResponse);
 

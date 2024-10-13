@@ -1,23 +1,24 @@
 import { ImageAnnotatorClient } from "@google-cloud/vision";
-import { determineReceiptBrand } from "./receipt.server";
-
-interface StoreInfo {
-  name: string;
-  location: string;
-  date: string;
-}
-
-interface ReceiptItem {
+import {
+  determineReceiptBrand,
+  determineReceiptLocation,
+} from "./receipt.server";
+import { receipts } from "~/db/schema";
+import { parseTraderJoesReceipt } from "~/lib/parsers/tj";
+type ReceiptItem = {
   name: string;
   price: number;
-}
+  unitQuantity: number;
+  unitPrice?: number;
+  confidence: number;
+};
 
-interface ParsedReceipt {
-  storeInfo: StoreInfo;
+type ParsedReceipt = Omit<
+  typeof receipts.$inferInsert,
+  "userId" | "imageUrl"
+> & {
   items: ReceiptItem[];
-  total: number | null;
-  rawText: string;
-}
+};
 
 const createVisionClient = () => {
   if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
@@ -32,142 +33,41 @@ const createVisionClient = () => {
   return new ImageAnnotatorClient();
 };
 
-// Common patterns for finding store information
-const STORE_PATTERNS: {
-  storeName: RegExp[];
-  address: RegExp[];
-  total: RegExp[];
-  date: RegExp[];
-} = {
-  storeName: [
-    /TRADER\s*JOE'?S/i,
-    /WHOLE\s*FOODS/i,
-    /H-E-B/i,
-    /WALMART/i,
-    /TARGET/i,
-    // Add more store patterns as needed
-  ],
-  address: [
-    /(\d+)\s+([^,]+),?\s*([A-Za-z]+)\s*,\s*([A-Z]{2})\s*(\d{5})/i, // Standard US address
-    /(\d+[A-Za-z\s]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln))/i, // Street address
-  ],
-  total: [
-    /total\s*\$?\s*(\d+\.\d{2})/i,
-    /amount\s*\$?\s*(\d+\.\d{2})/i,
-    /balance\s*\$?\s*(\d+\.\d{2})/i,
-  ],
-  date: [
-    /(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})/,
-    /(\d{4})[-/](\d{1,2})[-/](\d{1,2})/,
-  ],
-};
-
-const extractPrice = (text: string): number | null => {
-  const priceMatch = text.match(/\$?\s*(\d+\.\d{2})/);
-  return priceMatch ? parseFloat(priceMatch[1]) : null;
-};
-
-const findPattern = (text: string, patterns: RegExp[]): string | null => {
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match) return match[0];
-  }
-  return null;
-};
-
-const cleanItemName = (name: string): string => {
-  return name
-    .replace(/\$\s*\d+\.\d{2}/, "") // Remove price
-    .replace(/^\d+\s*@\s*\d+\.\d{2}/, "") // Remove quantity pricing
-    .replace(/\s{2,}/g, " ") // Remove extra spaces
-    .trim();
-};
-
 const parseReceiptText = (text: string): ParsedReceipt => {
   const lines = text.split("\n").map((line) => line.trim());
-  console.log("LINES");
-  console.log(lines);
-  console.log(
-    "---------------------------------------------------------------------------------"
-  );
-  throw new Error("Implementation Needed");
   const storeName = determineReceiptBrand(lines[0].trim());
   if (storeName) {
-    // parseReceipt(storeName) // TODO: specific parsing for each receipt type!
     console.log("Detected Receipt from supported store ", storeName);
+    if (storeName === "Trader Joe's") {
+      const tj = parseTraderJoesReceipt(lines);
+      let receipt: ParsedReceipt = {
+        storeBrandName: "Trader Joe's",
+        storeLocation: determineReceiptLocation(
+          "Trader Joe's",
+          tj.storeNumber,
+          tj.storeAddress
+        ),
+        rawOcrText: text,
+        purchaseDate: tj.datePurchased,
+        totalAmount: tj.totalAmount,
+        taxAmount: tj.taxAmount,
+        status: "pending",
+        items: tj.items,
+        processingErrors: tj.processingError,
+      };
+      return receipt;
+    } else {
+      let msg =
+        "Error Determining Store: Could not determine store, or processing receipts from this store is not yet supported.";
+      console.error(msg);
+      throw new Error(msg);
+    }
   } else {
     let msg =
       "Error Determining Store: Could not determine store, or processing receipts from this store is not yet supported.";
     console.error(msg);
     throw new Error(msg);
   }
-
-  // Find address
-  const address =
-    lines
-      .find((line) =>
-        STORE_PATTERNS.address.some((pattern) => pattern.test(line))
-      )
-      ?.trim() || "";
-
-  // Find date
-  let date = lines
-    .find((line) => STORE_PATTERNS.date.some((pattern) => pattern.test(line)))
-    ?.trim();
-  if (!date) date = new Date().toISOString();
-
-  // Extract items and prices
-  const items: ReceiptItem[] = [];
-  let total: any = null;
-
-  lines.forEach((line, index) => {
-    // Skip header/footer lines
-    if (line.includes("SALE") || line.includes("-----") || !line.trim()) return;
-
-    // Check for total
-    if (!total) {
-      for (const pattern of STORE_PATTERNS.total) {
-        const match = line.match(pattern);
-        if (match) {
-          total = parseFloat(match[1]);
-          return;
-        }
-      }
-    }
-
-    // Look for price patterns
-    const price = extractPrice(line);
-    if (price !== null) {
-      const name = cleanItemName(line);
-      if (name && !STORE_PATTERNS.total.some((pattern) => pattern.test(line))) {
-        items.push({ name, price });
-      }
-    }
-  });
-
-  // If we didn't find a total, use the last price that appears to be a total
-  if (!total) {
-    const totalItem = items.find(
-      (item: any) =>
-        item.name.toLowerCase().includes("total") ||
-        item.name.toLowerCase().includes("amount due")
-    );
-    if (totalItem) {
-      total = totalItem.price;
-      items.splice(items.indexOf(totalItem), 1);
-    }
-  }
-
-  return {
-    storeInfo: {
-      name: storeName,
-      location: address,
-      date,
-    },
-    items,
-    total,
-    rawText: text,
-  };
 };
 
 const detectReceiptText = async (
