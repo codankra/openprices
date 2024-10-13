@@ -58,13 +58,14 @@ export const action: ActionFunction = async ({ request }) => {
 
   try {
     console.log("Starting receipt processing");
-    const receiptURL = createR2URL(`receipts/${Date.now()}-${receipt.name}`);
+    const receiptFilename = `receipts/${Date.now()}-${receipt.name}`;
+    const receiptURL = createR2URL(receiptFilename);
     console.log("Receipt URL created:", receiptURL);
 
     const imageBuffer = Buffer.from(await receipt.arrayBuffer());
     console.log("Image buffer created");
 
-    const cloudflareResponse = uploadToR2(receiptURL, imageBuffer);
+    const cloudflareResponse = uploadToR2(receiptFilename, imageBuffer);
     console.log("Upload to R2 initiated");
 
     const receiptText = await detectReceiptText(imageBuffer);

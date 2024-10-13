@@ -85,6 +85,12 @@ const cleanItemName = (name: string): string => {
 
 const parseReceiptText = (text: string): ParsedReceipt => {
   const lines = text.split("\n").map((line) => line.trim());
+  console.log("LINES");
+  console.log(lines);
+  console.log(
+    "---------------------------------------------------------------------------------"
+  );
+  throw new Error("Implementation Needed");
   const storeName = determineReceiptBrand(lines[0].trim());
   if (storeName) {
     // parseReceipt(storeName) // TODO: specific parsing for each receipt type!

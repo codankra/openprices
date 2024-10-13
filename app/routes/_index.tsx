@@ -11,6 +11,7 @@ import { FaSearch, FaArrowRight } from "react-icons/fa";
 import { FaArrowTrendUp } from "react-icons/fa6";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { AnimatedText } from "~/components/custom/animations";
+import HeaderLinks from "~/components/custom/HeaderLinks";
 import { ChartConfig, ChartContainer } from "~/components/ui/chart";
 import { samplePriceData, type PriceSample } from "~/lib/data";
 
@@ -118,22 +119,8 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="bg-ogprime text-stone-900 py-4 flex justify-between">
-        <div className="flex items-center space-x-4 container mx-auto px-4 hover:text-stone-700">
-          <Link to="/" className="flex items-center space-x-4">
-            <img
-              src="favicon.ico"
-              width={40}
-              height={40}
-              alt="Open Price Data Logo"
-              className="rounded"
-            />
-            <h1 className="text-2xl font-bold">Open Price Data</h1>
-          </Link>
-        </div>
-        <div className="flex items-center container mx-auto px-4 mr-10 justify-end">
-          <Link to="/login">Log In</Link>
-        </div>
+      <header className="bg-ogprime ">
+        <HeaderLinks />
       </header>
 
       <main>
@@ -141,11 +128,11 @@ export default function Index() {
           <div className="container mx-auto px-4">
             <div className="flex flex-col lg:flex-row items-center">
               <div className="w-full lg:w-1/2 text-center lg:text-left mb-8 lg:mb-0">
-                <h2 className="text-4xl md:text-5xl xl:text-6xl font-bold mb-6">
+                <h2 className="text-4xl md:text-5xl xl:text-5xl font-bold mb-6">
                   How Have Prices Really Changed?
                 </h2>
-                <p className="text-xl md:text-3xl text-stone-600 mb-8">
-                  Explore Crowdsourced Data
+                <p className="text-xl md:text-2xl text-stone-600 mb-8">
+                  See the True Everyday Costs Reported in your Community{" "}
                 </p>
                 <Form
                   method="get"
@@ -157,13 +144,13 @@ export default function Index() {
                     name="q"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search for a product"
-                    className="px-4 py-2 w-64 text-stone-900 rounded-l-md focus:outline-none focus:ring-1 focus:ring-sky-500"
-                    aria-label="Search for a product"
+                    placeholder="Search Open Price Data"
+                    className="shadow px-4 py-2 w-5/6 md:w-4/6 text-stone-900 rounded-l-md focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    aria-label="Search for a product on Open Price Data"
                   />
                   <button
                     type="submit"
-                    className="bg-ogfore text-stone-700 px-4 py-2 rounded-r-md hover:bg-ogfore-hover focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    className="shadow bg-ogfore text-stone-700 px-4 py-2 rounded-r-md hover:bg-ogfore-hover focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     aria-label="Search"
                   >
                     <FaSearch className="w-5 h-5" />
