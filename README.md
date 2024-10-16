@@ -4,15 +4,16 @@
 
 Open Prices is a crowdsourced platform for tracking real-world prices of everyday products. The goal is to provide a more accurate, transparent, and uncorruptible record of current and historical prices. Right now the focus is grocery (and soon restaurant) prices.
 
-This is a new project under early development, being built in public, to the point I'm embarrassed about being vulnerable by showing it. Check out the live site at [openpricedata.com](https://openpricedata.com) (also [openpricehistory.com](https://www.openpricehistory.com)) Tell me which site name you like better in the [poll in Issues 📝](https://github.com/codankra/openprices/issues/1)
+This is a new project under early development, being built in public, to the point I'm embarrassed about being vulnerable by showing it. Check out the live site at [openpricedata.com](https://openpricedata.com) ([openpricehistory.com](https://www.openpricehistory.com) is also an option). Tell me which site name you like better in the [poll in Issues 📝](https://github.com/codankra/openprices/issues/1)
 
 ## 🛠 Built With
 
 - [React](https://reactjs.org/) & [Remix](https://remix.run/)
 - [TypeScript](https://www.typescriptlang.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Recharts](https://recharts.org/)
 - [LibSQL](https://github.com/libsql/libsql)
+- [AWS S3](https://aws.amazon.com/s3/) via [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/)
+- [Google Vision](https://cloud.google.com/vision)
+- [Recharts](https://recharts.org/) & [Tailwind CSS](https://tailwindcss.com/)
 
 Hosted on [Fly.io](https://fly.io/)
 
@@ -20,8 +21,7 @@ Hosted on [Fly.io](https://fly.io/)
 
 ### Prerequisites
 
-- Node.js v18 or later
-- npm, yarn, or pnpm
+- Your favorite between Deno 2, Bun, or Node.js v18 or later
 - Set up your own environment variables for Cloudflare, Google/Github Auth, and Turso
 
 ### Installation
@@ -58,13 +58,8 @@ I try to keep things simple. This should be familiar 😇
 
 I'd love your help in making Open Price even better! If you have an awesome idea, or notice any bug or area of improvement, here's how you can contribute:
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-Feel free to reach out if you have any questions or ideas!
+1. Open a Pull Request or
+2. Feel free to reach out here, or [here](https://x.com/thedanktoday)
 
 ## 📜 License
 

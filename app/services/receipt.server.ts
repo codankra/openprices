@@ -8,6 +8,14 @@ import {
 } from "~/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { damerauLevenshtein } from "~/lib/utils";
+import { createR2URL, uploadToR2 } from "./r2.server";
+import { detectReceiptText } from "./vision.server";
+import {
+  createJob,
+  removeJob,
+  jobEventEmitter,
+  emitJobUpdate,
+} from "~/services/job.server";
 
 const supportedBrands = [
   { label: "TRADER JOE'S", brandName: "Trader Joe's" },
@@ -246,3 +254,67 @@ export async function processReceiptItems(
 }
 // TODO: for all items, if their id is in the productReceiptIdentifiers table, then get the associated product. If product is not unitpriced, then we'll insert the priceEntry and mark the item complete. If unitpriced, we'll need to mark the item matched, but confirm quantity before inserting the priceEntry.
 // all other items are drafts. what I want to do is get the couple closest productReceiptIdentifiers that exist and suggest them. if the product does not exist, the user will need to create the product, and we'll then do 4 things: add the product, add the price entry, add the productReceiptIdentifier, and mark the draftItem as complete.
+
+export async function processReceiptInBackground(
+  jobId: string,
+  receipt: File,
+  userId: string
+) {
+  try {
+    createJob(jobId, userId);
+    emitJobUpdate(jobId, "Starting receipt processing");
+
+    const receiptFilename = `receipts/${Date.now()}-${receipt.name}`;
+    const receiptURL = createR2URL(receiptFilename);
+    emitJobUpdate(jobId, "Receipt URL created");
+
+    const imageBuffer = Buffer.from(await receipt.arrayBuffer());
+
+    const cloudflareResponse = await uploadToR2(receiptFilename, imageBuffer);
+    emitJobUpdate(jobId, "Upload to R2 completed");
+
+    const parsedReceipt = await detectReceiptText(imageBuffer);
+    emitJobUpdate(
+      jobId,
+      JSON.stringify({
+        receiptBrand: parsedReceipt.storeBrandName,
+        message: "Receipt Items and Store Info Parsed",
+      })
+    );
+
+    const receiptItems = parsedReceipt.items.map((item) => ({
+      receiptId: 0,
+      ...item,
+      receiptText: item.name,
+    }));
+    const receiptInfo: typeof receipts.$inferInsert = {
+      imageUrl: receiptURL,
+      userId,
+      ...parsedReceipt,
+    };
+
+    const receiptProcessingResponse = await processReceiptItems(
+      receiptItems,
+      receiptInfo
+    );
+    emitJobUpdate(jobId, "Receipt items processed");
+
+    emitJobUpdate(
+      jobId,
+      JSON.stringify({
+        completed: true,
+        url: receiptURL,
+        process: receiptProcessingResponse,
+        cloudflareResponse,
+      })
+    );
+  } catch (error) {
+    console.error(error);
+    emitJobUpdate(
+      jobId,
+      JSON.stringify({ error: "Failed to process receipt", completed: true })
+    );
+  } finally {
+    removeJob(jobId);
+  }
+}

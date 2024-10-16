@@ -4,15 +4,12 @@ import type {
   ActionFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, useNavigation } from "@remix-run/react";
-import { useState, useRef } from "react";
+import { Form, useActionData, useNavigation } from "@remix-run/react";
+import { useState, useRef, useEffect } from "react";
 import { auth } from "../services/auth.server";
 import { Upload, X, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { createR2URL, uploadToR2 } from "~/services/r2.server";
-import { detectReceiptText } from "~/services/vision.server";
-import { processReceiptItems } from "~/services/receipt.server";
-import { receipts } from "~/db/schema";
+import { processReceiptInBackground } from "~/services/receipt.server";
 
 interface UploadState {
   preview: string | null;
@@ -57,53 +54,13 @@ export const action: ActionFunction = async ({ request }) => {
     });
   }
 
-  try {
-    console.log("Starting receipt processing");
-    const receiptFilename = `receipts/${Date.now()}-${receipt.name}`;
-    const receiptURL = createR2URL(receiptFilename);
-    console.log("Receipt URL created:", receiptURL);
-
-    const imageBuffer = Buffer.from(await receipt.arrayBuffer());
-    console.log("Image buffer created");
-
-    const cloudflareResponse = uploadToR2(receiptFilename, imageBuffer);
-    console.log("Upload to R2 initiated");
-
-    const parsedReceipt = await detectReceiptText(imageBuffer);
-    console.log("Receipt text detected:", parsedReceipt);
-
-    console.log(parsedReceipt);
-    const receiptInfo: typeof receipts.$inferInsert = {
-      imageUrl: receiptURL,
-      userId: user.id,
-      ...parsedReceipt,
-    };
-    console.log("Receipt info created:", receiptInfo);
-
-    const receiptItems = parsedReceipt.items.map((item) => {
-      return { receiptId: 0, ...item, receiptText: item.name };
-    });
-    console.log("Receipt items mapped:", receiptItems);
-
-    const receiptProcessingResponse = await processReceiptItems(
-      receiptItems,
-      receiptInfo
-    );
-    console.log("Receipt items processed:", receiptProcessingResponse);
-
-    const [cloudflareConf] = await Promise.all([cloudflareResponse]);
-    console.log("Cloudflare upload completed:", cloudflareConf);
-
-    console.log("Preparing response");
-    return json({
-      success: true,
-      url: receiptURL,
-      process: receiptProcessingResponse,
-      cloudflareResponse: cloudflareConf,
-    });
-  } catch (error) {
+  const jobId = Date.now().toString();
+  // Start processing in the background
+  processReceiptInBackground(jobId, receipt, user.id).catch((e) => {
+    console.error(e);
     return json({ error: "Failed to process receipt", status: 500 });
-  }
+  });
+  return json({ jobId });
 };
 
 export default function UploadReceipt() {
@@ -111,10 +68,43 @@ export default function UploadReceipt() {
     preview: null,
     error: null,
   });
+  const [processingStatus, setProcessingStatus] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const navigation = useNavigation();
   const isUploading = navigation.state === "submitting";
+  useEffect(() => {
+    if (isUploading) {
+      setProcessingStatus([]);
+    }
+  }, [isUploading]);
+
+  const actionData = useActionData<typeof action>();
+  useEffect(() => {
+    if (actionData?.jobId) {
+      const eventSource = new EventSource(`/sse/${actionData.jobId}`);
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log(data);
+          if (data.error) {
+            setUploadState((prev) => ({ ...prev, error: data.error }));
+            eventSource.close();
+          } else if (data.completed) {
+            setProcessingStatus((prev) => [...prev, "Processing completed"]);
+            eventSource.close();
+            //Alert or Push to Render: DraftItems, InsertedItems, MatchedItems
+            // Maybe auto-redirect to receipts/receiptID?
+          } else {
+            setProcessingStatus((prev) => [...prev, data.message]);
+          }
+        } catch {
+          setProcessingStatus((prev) => [...prev, event.data]);
+        }
+      };
+      return () => eventSource.close();
+    }
+  }, [actionData]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -237,6 +227,16 @@ export default function UploadReceipt() {
           </ul>
         </div>
       </div>
+      {processingStatus.length > 0 && (
+        <div className="mt-4 bg-white p-4 rounded-lg shadow">
+          <h3 className="font-semibold mb-2">Processing Status:</h3>
+          <ul className="list-disc list-inside">
+            {processingStatus.map((status, index) => (
+              <li key={index}>{status}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
