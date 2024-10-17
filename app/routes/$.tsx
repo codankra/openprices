@@ -1,6 +1,7 @@
 import type { LoaderFunction } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import Custom404 from "~/components/custom/Custom404"; // Adjust the import path as needed
+import HeaderLinks from "~/components/custom/HeaderLinks";
 
 export const loader: LoaderFunction = async ({ request }) => {
   // You can add any additional logic here if needed
@@ -17,21 +18,12 @@ export default function CatchAllRoute() {
     return (
       <div className="bg-ogprime flex flex-col items-center min-h-screen">
         {" "}
-        <header className="bg-ogprime text-stone-900 ml-4 lg:self-start py-4 flex justify-between">
-          <div className="flex items-center container mx-auto hover:text-stone-700">
-            <Link to="/" className="flex items-center space-x-4">
-              <img
-                src="favicon.ico"
-                width={40}
-                height={40}
-                alt="Open Price Data Logo"
-                className="rounded"
-              />
-              <h1 className="text-2xl font-bold">Open Price Data</h1>
-            </Link>
-          </div>
+        <header className="w-full">
+          <HeaderLinks />{" "}
         </header>
-        <Custom404 />
+        <section className="flex-grow w-full items-center h-full">
+          <Custom404 />
+        </section>
       </div>
     );
   }

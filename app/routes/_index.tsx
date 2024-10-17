@@ -12,23 +12,16 @@ import { FaArrowTrendUp } from "react-icons/fa6";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { AnimatedText } from "~/components/custom/animations";
 import HeaderLinks from "~/components/custom/HeaderLinks";
+import ProductDetailsCard from "~/components/custom/ProductDetailsCard";
 import { ChartConfig, ChartContainer } from "~/components/ui/chart";
-import { samplePriceData, type PriceSample } from "~/lib/data";
-
-type ProductPreview = {
-  id: string;
-  name: string;
-  currentPrice: number;
-  trend?: "up" | "down" | "stable";
-  trendPc?: number;
-  storeImg: string;
-  prodImg: string;
-};
-
-type FAQ = {
-  question: string;
-  answer: string;
-};
+import {
+  FAQ,
+  faqs,
+  ProductPreview,
+  products,
+  samplePriceData,
+  type PriceSample,
+} from "~/lib/data";
 
 type LoaderData = {
   products: ProductPreview[];
@@ -50,66 +43,6 @@ export const meta: MetaFunction = () => {
   ];
 };
 export const loader: LoaderFunction = async () => {
-  const products: ProductPreview[] = [
-    {
-      id: "1",
-      name: "Costco Hot Dog & Soda",
-      currentPrice: 1.5,
-      trend: "stable",
-      storeImg: "/homepage/costco.png",
-      prodImg: "/homepage/hotdog.webp",
-    },
-    {
-      id: "4",
-      name: "Banana, each",
-      currentPrice: 0.23,
-      trend: "up",
-      trendPc: 17,
-      storeImg: "/homepage/traderjoes.png",
-      prodImg: "/homepage/banana.jpg",
-    },
-    {
-      id: "5",
-      name: "Sparkling Water",
-      currentPrice: 0.99,
-      trend: "stable",
-      storeImg: "/homepage/traderjoes.png",
-      prodImg: "/homepage/swater.jpg",
-    },
-    {
-      id: "2",
-      name: "Dawn Platinum Liquid Dish Soap",
-      currentPrice: 11.99,
-      trend: "up",
-      trendPc: 8,
-      storeImg: "/homepage/costco.png",
-      prodImg: "/homepage/dawn.webp",
-    },
-  ];
-  const faqs: FAQ[] = [
-    {
-      question: "What's the purpose of open price data?",
-      answer:
-        "<div>Have you noticed that the change in your gas or grocery bill doesn't match the government-reported inflation rate?<br /><br />We hope open price data can serve as a more <strong>accurate, crowdsourced, uncorruptable record of real current and historical prices</strong> - fueled by contributions on products us consumers actually buy. Let's see how this experiment plays out!</div>",
-    },
-    {
-      question: "Do I need an account to use this site?",
-      answer:
-        "No account is needed to browse, but you'll need one to contribute data (to prevent spam and abuse).",
-    },
-    {
-      question: "How is Open Price Data 'open'?",
-      answer:
-        "It's open for anyone to see and contribute price data, much more than can be said for government data sources. <br /> <br /> My hope is also to open source future stable services the website will use, so if I develop a budgeting tool for example people can just run that locally/independently.",
-    },
-    //  If you're seeing this I believe in FOSS - I can't guarentee to open source all site/product development always but for the moment, the core website code is <a href='https://github.com/codankra/openprices' target='_blank' rel='noopener noreferrer' style='color: blue;'>open source on GitHub</a>. (Contributions Welcome!)
-    {
-      question: "How can I support Open Price Data?",
-      answer:
-        "<div>We welcome your contribution in any way! Here are three options:<br /><br /><ol><li>&emsp;1. Contribute to the site by adding price data</li><li>&emsp;2. Spread the word about project to friends and family</li><li>&emsp;3. Support to the site maintainer through our <a href='https://ko-fi.com/thedank' target='_blank' rel='noopener noreferrer' style='color: blue;'>Ko-fi page</a></li></div>",
-    },
-  ];
-
   return json<LoaderData>({ products, faqs, samplePriceData });
 };
 
@@ -201,48 +134,7 @@ export default function Index() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
               {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-stone-100 border-black border-1 rounded-lg shadow-md overflow-hidden flex flex-col p-4 hover:shadow-xl transition-shadow transform hover:scale-105 relative"
-                >
-                  <div className="absolute top-2 right-2 flex items-center">
-                    {product.trend === "up" && (
-                      <span className="font-semibold text-ogfore flex items-center space-x-1">
-                        <span>{product.trendPc && `${product.trendPc}%`}</span>
-                        <FaArrowTrendUp className="text-ogfore" />
-                      </span>
-                    )}
-                    {product.trend === "stable" && (
-                      <span className="font-semibold text-black text-sm flex items-center space-x-1">
-                        <span>Stable</span>
-                      </span>
-                    )}
-                  </div>
-                  <Link
-                    to={`/product/${product.id}`}
-                    className="flex flex-grow items-center justify-center w-full text-inherit no-underline"
-                  >
-                    <div className="relative mt-4 mr-2 w-24 h-22 flex-shrink-0">
-                      <img
-                        src={product.prodImg}
-                        alt={product.name}
-                        className="w-16 h-16 object-cover rounded-full mb-4"
-                      />
-                      <img
-                        src={product.storeImg}
-                        alt="Store logo"
-                        className="absolute bottom-0 right-0 w-12 h-12 p-1 mr-2 object-contain rounded-full bg-white shadow-sm"
-                      />
-                    </div>
-                    <div className="flex-grow">
-                      <h3 className="font-semibold">{product.name}</h3>
-                      <p className="text-gray-600 text-sm">
-                        ${product.currentPrice.toFixed(2)}
-                      </p>
-                    </div>
-                    <FaArrowRight className="self-end w-4 h-4 text-stone-600 flex-shrink-0" />
-                  </Link>
-                </div>
+                <ProductDetailsCard product={product} key={product.id} />
               ))}
             </div>
           </div>

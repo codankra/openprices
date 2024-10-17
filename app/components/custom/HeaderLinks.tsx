@@ -6,7 +6,7 @@ const HeaderLinks = () => {
       <div className="flex items-center space-x-4 container mx-auto px-4 hover:text-stone-700">
         <Link to="/" className="flex items-center space-x-4">
           <img
-            src="favicon.ico"
+            src="/favicon.ico"
             width={40}
             height={40}
             alt="Open Price Data Logo"
