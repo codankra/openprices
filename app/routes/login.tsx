@@ -28,9 +28,11 @@ export default function Login() {
         </Form>
         <Form action="/auth" method="post">
           <button
+            disabled
+            aria-disabled
             name="authtype"
             value="github"
-            className="flex items-center justify-center w-64 px-4 py-2 text-white bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-opacity-50 shadow-sm hover:shadow-md transition-all duration-200"
+            className="flex items-center justify-center w-64 px-4 py-2 text-white bg-gray-200 rounded-md  focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-opacity-50  transition-all duration-200"
           >
             <FaGithub className="mr-2" />
             Sign in with GitHub
