@@ -1,7 +1,7 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import ProductDetailsCard from "~/components/custom/ProductDetailsCard";
 import { Input } from "~/components/ui/input";
@@ -27,9 +27,9 @@ type LoaderData = {
 export const loader: LoaderFunction = async ({ request }) => {
   const url = new URL(request.url);
 
-  const searchTerm = url.searchParams.get("search") || "";
+  const searchTerm = url.searchParams.get("q") || "";
   let searchResults: (typeof products.$inferSelect)[] = [];
-  if (searchTerm.length > 2) {
+  if (searchTerm.length > 1) {
     searchResults = await getProductsBySearch(searchTerm);
   }
   return json<LoaderData>({ trendingProducts, searchResults });
@@ -37,23 +37,25 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 export default function ProductSearch() {
   const { trendingProducts, searchResults } = useLoaderData<LoaderData>();
-  const [_searchParams, setSearchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearch = debounce((term: string) => {
-    setSearchParams((prev) => {
-      const newParams = new URLSearchParams(prev);
-      newParams.set("search", term);
-      return newParams;
-    });
-  }, 300);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") ?? "");
+  const debouncedSearch = useCallback(
+    debounce((term: string) => {
+      setSearchParams((prev) => {
+        const newParams = new URLSearchParams(prev);
+        newParams.set("q", term);
+        return newParams;
+      });
+    }, 300),
+    [setSearchParams]
+  );
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    if (term.length > 2) {
+    if (term.length > 0) {
       debouncedSearch(term);
     }
   };
-
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <header className="bg-ogprime w-full">
@@ -80,7 +82,7 @@ export default function ProductSearch() {
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {searchResults.map((product) => (
                 <Link
-                  to={`/products/${product.id}`}
+                  to={`/product/${product.id}`}
                   key={product.id}
                   className="bg-white border border-stone-200 rounded-md p-4 cursor-pointer hover:bg-stone-50 transition duration-150 ease-in-out"
                   onClick={() => {

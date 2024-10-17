@@ -12,7 +12,7 @@ import type {
   LoaderFunction,
   MetaFunction,
 } from "@remix-run/node";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
@@ -257,13 +257,16 @@ export default function NewPricePoint() {
     });
   };
 
-  const debouncedSearch = debounce((term: string) => {
-    setSearchParams((prev) => {
-      const newParams = new URLSearchParams(prev);
-      newParams.set("search", term);
-      return newParams;
-    });
-  }, 300);
+  const debouncedSearch = useCallback(
+    debounce((term: string) => {
+      setSearchParams((prev) => {
+        const newParams = new URLSearchParams(prev);
+        newParams.set("search", term);
+        return newParams;
+      });
+    }, 300),
+    [setSearchParams]
+  );
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
