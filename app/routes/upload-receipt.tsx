@@ -7,13 +7,25 @@ import { json, redirect } from "@remix-run/node";
 import { Form, useActionData, useNavigation } from "@remix-run/react";
 import { useState, useRef, useEffect } from "react";
 import { auth } from "../services/auth.server";
-import { Upload, X, Loader2 } from "lucide-react";
+import {
+  Upload,
+  X,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  CircleDashed,
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { processReceiptInBackground } from "~/services/receipt.server";
 
 interface UploadState {
   preview: string | null;
   error: string | null;
+}
+
+interface StatusItem {
+  message: string;
+  status: "completed" | "in-progress" | "not-started" | "error";
 }
 
 export const meta: MetaFunction = () => {
@@ -68,7 +80,8 @@ export default function UploadReceipt() {
     preview: null,
     error: null,
   });
-  const [processingStatus, setProcessingStatus] = useState<string[]>([]);
+  const [processingStatus, setProcessingStatus] = useState<StatusItem[]>([]);
+  const [summary, setSummary] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const navigation = useNavigation();
@@ -76,6 +89,7 @@ export default function UploadReceipt() {
   useEffect(() => {
     if (isUploading) {
       setProcessingStatus([]);
+      setSummary("");
     }
   }, [isUploading]);
 
@@ -86,26 +100,23 @@ export default function UploadReceipt() {
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log(data);
           if (data.error) {
             setUploadState((prev) => ({ ...prev, error: data.error }));
             eventSource.close();
           } else if (data.completed) {
-            setProcessingStatus((prev) => [...prev, "Processing completed"]);
+            setProcessingStatus(data.statusList);
+            setSummary(data.summary);
             eventSource.close();
-            //Alert or Push to Render: DraftItems, InsertedItems, MatchedItems
-            // Maybe auto-redirect to receipts/receiptID?
           } else {
-            setProcessingStatus((prev) => [...prev, data.message]);
+            setProcessingStatus(data.statusList);
           }
-        } catch {
-          setProcessingStatus((prev) => [...prev, event.data]);
+        } catch (error) {
+          console.error("Error parsing SSE data:", error);
         }
       };
       return () => eventSource.close();
     }
   }, [actionData]);
-
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -123,6 +134,19 @@ export default function UploadReceipt() {
       });
     };
     reader.readAsDataURL(file);
+  };
+
+  const StatusIcon = ({ status }: { status: StatusItem["status"] }) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircle2 className="text-green-500" />;
+      case "in-progress":
+        return <Loader2 className="text-orange-500 animate-spin" />;
+      case "not-started":
+        return <CircleDashed className="text-gray-400" />;
+      case "error":
+        return <AlertCircle className="text-red-500" />;
+    }
   };
 
   return (
@@ -217,6 +241,38 @@ export default function UploadReceipt() {
           </Alert>
         )}
 
+        {processingStatus.length > 0 && (
+          <div className="mt-4 bg-white p-4 rounded-lg shadow">
+            <h3 className="font-semibold mb-2">Processing Status:</h3>
+            <ul className="space-y-2">
+              {processingStatus.map((status, index) => (
+                <li
+                  key={index}
+                  className={`flex items-center space-x-2 transition-all duration-300 ease-in-out ${
+                    status.status === "completed"
+                      ? "text-green-600"
+                      : status.status === "in-progress"
+                      ? "text-orange-500"
+                      : status.status === "error"
+                      ? "text-red-500"
+                      : "text-gray-400"
+                  }`}
+                >
+                  <StatusIcon status={status.status} />
+                  <span>{status.message}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {summary && (
+          <div className="mt-4 bg-white p-4 rounded-lg shadow">
+            <h3 className="font-semibold mb-2">Job Summary:</h3>
+            <p>{summary}</p>
+          </div>
+        )}
+
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-4">Instructions</h2>
           <ul className="list-disc list-inside space-y-2 text-gray-600">
@@ -227,16 +283,6 @@ export default function UploadReceipt() {
           </ul>
         </div>
       </div>
-      {processingStatus.length > 0 && (
-        <div className="mt-4 bg-white p-4 rounded-lg shadow">
-          <h3 className="font-semibold mb-2">Processing Status:</h3>
-          <ul className="list-disc list-inside">
-            {processingStatus.map((status, index) => (
-              <li key={index}>{status}</li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

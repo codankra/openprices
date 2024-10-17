@@ -255,33 +255,56 @@ export async function processReceiptItems(
 // TODO: for all items, if their id is in the productReceiptIdentifiers table, then get the associated product. If product is not unitpriced, then we'll insert the priceEntry and mark the item complete. If unitpriced, we'll need to mark the item matched, but confirm quantity before inserting the priceEntry.
 // all other items are drafts. what I want to do is get the couple closest productReceiptIdentifiers that exist and suggest them. if the product does not exist, the user will need to create the product, and we'll then do 4 things: add the product, add the price entry, add the productReceiptIdentifier, and mark the draftItem as complete.
 
+interface StatusItem {
+  message: string;
+  status: "completed" | "in-progress" | "not-started" | "error";
+}
+
 export async function processReceiptInBackground(
   jobId: string,
   receipt: File,
   userId: string
 ) {
+  let statusList: StatusItem[] = [
+    { message: "Initializing receipt processing", status: "completed" },
+    { message: "Creating receipt URL", status: "in-progress" },
+    { message: "Uploading to R2 storage", status: "not-started" },
+    { message: "Parsing receipt text", status: "not-started" },
+    { message: "Processing receipt items", status: "not-started" },
+    { message: "Finalizing results", status: "not-started" },
+  ];
+
+  const updateStatus = (
+    index: number,
+    newStatus: StatusItem["status"],
+    message?: string
+  ) => {
+    statusList[index].status = newStatus;
+    if (message) statusList[index].message = message;
+    emitJobUpdate(jobId, JSON.stringify({ statusList }));
+  };
+
   try {
     createJob(jobId, userId);
-    emitJobUpdate(jobId, "Starting receipt processing");
 
+    updateStatus(1, "completed");
     const receiptFilename = `receipts/${Date.now()}-${receipt.name}`;
     const receiptURL = createR2URL(receiptFilename);
-    emitJobUpdate(jobId, "Receipt URL created");
 
+    updateStatus(2, "in-progress");
     const imageBuffer = Buffer.from(await receipt.arrayBuffer());
-
     const cloudflareResponse = await uploadToR2(receiptFilename, imageBuffer);
-    emitJobUpdate(jobId, "Upload to R2 completed");
+    updateStatus(2, "completed");
 
+    updateStatus(3, "in-progress");
     const parsedReceipt = await detectReceiptText(imageBuffer);
-    emitJobUpdate(
-      jobId,
-      JSON.stringify({
-        receiptBrand: parsedReceipt.storeBrandName,
-        message: "Receipt Items and Store Info Parsed",
-      })
+    updateStatus(
+      3,
+      "completed",
+      `Receipt Items and Store Info Parsed: ${parsedReceipt.storeBrandName}`
     );
 
+    updateStatus(4, "in-progress");
     const receiptItems = parsedReceipt.items.map((item) => ({
       receiptId: 0,
       ...item,
@@ -297,11 +320,20 @@ export async function processReceiptInBackground(
       receiptItems,
       receiptInfo
     );
-    emitJobUpdate(jobId, "Receipt items processed");
+    updateStatus(4, "completed");
+
+    updateStatus(5, "in-progress");
+    const summary =
+      `Created ${receiptProcessingResponse.priceEntriesCreated} price entries, ` +
+      `matched ${receiptProcessingResponse.matchedUnitPriced} unit-priced items, ` +
+      `and found ${receiptProcessingResponse.unmatched} unmatched items.`;
+    updateStatus(5, "completed");
 
     emitJobUpdate(
       jobId,
       JSON.stringify({
+        statusList,
+        summary,
         completed: true,
         url: receiptURL,
         process: receiptProcessingResponse,
@@ -310,9 +342,18 @@ export async function processReceiptInBackground(
     );
   } catch (error) {
     console.error(error);
+    statusList.forEach((item, index) => {
+      if (item.status === "in-progress" || item.status === "not-started") {
+        updateStatus(index, "error");
+      }
+    });
     emitJobUpdate(
       jobId,
-      JSON.stringify({ error: "Failed to process receipt", completed: true })
+      JSON.stringify({
+        statusList,
+        error: "Failed to process receipt",
+        completed: true,
+      })
     );
   } finally {
     removeJob(jobId);
