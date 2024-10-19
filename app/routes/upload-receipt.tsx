@@ -4,7 +4,7 @@ import type {
   ActionFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, useActionData, useNavigation } from "@remix-run/react";
+import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
 import { useState, useRef, useEffect } from "react";
 import { auth } from "../services/auth.server";
 import {
@@ -16,7 +16,16 @@ import {
   CircleDashed,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { processReceiptInBackground } from "~/services/receipt.server";
+import HeaderLinks from "~/components/custom/HeaderLinks";
 
 interface UploadState {
   preview: string | null;
@@ -150,9 +159,41 @@ export default function UploadReceipt() {
   };
 
   return (
-    <div className="font-sans p-4 bg-ogprime min-h-screen">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900">Upload Receipt</h1>
+    <div className="font-sans bg-ogprime min-h-screen">
+      <header>
+        <HeaderLinks />
+      </header>
+      <div className="max-w-3xl mx-auto space-y-6 p-4">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <Link to={"/"}>
+              <BreadcrumbLink>Home</BreadcrumbLink>
+            </Link>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>Contribute Prices</BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className=" font-bold">
+                By Receipt Detection&nbsp;&nbsp;
+              </BreadcrumbPage>
+              <span> |</span>
+              <Link to={"/price-entry"}>
+                <BreadcrumbPage className="underline hover:bg-black/10 px-2 py-1 rounded transition-colors ml-0">
+                  By Manual Entry
+                </BreadcrumbPage>
+              </Link>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <div className="flex flex-wrap justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Receipt Price Detector
+          </h1>
+          <span className="bg-green-950  text-white font-semibold text-lg  py-1 px-3 rounded ">
+            {processingStatus.length > 0 ? "Processing" : "Ready"}
+          </span>
+        </div>
 
         <Form
           ref={formRef}
@@ -162,12 +203,12 @@ export default function UploadReceipt() {
         >
           <div
             className={`
-              border-2 border-dashed rounded-lg p-8
-              ${uploadState.preview ? "border-green-500" : "border-gray-300"}
+              border-2 border-dashed rounded-lg p-8 shadow-lg
+              ${uploadState.preview ? "border-ogfore" : "border-gray-300"}
               transition-colors duration-200
               flex flex-col items-center justify-center
-              min-h-[400px] bg-white
-              relative
+              min-h-[400px] bg-white hover:bg-stone-100
+              relative cursor-pointer
             `}
             onClick={() => fileInputRef.current?.click()}
           >
@@ -194,19 +235,19 @@ export default function UploadReceipt() {
                     setUploadState({ preview: null, error: null });
                     formRef.current?.reset();
                   }}
-                  className="absolute -top-2 -right-2 p-1 bg-red-500 rounded-full text-white"
+                  className="absolute -top-3 -right-3 p-1 bg-ogfore rounded-full text-white"
                 >
-                  <X size={16} />
+                  <X size={24} />
                 </button>
               </div>
             ) : (
               <div className="text-center">
                 <Upload className="mx-auto h-12 w-12 text-gray-400" />
                 <p className="mt-4 text-lg font-medium text-gray-900">
-                  Drop your receipt here
+                  Upload your receipt here
                 </p>
                 <p className="mt-2 text-sm text-gray-500">
-                  or click to select a file
+                  click to select a file
                 </p>
               </div>
             )}
@@ -226,7 +267,7 @@ export default function UploadReceipt() {
           {uploadState.preview && (
             <button
               type="submit"
-              className="mt-4 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+              className="mt-4 w-full bg-ogfore text-white py-2 px-4 rounded-lg hover:bg-ogfore-hover transition-colors shadow-xl"
               disabled={isUploading}
             >
               Upload Receipt

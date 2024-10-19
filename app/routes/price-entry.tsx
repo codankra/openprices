@@ -5,14 +5,15 @@ import {
   useLoaderData,
   useSearchParams,
   Link,
+  Await,
 } from "@remix-run/react";
-import { json, redirect } from "@remix-run/node";
+import { defer, json, redirect } from "@remix-run/node";
 import type {
   ActionFunction,
   LoaderFunction,
   MetaFunction,
 } from "@remix-run/node";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
@@ -25,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { products, UnitType, productBrands } from "~/db/schema";
+import { products, UnitType } from "~/db/schema";
 import { auth } from "~/services/auth.server";
 import { z } from "zod";
 import { AuthUser } from "~/services/user.server";
@@ -43,9 +44,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+
 import { FaCircleInfo } from "react-icons/fa6";
 import { uploadToR2 } from "~/services/r2.server";
 import { addNewPriceEntry } from "~/services/price.server";
+import HeaderLinks from "~/components/custom/HeaderLinks";
 
 export const meta: MetaFunction = () => {
   return [
@@ -61,7 +72,7 @@ type LoaderData = {
   searchResults: (typeof products.$inferSelect)[];
   existingProduct: typeof products.$inferSelect | null;
   user: AuthUser;
-  productBrandsList: (typeof productBrands.$inferSelect)[];
+  productBrandsListPromise: Awaited<ReturnType<typeof getAllProductBrands>>;
 };
 
 const formSchema = z
@@ -122,12 +133,12 @@ export const loader: LoaderFunction = async ({ request }) => {
     existingProduct = await getProductById(existingProductId);
   }
 
-  const productBrandsList = await getAllProductBrands();
-  return json<LoaderData>({
+  const productBrandsListPromise = getAllProductBrands();
+  return defer({
     searchResults,
     existingProduct,
     user,
-    productBrandsList,
+    productBrandsListPromise,
   });
 };
 
@@ -227,8 +238,11 @@ type ActionData = {
 };
 
 export default function NewPricePoint() {
-  const { searchResults, existingProduct, productBrandsList } =
-    useLoaderData<LoaderData>();
+  const {
+    searchResults,
+    existingProduct,
+    productBrandsListPromise: productBrandsList,
+  } = useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
   const [_searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
@@ -276,29 +290,37 @@ export default function NewPricePoint() {
   };
 
   return (
-    <div className="bg-white">
-      <header className="bg-ogprime text-stone-900 py-4 flex justify-between">
-        <div className="flex items-center space-x-4 container mx-auto px-4 hover:text-stone-700 flex-grow">
-          <Link to="/" className="flex items-center space-x-4">
-            <img
-              src="favicon.ico"
-              width={40}
-              height={40}
-              alt="Open Price Data Logo"
-              className="rounded"
-            />
-            <h1 className="text-2xl font-bold">Open Price Data</h1>
-          </Link>
-        </div>
-        <div className="flex items-center px-4 whitespace-nowrap">
-          <Link to="/logout">Log Out</Link>
-        </div>
+    <div className="font-sans bg-ogprime min-h-screen">
+      <header className="">
+        <HeaderLinks />
       </header>{" "}
-      <div className="container mx-auto p-4">
+      <div className="max-w-3xl mx-auto space-y-6 p-4">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <Link to={"/"}>
+              <BreadcrumbLink>Home</BreadcrumbLink>
+            </Link>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>Contribute Prices</BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className=" font-bold">
+                By Manual Entry&nbsp;&nbsp;
+              </BreadcrumbPage>
+              <span> |</span>
+              <Link to={"/upload-receipt"}>
+                <BreadcrumbPage className="underline hover:bg-black/10 px-2 py-1 rounded transition-colors ml-0">
+                  By Receipt Detection{" "}
+                </BreadcrumbPage>
+              </Link>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         <Form
           method="post"
           encType="multipart/form-data"
-          className="space-y-6 bg-stone-100 p-8 rounded-lg shadow-md max-w-3xl mx-auto"
+          className="space-y-6 bg-stone-100 p-8 rounded-lg shadow-md "
         >
           <h1 className="text-2xl font-bold mb-4 text-center">
             New Price Entry
@@ -455,18 +477,45 @@ export default function NewPricePoint() {
                     Brand Name
                   </Label>
                   <div className="mt-1">
-                    <Select name="productBrandName">
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a brand" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {productBrandsList.map((brand) => (
-                          <SelectItem key={brand.name} value={brand.name}>
-                            {brand.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Suspense
+                      fallback={
+                        <Input
+                          type="text"
+                          id="productBrandName"
+                          name="productBrandName"
+                          required
+                          className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                        />
+                      }
+                    >
+                      <Await
+                        resolve={productBrandsList}
+                        errorElement={
+                          <Input
+                            type="text"
+                            id="productBrandName"
+                            name="productBrandName"
+                            required
+                            className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                          />
+                        }
+                      >
+                        {(resolvedProductBrandsList) => (
+                          <Select name="productBrandName">
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select a brand" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {resolvedProductBrandsList.map((brand) => (
+                                <SelectItem key={brand.name} value={brand.name}>
+                                  {brand.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </Await>
+                    </Suspense>
                   </div>
                 </div>
                 <div>
