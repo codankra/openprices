@@ -300,7 +300,11 @@ export default function UploadReceipt() {
                   }`}
                 >
                   <StatusIcon status={status.status} />
-                  <span>{status.message}</span>
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: `<p>${status.message}</p>`,
+                    }}
+                  ></div>
                 </li>
               ))}
             </ul>

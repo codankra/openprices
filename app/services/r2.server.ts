@@ -38,6 +38,21 @@ export async function uploadToR2(
     throw new Error(`Failed to upload to R2: ${error}`);
   }
 }
+
+export async function deleteFromR2(key: string): Promise<boolean> {
+  try {
+    await s3Client.deleteObject({
+      Bucket: BUCKET_NAME,
+      Key: key,
+    });
+    console.log(`Successfully deleted object with key: ${key}`);
+    return true;
+  } catch (error) {
+    console.error("Error deleting from R2:", error);
+    return false;
+  }
+}
+
 function getContentType(filename: string): string {
   const ext = filename.split(".").pop()?.toLowerCase();
   switch (ext) {

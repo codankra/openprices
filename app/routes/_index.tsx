@@ -39,7 +39,12 @@ const chartConfig = {
 export const meta: MetaFunction = () => {
   return [
     { title: "Open Price Data" },
-    { name: "description", content: "Open Price Data" },
+    {
+      name: "description",
+      content:
+        "Explore crowdsourced open food price data to see real costs change over time. Join our community in tracking accurate, transparent food price trends.",
+    },
+    { tagName: "link", rel: "canonical", href: process.env.SITE_NAME },
   ];
 };
 export const loader: LoaderFunction = async () => {

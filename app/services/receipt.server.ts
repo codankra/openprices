@@ -8,14 +8,9 @@ import {
 } from "~/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { damerauLevenshtein } from "~/lib/utils";
-import { createR2URL, uploadToR2 } from "./r2.server";
+import { createR2URL, deleteFromR2, uploadToR2 } from "./r2.server";
 import { detectReceiptText } from "./vision.server";
-import {
-  createJob,
-  removeJob,
-  jobEventEmitter,
-  emitJobUpdate,
-} from "~/services/job.server";
+import { createJob, removeJob, emitJobUpdate } from "~/services/job.server";
 
 const supportedBrands = [
   { label: "TRADER JOE'S", brandName: "Trader Joe's" },
@@ -266,12 +261,8 @@ export async function processReceiptInBackground(
   userId: string
 ) {
   let statusList: StatusItem[] = [
-    { message: "Initializing receipt processing", status: "completed" },
-    { message: "Creating receipt URL", status: "in-progress" },
-    { message: "Uploading to R2 storage", status: "not-started" },
-    { message: "Parsing receipt text", status: "not-started" },
-    { message: "Processing receipt items", status: "not-started" },
-    { message: "Finalizing results", status: "not-started" },
+    { message: "Uploading Receipt", status: "completed" },
+    { message: "Saving Receipt Image", status: "not-started" },
   ];
 
   const updateStatus = (
@@ -284,27 +275,37 @@ export async function processReceiptInBackground(
     emitJobUpdate(jobId, JSON.stringify({ statusList }));
   };
 
+  const receiptFilename = `receipts/${Date.now()}-${receipt.name}`;
+  const receiptURL = createR2URL(receiptFilename);
+  let uploadHasStarted = false;
   try {
     createJob(jobId, userId);
+    updateStatus(0, "completed", "Receipt Uploaded");
+    updateStatus(1, "in-progress");
 
-    updateStatus(1, "completed");
-    const receiptFilename = `receipts/${Date.now()}-${receipt.name}`;
-    const receiptURL = createR2URL(receiptFilename);
-
-    updateStatus(2, "in-progress");
     const imageBuffer = Buffer.from(await receipt.arrayBuffer());
     const cloudflareResponse = await uploadToR2(receiptFilename, imageBuffer);
-    updateStatus(2, "completed");
+    updateStatus(1, "completed", "Image Created for the Receipt");
+    uploadHasStarted = true;
 
-    updateStatus(3, "in-progress");
+    statusList.push({
+      message: "Scanning Receipt Details",
+      status: "not-started",
+    });
+    updateStatus(2, "in-progress");
     const parsedReceipt = await detectReceiptText(imageBuffer);
     updateStatus(
-      3,
+      2,
       "completed",
-      `Receipt Items and Store Info Parsed: ${parsedReceipt.storeBrandName}`
+      `Receipt Items and Store Info Detected: <strong>${parsedReceipt.storeBrandName}</strong>`
     );
 
-    updateStatus(4, "in-progress");
+    statusList.push({
+      message: "Saving Prices for Items",
+      status: "not-started",
+    });
+    statusList.push({ message: "Finalizing Results", status: "not-started" });
+    updateStatus(3, "in-progress");
     const receiptItems = parsedReceipt.items.map((item) => ({
       receiptId: 0,
       ...item,
@@ -320,14 +321,14 @@ export async function processReceiptInBackground(
       receiptItems,
       receiptInfo
     );
-    updateStatus(4, "completed");
+    updateStatus(3, "completed");
 
-    updateStatus(5, "in-progress");
+    updateStatus(4, "in-progress");
     const summary =
       `Created ${receiptProcessingResponse.priceEntriesCreated} price entries, ` +
       `matched ${receiptProcessingResponse.matchedUnitPriced} unit-priced items, ` +
       `and found ${receiptProcessingResponse.unmatched} unmatched items.`;
-    updateStatus(5, "completed");
+    updateStatus(4, "completed");
 
     emitJobUpdate(
       jobId,
@@ -343,10 +344,14 @@ export async function processReceiptInBackground(
   } catch (error) {
     console.error(error);
     statusList.forEach((item, index) => {
-      if (item.status === "in-progress" || item.status === "not-started") {
+      if (item.status === "in-progress") {
         updateStatus(index, "error");
       }
     });
+    if (uploadHasStarted) {
+      console.log("Attempting to free R2 resource at: ", receiptURL);
+      await deleteFromR2(receiptFilename);
+    }
     emitJobUpdate(
       jobId,
       JSON.stringify({
