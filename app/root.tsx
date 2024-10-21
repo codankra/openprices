@@ -26,6 +26,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
           name="twitter:image"
           content="https://cdn.openpricedata.com/opengraph.png"
         />
+        <meta property="twitter:domain" content="" />
+        <meta property="twitter:url" content="https://openpricedata.com" />
+        <meta
+          name="twitter:title"
+          content="Open Price Data | Crowdsourced History of Real Consumer Prices"
+        />
+        <meta
+          name="twitter:description"
+          content="Track true crowdsourced prices on the Open Price Data platform. See how everyday costs really change over time."
+        />
         <Meta />
         <Links />
       </head>
