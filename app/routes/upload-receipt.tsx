@@ -115,6 +115,7 @@ export default function UploadReceipt() {
           } else if (data.completed) {
             setProcessingStatus(data.statusList);
             setSummary(data.summary);
+
             eventSource.close();
           } else {
             setProcessingStatus(data.statusList);
@@ -152,7 +153,7 @@ export default function UploadReceipt() {
       case "in-progress":
         return <Loader2 className="text-orange-500 animate-spin" />;
       case "not-started":
-        return <CircleDashed className="text-gray-400" />;
+        return <CircleDashed className="text-stone-400" />;
       case "error":
         return <AlertCircle className="text-red-500" />;
     }
@@ -187,93 +188,105 @@ export default function UploadReceipt() {
         </Breadcrumb>
 
         <div className="flex flex-wrap justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-stone-900 my-1 sm:my-0 mr-2">
             Receipt Price Detector
           </h1>
-          <span className="bg-green-950  text-white font-semibold text-lg  py-1 px-3 rounded ">
-            {processingStatus.length > 0 ? "Processing" : "Ready"}
-          </span>
+          {uploadState.error ? (
+            <span className="bg-red-900  text-white font-semibold text-lg  py-1 px-3 rounded ">
+              Error{" "}
+            </span>
+          ) : (
+            <span className="bg-green-950  text-white font-semibold text-lg  py-1 px-3 rounded ">
+              {processingStatus.length > 0
+                ? summary
+                  ? "Processed"
+                  : "Processing"
+                : "Ready"}
+            </span>
+          )}
         </div>
 
-        <Form
-          ref={formRef}
-          method="post"
-          encType="multipart/form-data"
-          className="relative"
-        >
-          <div
-            className={`
+        {!processingStatus.length && (
+          <Form
+            ref={formRef}
+            method="post"
+            encType="multipart/form-data"
+            className="relative"
+          >
+            <div
+              className={`
               border-2 border-dashed rounded-lg p-8 shadow-lg
-              ${uploadState.preview ? "border-ogfore" : "border-gray-300"}
+              ${uploadState.preview ? "border-ogfore" : "border-stone-300"}
               transition-colors duration-200
               flex flex-col items-center justify-center
               min-h-[400px] bg-white hover:bg-stone-100
               relative cursor-pointer
             `}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              name="receipt"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileChange}
-            />
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                name="receipt"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
 
-            {uploadState.preview ? (
-              <div className="relative">
-                <img
-                  src={uploadState.preview}
-                  alt="Receipt preview"
-                  className="max-h-[350px] rounded-lg shadow-lg"
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setUploadState({ preview: null, error: null });
-                    formRef.current?.reset();
-                  }}
-                  className="absolute -top-3 -right-3 p-1 bg-ogfore rounded-full text-white"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-            ) : (
-              <div className="text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-4 text-lg font-medium text-gray-900">
-                  Upload your receipt here
-                </p>
-                <p className="mt-2 text-sm text-gray-500">
-                  click to select a file
-                </p>
-              </div>
-            )}
-
-            {isUploading && (
-              <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-lg">
-                <div className="flex flex-col items-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                  <p className="mt-2 text-sm font-medium text-gray-900">
-                    Processing receipt...
+              {uploadState.preview ? (
+                <div className="relative">
+                  <img
+                    src={uploadState.preview}
+                    alt="Receipt preview"
+                    className="max-h-[350px] rounded-lg shadow-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUploadState({ preview: null, error: null });
+                      formRef.current?.reset();
+                    }}
+                    className="absolute -top-3 -right-3 p-1 bg-ogfore rounded-full text-white"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <Upload className="mx-auto h-12 w-12 text-stone-400" />
+                  <p className="mt-4 text-lg font-medium text-stone-900">
+                    Upload your receipt here
+                  </p>
+                  <p className="mt-2 text-sm text-stone-500">
+                    click to select a file
                   </p>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
 
-          {uploadState.preview && (
-            <button
-              type="submit"
-              className="mt-4 w-full bg-ogfore text-white py-2 px-4 rounded-lg hover:bg-ogfore-hover transition-colors shadow-xl"
-              disabled={isUploading}
-            >
-              Upload Receipt
-            </button>
-          )}
-        </Form>
+              {isUploading && (
+                <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-lg">
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                    <p className="mt-2 text-sm font-medium text-stone-900">
+                      Processing receipt...
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {uploadState.preview && (
+              <button
+                type="submit"
+                className="mt-4 w-full bg-ogfore text-white py-2 px-4 rounded-lg hover:bg-ogfore-hover transition-colors shadow-xl"
+                disabled={isUploading}
+              >
+                Upload Receipt
+              </button>
+            )}
+          </Form>
+        )}
 
         {uploadState.error && (
           <Alert variant="destructive">
@@ -296,7 +309,7 @@ export default function UploadReceipt() {
                       ? "text-orange-500"
                       : status.status === "error"
                       ? "text-red-500"
-                      : "text-gray-400"
+                      : "text-stone-400"
                   }`}
                 >
                   <StatusIcon status={status.status} />
@@ -313,20 +326,34 @@ export default function UploadReceipt() {
 
         {summary && (
           <div className="mt-4 bg-white p-4 rounded-lg shadow">
-            <h3 className="font-semibold mb-2">Job Summary:</h3>
+            <h3 className="font-semibold mb-2">Receipt Detection Summary:</h3>
             <p>{summary}</p>
+            <Link to={`/receipt/${processingStatus.length}receiptId`}></Link>
+            <button
+              type="button"
+              className="mt-4 w-full bg-ogfore hover:bg-ogfore-hover text-white font-bold py-3 px-6 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-ogfore-hover focus:ring-opacity-50"
+            >
+              Edit or View Results
+            </button>
           </div>
         )}
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Instructions</h2>
-          <ul className="list-disc list-inside space-y-2 text-gray-600">
-            <li>Upload a clear photo of your receipt</li>
-            <li>Make sure all items and prices are visible</li>
-            <li>Supported formats: JPEG, PNG, GIF, WebP</li>
-            <li>Maximum file size: 3MB</li>
-          </ul>
-        </div>
+        {(!processingStatus.length || uploadState.error) && (
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-lg font-semibold mb-4">
+              Instructions to upload a clear receipt photo:
+            </h2>
+            <ul className="list-disc list-inside space-y-2 text-stone-600">
+              <li>
+                ONLY the following stores are currently supported:{" "}
+                <span className="font-bold text-red-800">Trader Joe's</span>
+              </li>
+              <li>Please make sure all items and prices are visible 😊</li>
+              <li>Supported formats: JPEG, PNG, GIF, WebP 🖼️</li>
+              <li>Maximum file size: 3MB 🌐</li>
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -63,21 +63,33 @@ export default function ProductSearch() {
       </header>
 
       <main className="h-full flex-grow bg-ogprime">
-        <div className=" p-6 rounded-md shadow-sm">
-          <Label
-            htmlFor="productSearch"
-            className="text-stone-700 font-semibold"
-          >
-            Search for Existing Product
-          </Label>
-          <Input
-            type="text"
-            id="productSearch"
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search for a product"
-            className="mt-2 w-full max-w-md border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-          />
+        <section className="py-8 px-6 rounded-md shadow-sm  max-w-6xl mx-auto ">
+          <div id="search-bar" className="relative">
+            <Input
+              type="text"
+              id="productSearch"
+              value={searchTerm}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Search Open Price Data"
+              className="mt-2 bg-white w-full border-2 focus-visible:border-2 focus-visible:border-ogfore  focus-visible:ring-ogfore  text-lg py-5 pl-10 pr-4 rounded-lg shadow-lg"
+              autoFocus
+            />
+            <svg
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-stone-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+
           {searchResults.length > 0 && (
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {searchResults.map((product) => (
@@ -98,9 +110,9 @@ export default function ProductSearch() {
               ))}
             </div>
           )}
-        </div>
+        </section>
 
-        <section className="py-16 ">
+        <section className="py-8 ">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold mb-8 text-center">
               Trending Prices

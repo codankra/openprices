@@ -261,8 +261,8 @@ export async function processReceiptInBackground(
   userId: string
 ) {
   let statusList: StatusItem[] = [
-    { message: "Uploading Receipt", status: "completed" },
-    { message: "Saving Receipt Image", status: "not-started" },
+    { message: "🌐 Uploading Receipt", status: "completed" },
+    { message: "📷 Saving Receipt Image...", status: "not-started" },
   ];
 
   const updateStatus = (
@@ -280,16 +280,16 @@ export async function processReceiptInBackground(
   let uploadHasStarted = false;
   try {
     createJob(jobId, userId);
-    updateStatus(0, "completed", "Receipt Uploaded");
+    updateStatus(0, "completed", "🌐 Receipt Uploaded");
     updateStatus(1, "in-progress");
 
     const imageBuffer = Buffer.from(await receipt.arrayBuffer());
     const cloudflareResponse = await uploadToR2(receiptFilename, imageBuffer);
-    updateStatus(1, "completed", "Image Created for the Receipt");
+    updateStatus(1, "completed", "📷 Image Created for the Receipt");
     uploadHasStarted = true;
 
     statusList.push({
-      message: "Scanning Receipt Details",
+      message: "🔍 Scanning Receipt Details...",
       status: "not-started",
     });
     updateStatus(2, "in-progress");
@@ -297,11 +297,11 @@ export async function processReceiptInBackground(
     updateStatus(
       2,
       "completed",
-      `Receipt Items and Store Info Detected: <strong>${parsedReceipt.storeBrandName}</strong>`
+      `🛒 Receipt Items and Store Info Detected: <strong>${parsedReceipt.storeBrandName}</strong>`
     );
 
     statusList.push({
-      message: "Saving Prices for Items",
+      message: "🏷️ Saving Prices for Items...",
       status: "not-started",
     });
     statusList.push({ message: "Finalizing Results", status: "not-started" });
@@ -321,14 +321,18 @@ export async function processReceiptInBackground(
       receiptItems,
       receiptInfo
     );
-    updateStatus(3, "completed");
+    updateStatus(
+      3,
+      "completed",
+      `🏷️ Saved Prices for ${receiptItems.length} Items`
+    );
 
     updateStatus(4, "in-progress");
     const summary =
       `Created ${receiptProcessingResponse.priceEntriesCreated} price entries, ` +
       `matched ${receiptProcessingResponse.matchedUnitPriced} unit-priced items, ` +
       `and found ${receiptProcessingResponse.unmatched} unmatched items.`;
-    updateStatus(4, "completed");
+    updateStatus(4, "completed", "🏁 Results Ready");
 
     emitJobUpdate(
       jobId,
@@ -356,7 +360,8 @@ export async function processReceiptInBackground(
       jobId,
       JSON.stringify({
         statusList,
-        error: "Failed to process receipt",
+        error:
+          "Failed to Process Receipt. Please make sure the photo is clear and follows the instructions.\n\nRefresh this page or try again later.",
         completed: true,
       })
     );

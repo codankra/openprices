@@ -38,13 +38,31 @@ const chartConfig = {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Open Price Data" },
+    { title: "Open Price Data | Track Real Consumer Cost History" },
     {
       name: "description",
       content:
         "Explore crowdsourced open food price data to see real costs change over time. Join our community in tracking accurate, transparent food price trends.",
     },
-    { tagName: "link", rel: "canonical", href: process.env.SITE_NAME },
+    { tagName: "link", rel: "canonical", href: "https://openpricedata.com" },
+    {
+      property: "og:title",
+      content: "Open Price Data | Crowdsourced History of Real Consumer Prices",
+    },
+    {
+      property: "og:description",
+      content:
+        "Track true crowdsourced prices on the Open Price Data platform. See how everyday costs really change over time.",
+    },
+    {
+      property: "og:image",
+      content:
+        "https://raw.githubusercontent.com/codankra/openprices/refs/heads/master/public/header_preview.png",
+    },
+    {
+      property: "og:url",
+      content: "https://openpricedata.com",
+    },
   ];
 };
 export const loader: LoaderFunction = async () => {

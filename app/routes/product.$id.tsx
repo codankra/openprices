@@ -35,9 +35,10 @@ export const loader: LoaderFunction = async ({ params }) => {
   }
 };
 
-export const meta: MetaFunction = () => {
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  const productName = data.product.productInfo.name;
   return [
-    { title: "Price History" },
+    { title: `${productName} - Open Price History` },
     { name: "description", content: "Open Price History of Your Product" },
   ];
 };

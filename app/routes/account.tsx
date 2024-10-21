@@ -13,8 +13,12 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Open Price Dashboard" },
-    { name: "description", content: "Your User Section of Open Price Data" },
+    { title: "Account Dashboard - Open Price Data" },
+    {
+      name: "description",
+      content:
+        "Contributions - Statistics - Settings of Your User Profile Section of Open Price Data",
+    },
   ];
 };
 

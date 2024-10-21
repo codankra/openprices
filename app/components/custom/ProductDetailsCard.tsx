@@ -44,7 +44,7 @@ export default function ProductDetailsCard(props: ProductDetailsProps) {
         </div>
         <div className="flex-grow">
           <h3 className="font-semibold">{product.name}</h3>
-          <p className="text-gray-600 text-sm">
+          <p className="text-stone-600 text-sm">
             ${product.currentPrice.toFixed(2)}
           </p>
         </div>
