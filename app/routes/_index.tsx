@@ -7,8 +7,7 @@ import {
 import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { useLoaderData, Link, Form } from "@remix-run/react";
 import { useState } from "react";
-import { FaSearch, FaArrowRight } from "react-icons/fa";
-import { FaArrowTrendUp } from "react-icons/fa6";
+import { FaSearch } from "react-icons/fa";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { AnimatedText } from "~/components/custom/animations";
 import HeaderLinks from "~/components/custom/HeaderLinks";
@@ -53,11 +52,6 @@ export const meta: MetaFunction = () => {
       property: "og:description",
       content:
         "Track true crowdsourced prices on the Open Price Data platform. See how everyday costs really change over time.",
-    },
-    {
-      property: "og:image",
-      content:
-        "https://raw.githubusercontent.com/codankra/openprices/refs/heads/master/public/header_preview.png",
     },
     {
       property: "og:url",

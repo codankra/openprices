@@ -5,7 +5,6 @@ import { useCallback, useState } from "react";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import ProductDetailsCard from "~/components/custom/ProductDetailsCard";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
 import { products } from "~/db/schema";
 import { ProductPreview, products as trendingProducts } from "~/lib/data";
 import { debounce } from "~/lib/utils";

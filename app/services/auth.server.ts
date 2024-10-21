@@ -10,7 +10,7 @@ export const sessionStorage = createCookieSessionStorage({
     httpOnly: true,
     path: "/",
     sameSite: "lax",
-    expires: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000),
+    expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
     secrets: [process.env.AUTH_COOKIE_SECRET!],
     secure: process.env.NODE_ENV === "production",
   },
@@ -21,9 +21,9 @@ export const auth = new Authenticator<AuthUser>(sessionStorage);
 auth.use(
   new GitHubStrategy(
     {
-      clientID: process.env.AUTH_GITHUB_CLIENT_ID!,
+      clientId: process.env.AUTH_GITHUB_CLIENT_ID!,
       clientSecret: process.env.AUTH_GITHUB_CLIENT_SECRET!,
-      callbackURL: `${process.env.SITE_NAME}/auth/callback?provider=github`,
+      redirectURI: `${process.env.SITE_NAME}/auth/callback?provider=github`,
     },
     async ({ profile }) => {
       const user = await findOrCreateUser({
