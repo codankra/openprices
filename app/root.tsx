@@ -13,20 +13,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        <meta property="og:locale" content="en" />
+        <meta property="og:type" content="website" />
         <meta
           name="image"
           content="https://cdn.openpricedata.com/opengraph.png"
         />
         <meta
-          name="og:image"
+          property="og:image"
           content="https://cdn.openpricedata.com/opengraph.png"
         />
+
         <meta name="twitter:card" content="summary_large_image" />
-        <meta
-          name="twitter:image"
-          content="https://cdn.openpricedata.com/opengraph.png"
-        />
-        <meta property="twitter:domain" content="" />
+        <meta property="twitter:domain" content="openpricedata.com" />
         <meta property="twitter:url" content="https://openpricedata.com" />
         <meta
           name="twitter:title"
@@ -36,6 +36,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           name="twitter:description"
           content="Track true crowdsourced prices on the Open Price Data platform. See how everyday costs really change over time."
         />
+        <meta
+          name="twitter:image"
+          content="https://cdn.openpricedata.com/opengraph.png"
+        />
+
         <Meta />
         <Links />
       </head>
