@@ -21,6 +21,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           name="og:image"
           content="https://cdn.openpricedata.com/opengraph.png"
         />
+        <meta name="twitter:card" content="summary_large_image" />
         <meta
           name="twitter:image"
           content="https://cdn.openpricedata.com/opengraph.png"
