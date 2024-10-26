@@ -124,12 +124,17 @@ export const products = sqliteTable(
     productBrandName: text("product_brand_name").references(
       () => productBrands.name
     ),
+    contributedBy: text("contributed_by").references(() => users.id),
+    active: integer("is_active", { mode: "boolean" }).notNull().default(true),
   },
   (table) => ({
     productBrandNameIdx: index("product_brand_name_idx").on(
       table.productBrandName
     ),
     productNameIdx: index("product_name_idx").on(table.name),
+    contributedByIdx: index("product_contributed_by_idx").on(
+      table.contributedBy
+    ),
   })
 );
 
@@ -152,6 +157,9 @@ export const receipts = sqliteTable(
     })
       .notNull()
       .default("pending"),
+    processedPriceEntries: text("processed_price_entries"),
+    processedMatchedItems: text("processed_matched_items"),
+    processedUnmatchedTxt: text("processed_unmatched_txt"),
     processingErrors: text("processing_errors"),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
