@@ -83,6 +83,7 @@ export const priceEntries = sqliteTable(
     receiptId: integer("receipt_id").references(
       () => productReceiptIdentifiers.id
     ),
+    verified: integer("verified", { mode: "boolean" }).default(false),
   },
   (table) => ({
     productIdIdx: index("price_entries_product_id_idx").on(table.productId),
@@ -91,6 +92,7 @@ export const priceEntries = sqliteTable(
     contributorIdx: index("price_entries_contributor_id_idx").on(
       table.contributorId
     ),
+    verifiedIdx: index("price_entries_verified_idx").on(table.verified),
   })
 );
 
@@ -157,9 +159,9 @@ export const receipts = sqliteTable(
     })
       .notNull()
       .default("pending"),
-    processedPriceEntries: text("processed_price_entries"),
-    processedMatchedItems: text("processed_matched_items"),
-    processedUnmatchedTxt: text("processed_unmatched_txt"),
+    processedPriceEntries: integer("processed_price_entries"),
+    processedMatchedItems: integer("processed_matched_items"),
+    processedUnmatchedTxt: integer("processed_unmatched_txt"),
     processingErrors: text("processing_errors"),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()

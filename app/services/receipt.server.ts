@@ -225,6 +225,7 @@ export async function processReceiptItems(
             await tx.insert(priceEntries).values(priceEntriesToInsert);
           } catch (error) {
             console.error("Error inserting price entries:", error);
+            throw error;
           }
         }
 
@@ -235,9 +236,19 @@ export async function processReceiptItems(
             await tx.insert(draftItems).values(draftItemsToInsert);
           } catch (error) {
             console.error("Error inserting draft items:", error);
+            throw error;
           }
         }
       }
+      // Update the receipt record with finalized processing results
+      await tx
+        .update(receipts)
+        .set({
+          processedPriceEntries: results.priceEntriesCreated,
+          processedMatchedItems: results.matchedUnitPriced,
+          processedUnmatchedTxt: results.unmatched,
+        })
+        .where(eq(receipts.id, receipt.id));
 
       console.log("Processing complete. Returning results:", results);
       return results;
