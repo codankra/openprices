@@ -10,7 +10,7 @@ const HeaderLinks = () => {
             width={40}
             height={40}
             alt="Open Price Data Logo"
-            className="rounded"
+            className="rounded min-w-10"
           />
           <h1 className="text-2xl font-bold hidden md:block">
             Open Price Data

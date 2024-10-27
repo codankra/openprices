@@ -14,7 +14,7 @@ import { createJob, removeJob, emitJobUpdate } from "~/services/job.server";
 
 const supportedBrands = [
   { label: "TRADER JOE'S", brandName: "Trader Joe's" },
-  { label: "Costco", brandName: "Costco Wholesale" },
+  // { label: "Costco", brandName: "Costco Wholesale" },
 ];
 
 export function determineReceiptBrand(header: string) {
@@ -44,6 +44,61 @@ export function determineReceiptLocation(
 ) {
   // At the moment of writing, all the app expects is a descriptive string.
   return `${storeBrandName} ${storeNumber} - ${storeAddress}`;
+}
+
+export async function getReceiptByID(receiptId: number, contributorId: string) {
+  try {
+    // Get receipt details and verify ownership
+    const receipt = await db
+      .select()
+      .from(receipts)
+      .where(
+        and(eq(receipts.id, receiptId), eq(receipts.userId, contributorId))
+      )
+      .limit(1);
+
+    return receipt[0];
+  } catch (error) {
+    console.error("Error fetching receipt details:", error);
+    throw error;
+  }
+}
+
+export async function getReceiptItemsByReceiptID(receiptId: number) {
+  try {
+    const draftItemsList = await db
+      .select()
+      .from(draftItems)
+      .where(eq(draftItems.receiptId, receiptId));
+
+    return draftItemsList;
+  } catch (error) {
+    console.error("Error fetching receipt items:", error);
+    throw error;
+  }
+}
+
+export async function getReceiptDetails(
+  receiptId: number,
+  contributorId: string
+) {
+  try {
+    // Get receipt details and verify ownership
+    const receiptItemsPromise = getReceiptItemsByReceiptID(receiptId);
+    const receipt = await getReceiptByID(receiptId, contributorId);
+    if (!receipt) {
+      console.error("Receipt not found or unauthorized");
+      return null;
+    }
+    const receiptItems = await receiptItemsPromise;
+    return {
+      receipt,
+      receiptItems,
+    };
+  } catch (error) {
+    console.error("Error fetching receipt details:", error);
+    throw error;
+  }
 }
 
 interface ProcessedResults {
