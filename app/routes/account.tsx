@@ -1,15 +1,23 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
+import { defer, json, redirect } from "@remix-run/node";
+import { Await, Form, useLoaderData } from "@remix-run/react";
 import { auth } from "../services/auth.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
+import { getUserContributionsById } from "~/services/user.server";
+import { users } from "drizzle/schema";
+import { Suspense } from "react";
 
+type LoaderData = {
+  userContributions: Awaited<ReturnType<typeof getUserContributionsById>>;
+  user: typeof users.$inferSelect;
+};
 export const loader: LoaderFunction = async ({ request }) => {
   const user = await auth.isAuthenticated(request);
   if (!user) {
     return redirect("/login");
   }
-  return json({ user });
+  let userContributionsPromise = getUserContributionsById(user.id);
+  return defer({ user, userContributions: userContributionsPromise });
 };
 
 export const meta: MetaFunction = () => {
@@ -24,7 +32,7 @@ export const meta: MetaFunction = () => {
 };
 
 export default function UserAccount() {
-  const { user } = useLoaderData<typeof loader>();
+  const { user, userContributions } = useLoaderData<LoaderData>();
   return (
     <div className="font-sans p-4 bg-gradient-to-b from-[#f7f2ec] to-[#efebe7] min-h-screen">
       <header>
@@ -41,36 +49,69 @@ export default function UserAccount() {
           <h2 className="text-xl font-bold">Name</h2>
           <p className="">{user.name}</p>
         </div>
-        <div>
-          <h2 className="text-xl font-bold">Signed In With</h2>
-          <div className="flex gap-4">
-            <div className="flex items-center gap-2">
-              {user.googleId && (
-                <>
-                  <span>Google</span>
-                  <span className="text-green-600">✓</span>
-                </>
-              )}
+        <div className="flex items-center">
+          <div className="mr-8">
+            <h2 className="text-xl font-bold">Signed In With</h2>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-2">
+                {user.googleId && (
+                  <>
+                    <span>Google</span>
+                    <span className="text-green-600">✓</span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {user.githubId && (
+                  <>
+                    <span>GitHub</span>
+                    <span className="text-green-600">✓</span>
+                  </>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {user.githubId && (
-                <>
-                  <span>GitHub</span>
-                  <span className="text-green-600">✓</span>
-                </>
-              )}
-            </div>
-          </div>
+          </div>{" "}
+          <Form method="post" action="/logout">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-stone-600 text-white rounded hover:bg-stone-700 transition-colors duration-200 flex items-center gap-2"
+            >
+              Log Out
+            </button>
+          </Form>
         </div>
 
-        <Form method="post" action="/logout">
-          <button
-            type="submit"
-            className="mt-4 px-4 py-2 bg-stone-600 text-white rounded hover:bg-stone-700 transition-colors duration-200 flex items-center gap-2"
-          >
-            Log Out
-          </button>
-        </Form>
+        <div>
+          <div className="flex space-x-2">
+            <h2 className="text-xl font-bold">Contribution History</h2>
+            <h3 className="text-lg font-normal text-stone-500">past 30 days</h3>
+          </div>
+          <div className="flex flex-col ">
+            <Suspense
+              fallback={
+                <div className="text-stone-700">Loading contributions...</div>
+              }
+            >
+              <Await
+                resolve={userContributions}
+                errorElement={<div>Error loading Contributions</div>}
+              >
+                {(resolvedUserContributions) => (
+                  <>
+                    {(!resolvedUserContributions ||
+                      resolvedUserContributions.userPriceEntries.length ===
+                        0) && (
+                      <div className="text-stone-700">
+                        No price entries found
+                      </div>
+                    )}
+                    {JSON.stringify(resolvedUserContributions)}
+                  </>
+                )}
+              </Await>
+            </Suspense>
+          </div>
+        </div>
       </div>
     </div>
   );

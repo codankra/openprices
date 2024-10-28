@@ -6,7 +6,7 @@ import {
   draftItems,
   receipts,
 } from "~/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, gte } from "drizzle-orm";
 import { damerauLevenshtein } from "~/lib/utils";
 import { createR2URL, deleteFromR2, uploadToR2 } from "./r2.server";
 import { detectReceiptText } from "./vision.server";
@@ -60,6 +60,31 @@ export async function getReceiptByID(receiptId: number, contributorId: string) {
     return receipt[0];
   } catch (error) {
     console.error("Error fetching receipt details:", error);
+    throw error;
+  }
+}
+
+export async function getReceiptsByContributorID(
+  contributorId: string,
+  days: number = 30
+) {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    const receipts_list = await db
+      .select()
+      .from(receipts)
+      .where(
+        and(
+          eq(receipts.userId, contributorId),
+          gte(receipts.createdAt, cutoffDate)
+        )
+      );
+
+    return receipts_list;
+  } catch (error) {
+    console.error("Error fetching receipts:", error);
     throw error;
   }
 }

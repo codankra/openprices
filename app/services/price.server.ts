@@ -1,6 +1,6 @@
 import { priceEntries, users } from "~/db/schema";
 import { db } from "~/db/index";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, gte, and } from "drizzle-orm";
 import { priceEntriesCache } from "~/db/cache";
 import { withRetry } from "~/lib/utils";
 
@@ -51,6 +51,55 @@ export async function getPriceEntriesByProductID(id: string) {
       console.error(`Error fetching price entries for product ${id}:`, error);
       // You might want to throw a custom error here or return a default value
       throw new Error(`Failed to fetch price entries for product ${id}`);
+    }
+  });
+}
+
+export async function getPriceEntriesByContributorID(
+  id: string,
+  days: number = 30
+) {
+  return withRetry(async () => {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+
+      const cached: (typeof priceEntries.$inferSelect)[] | undefined =
+        await priceEntriesCache.get(`contributor-${id}-days-${days}`);
+      if (cached) return cached;
+      else {
+        const daysAgo = new Date();
+        daysAgo.setDate(daysAgo.getDate() - days);
+
+        const result = await db
+          .select({
+            id: priceEntries.id,
+            productId: priceEntries.productId,
+            entrySource: priceEntries.entrySource,
+            verified: priceEntries.verified,
+            price: priceEntries.price,
+            date: priceEntries.date,
+            proof: priceEntries.proof,
+            storeLocation: priceEntries.storeLocation,
+            createdAt: priceEntries.createdAt,
+          })
+          .from(priceEntries)
+          .where(
+            and(
+              eq(priceEntries.contributorId, id),
+              gte(priceEntries.createdAt, cutoffDate)
+            )
+          )
+          .orderBy(desc(priceEntries.createdAt));
+        await priceEntriesCache.set(`contributor-${id}-days-${days}`, result);
+        return result;
+      }
+    } catch (error) {
+      console.error(
+        `Error fetching price entries for contributor ${id}:`,
+        error
+      );
+      throw new Error(`Failed to fetch price entries for contributor ${id}`);
     }
   });
 }

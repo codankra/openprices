@@ -56,6 +56,12 @@ export const productBrands = sqliteTable("ProductBrands", {
   headquarters: text("headquarters"),
   website: text("website"),
   image: text("image"),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 export const storeBrands = sqliteTable("StoreBrands", {
   name: text("name").primaryKey().notNull(),
@@ -63,6 +69,12 @@ export const storeBrands = sqliteTable("StoreBrands", {
   headquarters: text("headquarters"),
   website: text("website"),
   image: text("image"),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const priceEntries = sqliteTable(
@@ -84,6 +96,12 @@ export const priceEntries = sqliteTable(
       () => productReceiptIdentifiers.id
     ),
     verified: integer("verified", { mode: "boolean" }).default(false),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({
     productIdIdx: index("price_entries_product_id_idx").on(table.productId),
@@ -93,6 +111,7 @@ export const priceEntries = sqliteTable(
       table.contributorId
     ),
     verifiedIdx: index("price_entries_verified_idx").on(table.verified),
+    createdAtIdx: index("price_entries_created_at_idx").on(table.createdAt),
   })
 );
 
@@ -128,6 +147,12 @@ export const products = sqliteTable(
     ),
     contributedBy: text("contributed_by").references(() => users.id),
     active: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({
     productBrandNameIdx: index("product_brand_name_idx").on(
@@ -137,6 +162,7 @@ export const products = sqliteTable(
     contributedByIdx: index("product_contributed_by_idx").on(
       table.contributedBy
     ),
+    createdAtIdx: index("product_created_at_idx").on(table.createdAt),
   })
 );
 
@@ -177,6 +203,7 @@ export const receipts = sqliteTable(
     storeBrandNameIdx: index("receipts_store_brand_name_idx").on(
       table.storeBrandName
     ),
+    createdAtIdx: index("receipts_created_at_idx").on(table.createdAt),
   })
 );
 

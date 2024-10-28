@@ -3,6 +3,8 @@ import { db } from "~/db";
 import { users } from "~/db/schema";
 import { eq, or } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { getReceiptsByContributorID } from "./receipt.server";
+import { getPriceEntriesByContributorID } from "./price.server";
 
 export type AuthUser = typeof users.$inferSelect;
 
@@ -61,4 +63,15 @@ export async function findOrCreateUser(profile: {
 export async function getUserById(id: string): Promise<AuthUser | null> {
   const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return user;
+}
+
+export async function getUserContributionsById(id: string, days: number = 30) {
+  try {
+    const userPriceEntries = await getPriceEntriesByContributorID(id, days);
+    const userReceipts = await getReceiptsByContributorID(id, days);
+    return { userReceipts, userPriceEntries };
+  } catch (error) {
+    console.error("Error getting user contributions:", error);
+    return { userReceipts: [], userPriceEntries: [] };
+  }
 }
