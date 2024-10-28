@@ -6,6 +6,13 @@ import HeaderLinks from "~/components/custom/HeaderLinks";
 import { getUserContributionsById } from "~/services/user.server";
 import { users } from "drizzle/schema";
 import { Suspense } from "react";
+import {
+  EmptyState,
+  PriceEntryItem,
+  ReceiptItem,
+} from "~/components/custom/ItemLists";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Receipt, Tag } from "lucide-react";
 
 type LoaderData = {
   userContributions: Awaited<ReturnType<typeof getUserContributionsById>>;
@@ -97,16 +104,50 @@ export default function UserAccount() {
                 errorElement={<div>Error loading Contributions</div>}
               >
                 {(resolvedUserContributions) => (
-                  <>
-                    {(!resolvedUserContributions ||
-                      resolvedUserContributions.userPriceEntries.length ===
-                        0) && (
-                      <div className="text-stone-700">
-                        No price entries found
-                      </div>
-                    )}
-                    {JSON.stringify(resolvedUserContributions)}
-                  </>
+                  <Tabs defaultValue="receipts" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-6">
+                      <TabsTrigger
+                        value="receipts"
+                        className="flex items-center gap-2"
+                      >
+                        <Receipt className="w-4 h-4" />
+                        Receipts
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="prices"
+                        className="flex items-center gap-2"
+                      >
+                        <Tag className="w-4 h-4" />
+                        Price Entries
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="receipts">
+                      {resolvedUserContributions.userReceipts &&
+                      resolvedUserContributions.userReceipts.length > 0 ? (
+                        resolvedUserContributions.userReceipts.map(
+                          (receipt: any) => (
+                            <ReceiptItem key={receipt.id} receipt={receipt} />
+                          )
+                        )
+                      ) : (
+                        <EmptyState type="receipts" />
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="prices">
+                      {resolvedUserContributions.userPriceEntries &&
+                      resolvedUserContributions.userPriceEntries.length > 0 ? (
+                        resolvedUserContributions.userPriceEntries.map(
+                          (entry: any) => (
+                            <PriceEntryItem key={entry.id} entry={entry} />
+                          )
+                        )
+                      ) : (
+                        <EmptyState type="price entries" />
+                      )}
+                    </TabsContent>
+                  </Tabs>
                 )}
               </Await>
             </Suspense>

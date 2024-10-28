@@ -69,8 +69,8 @@ export const meta: MetaFunction = () => {
 };
 
 type LoaderData = {
-  searchResults: (typeof products.$inferSelect)[];
-  existingProduct: typeof products.$inferSelect | null;
+  searchResults0: (typeof products.$inferInsert)[];
+  existingProduct0: typeof products.$inferInsert | null;
   user: AuthUser;
   productBrandsListPromise: Awaited<ReturnType<typeof getAllProductBrands>>;
 };
@@ -128,15 +128,15 @@ export const loader: LoaderFunction = async ({ request }) => {
   }
 
   const existingProductId = url.searchParams.get("existingProductId");
-  let existingProduct: typeof products.$inferSelect | null = null;
+  let existingProduct: typeof products.$inferInsert | null = null;
   if (existingProductId) {
     existingProduct = await getProductById(existingProductId);
   }
 
   const productBrandsListPromise = getAllProductBrands();
   return defer({
-    searchResults,
-    existingProduct,
+    searchResults0: searchResults,
+    existingProduct0: existingProduct,
     user,
     productBrandsListPromise,
   });
@@ -239,10 +239,16 @@ type ActionData = {
 
 export default function NewPricePoint() {
   const {
-    searchResults,
-    existingProduct,
+    searchResults0,
+    existingProduct0,
     productBrandsListPromise: productBrandsList,
   } = useLoaderData<LoaderData>();
+  const searchResults: (typeof products.$inferInsert)[] = JSON.parse(
+    JSON.stringify(searchResults0)
+  );
+  const existingProduct: typeof products.$inferInsert | null = existingProduct0
+    ? JSON.parse(JSON.stringify(existingProduct0))
+    : null;
   const actionData = useActionData<ActionData>();
   const [_searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
@@ -252,7 +258,7 @@ export default function NewPricePoint() {
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<
-    typeof products.$inferSelect | null
+    typeof products.$inferInsert | null
   >(existingProduct || null);
 
   useEffect(() => {
@@ -413,29 +419,35 @@ export default function NewPricePoint() {
                 name="productId"
                 value={selectedProduct.id}
               />
-              <h3 className="font-bold text-stone-800 text-xl mb-2">
-                {selectedProduct.name}
-              </h3>
-              {selectedProduct.image && (
-                <img
-                  src={selectedProduct.image}
-                  alt={selectedProduct.name}
-                  className="w-32 h-32 object-cover mt-2 rounded-md shadow-sm"
-                />
-              )}
-              <p className="text-stone-600">
-                Category: {selectedProduct.category}
-              </p>
-              {selectedProduct.unitPricing && (
+              <Link
+                className="w-full hover:bg-stone-400"
+                to={`/product/${selectedProduct.id}`}
+              >
+                {" "}
+                <h3 className="font-bold text-stone-800 text-xl mb-2">
+                  {selectedProduct.name}
+                </h3>
+                {selectedProduct.image && (
+                  <img
+                    src={selectedProduct.image}
+                    alt={selectedProduct.name}
+                    className="w-32 h-32 object-cover mt-2 rounded-md shadow-sm"
+                  />
+                )}
                 <p className="text-stone-600">
-                  Unit: {selectedProduct.unitQty} {selectedProduct.unitType}
+                  Category: {selectedProduct.category}
                 </p>
-              )}
-              {selectedProduct.productBrandName && (
-                <p className="text-stone-600">
-                  Brand: {selectedProduct.productBrandName}
-                </p>
-              )}
+                {selectedProduct.unitPricing && (
+                  <p className="text-stone-600">
+                    Unit: {selectedProduct.unitQty} {selectedProduct.unitType}
+                  </p>
+                )}
+                {selectedProduct.productBrandName && (
+                  <p className="text-stone-600">
+                    Brand: {selectedProduct.productBrandName}
+                  </p>
+                )}
+              </Link>
             </div>
           )}
           {isNewProduct && (

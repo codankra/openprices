@@ -12,6 +12,7 @@ import {
 import { getPriceEntriesByProductID } from "~/services/price.server";
 import { getProductAndBrandByID } from "~/services/product.server";
 import PriceChart from "~/components/custom/PriceEntryChart";
+import HeaderLinks from "~/components/custom/HeaderLinks";
 type LoaderData = {
   product: Awaited<ReturnType<typeof getProductAndBrandByID>>;
   priceEntries: Awaited<ReturnType<typeof getPriceEntriesByProductID>>;
@@ -54,19 +55,8 @@ export default function ProductPage() {
       })`;
   return (
     <div className="font-sans bg-ogprime min-h-screen">
-      <header className="bg-stone-300 text-stone-900 self-start py-4 mb-4 border-stone-800 border-b-2 flex justify-between">
-        <div className="flex items-center container mx-auto hover:text-stone-700 ">
-          <Link to="/" className="flex items-center space-x-4">
-            <img
-              src="/favicon.ico"
-              width={40}
-              height={40}
-              alt="Open Price Data Logo"
-              className="rounded"
-            />
-            <h1 className="text-2xl font-bold">Open Price Data</h1>
-          </Link>
-        </div>
+      <header>
+        <HeaderLinks />
       </header>
 
       <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6 mb-4">
