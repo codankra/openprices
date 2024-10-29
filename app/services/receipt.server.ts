@@ -346,6 +346,18 @@ interface StatusItem {
   status: "completed" | "in-progress" | "not-started" | "error";
 }
 
+export type ReceiptProcessResultsData = ProcessedResults & {
+  summary: string;
+  url: string;
+};
+
+type ReceiptProcessResults = {
+  completed: true;
+  error?: string;
+  statusList: StatusItem[];
+  results?: ReceiptProcessResultsData;
+};
+
 export async function processReceiptInBackground(
   jobId: string,
   receipt: File,
@@ -375,7 +387,7 @@ export async function processReceiptInBackground(
     updateStatus(1, "in-progress");
 
     const imageBuffer = Buffer.from(await receipt.arrayBuffer());
-    const cloudflareResponse = await uploadToR2(receiptFilename, imageBuffer);
+    await uploadToR2(receiptFilename, imageBuffer);
     updateStatus(1, "completed", "📷 Image Created for the Receipt");
     uploadHasStarted = true;
 
@@ -422,20 +434,15 @@ export async function processReceiptInBackground(
     const summary =
       `Created ${receiptProcessingResponse.priceEntriesCreated} price entries, ` +
       `matched ${receiptProcessingResponse.matchedUnitPriced} unit-priced items, ` +
-      `and found ${receiptProcessingResponse.unmatched} unmatched items.`;
-    updateStatus(4, "completed", "🏁 Results Ready");
+      `and found ${receiptProcessingResponse.unmatched} unmatched items.` +
+      updateStatus(4, "completed", "🏁 Results Ready");
 
-    emitJobUpdate(
-      jobId,
-      JSON.stringify({
-        statusList,
-        summary,
-        completed: true,
-        url: receiptURL,
-        process: receiptProcessingResponse,
-        cloudflareResponse,
-      })
-    );
+    const receiptProcessResults: ReceiptProcessResults = {
+      statusList,
+      completed: true,
+      results: { ...receiptProcessingResponse, url: receiptURL, summary },
+    };
+    emitJobUpdate(jobId, JSON.stringify(receiptProcessResults));
   } catch (error) {
     console.error(error);
     statusList.forEach((item, index) => {
@@ -447,15 +454,13 @@ export async function processReceiptInBackground(
       console.log("Attempting to free R2 resource at: ", receiptURL);
       await deleteFromR2(receiptFilename);
     }
-    emitJobUpdate(
-      jobId,
-      JSON.stringify({
-        statusList,
-        error:
-          "Failed to Process Receipt. Please make sure the photo is clear and follows the instructions.\n\nRefresh this page or try again later.",
-        completed: true,
-      })
-    );
+    const receiptErrorResults: ReceiptProcessResults = {
+      statusList,
+      error:
+        "Failed to Process Receipt. Please make sure the photo is clear and follows the instructions.\n\nRefresh this page or try again later.",
+      completed: true,
+    };
+    emitJobUpdate(jobId, JSON.stringify(receiptErrorResults));
   } finally {
     removeJob(jobId);
   }

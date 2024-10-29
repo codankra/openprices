@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   AlertCircle,
   CircleDashed,
+  ExternalLinkIcon,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -24,7 +25,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { processReceiptInBackground } from "~/services/receipt.server";
+import {
+  processReceiptInBackground,
+  ReceiptProcessResultsData,
+} from "~/services/receipt.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 
 interface UploadState {
@@ -90,7 +94,8 @@ export default function UploadReceipt() {
     error: null,
   });
   const [processingStatus, setProcessingStatus] = useState<StatusItem[]>([]);
-  const [summary, setSummary] = useState<string>("");
+  const [processSummary, setProcessSummary] =
+    useState<ReceiptProcessResultsData | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const navigation = useNavigation();
@@ -98,7 +103,7 @@ export default function UploadReceipt() {
   useEffect(() => {
     if (isUploading) {
       setProcessingStatus([]);
-      setSummary("");
+      setProcessSummary(null);
     }
   }, [isUploading]);
 
@@ -114,7 +119,7 @@ export default function UploadReceipt() {
             eventSource.close();
           } else if (data.completed) {
             setProcessingStatus(data.statusList);
-            setSummary(data.summary);
+            setProcessSummary(data.results);
 
             eventSource.close();
           } else {
@@ -198,7 +203,7 @@ export default function UploadReceipt() {
           ) : (
             <span className="bg-green-950  text-white font-semibold text-lg  py-1 px-3 rounded ">
               {processingStatus.length > 0
-                ? summary
+                ? processSummary
                   ? "Processed"
                   : "Processing"
                 : "Ready"}
@@ -324,17 +329,33 @@ export default function UploadReceipt() {
           </div>
         )}
 
-        {summary && (
+        {processSummary && (
           <div className="mt-4 bg-white p-4 rounded-lg shadow">
             <h3 className="font-semibold mb-2">Receipt Detection Summary:</h3>
-            <p>{summary}</p>
-            <Link to={`/receipt/${processingStatus.length}receiptId`}></Link>
-            <button
-              type="button"
-              className="mt-4 w-full bg-ogfore hover:bg-ogfore-hover text-white font-bold py-3 px-6 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-ogfore-hover focus:ring-opacity-50"
-            >
-              Edit or View Results
-            </button>
+            <div className="flex items-center mx-4 space-x-4">
+              <p>{processSummary.summary}</p>
+              <Link
+                to={processSummary.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center p-2 hover:bg-stone-200 rounded"
+              >
+                <ExternalLinkIcon className="w-8 h-8" />
+                <p className="text-stone-600 text-xs text-center">
+                  View&nbsp;Receipt
+                </p>
+              </Link>
+            </div>
+
+            <Link to={`/receipt/${processSummary.receiptId}`}>
+              {" "}
+              <button
+                type="button"
+                className="mt-4 w-full bg-ogfore hover:bg-ogfore-hover text-white font-bold py-3 px-6 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-ogfore-hover focus:ring-opacity-50"
+              >
+                Edit or View Results
+              </button>
+            </Link>
           </div>
         )}
 
