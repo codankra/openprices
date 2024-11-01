@@ -116,13 +116,6 @@ export default function ReceiptPage() {
 
 const ReceiptReview = (props: LoaderData) => {
   const { receipt, receiptItems } = props;
-  const [newProduct, setNewProduct] = useState({
-    name: "",
-    category: "",
-    unitQty: 0,
-    unitType: "COUNT",
-    productBrandName: "",
-  });
 
   const ReceiptSummary = () => (
     <Card className="mb-6">
@@ -234,20 +227,34 @@ const ReceiptReview = (props: LoaderData) => {
   }: {
     draftItem: typeof draftItems.$inferInsert;
   }) => {
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [formData, setFormData] = useState({
+      name: "",
+      category: "",
+      unitQty: 0,
+      unitType: "",
+      productBrandName: "",
+    });
+
     const handleSubmit = async () => {
       // TODO: Implement API calls to:
       // 1. Create new product
       // 2. Create price entry
       // 3. Create product receipt identifier
       // 4. Mark draft item as complete
+      setDialogOpen(false);
     };
 
     return (
-      <Dialog>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogTrigger asChild>
           <Button variant="outline">Create Product</Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent
+          aria-describedby="Create a product for this receipt item."
+          aria-description="Create a product for this receipt item."
+          className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
+        >
           <DialogHeader>
             <DialogTitle>Create New Product</DialogTitle>
           </DialogHeader>
@@ -256,20 +263,19 @@ const ReceiptReview = (props: LoaderData) => {
               <Label htmlFor="name">Product Name</Label>
               <Input
                 id="name"
-                value={newProduct.name}
+                value={formData.name}
                 onChange={(e) =>
-                  setNewProduct({ ...newProduct, name: e.target.value })
+                  setFormData((prev) => ({ ...prev, name: e.target.value }))
                 }
-                defaultValue={draftItem.receiptText}
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="category">Category</Label>
               <Input
                 id="category"
-                value={newProduct.category}
+                value={formData.category}
                 onChange={(e) =>
-                  setNewProduct({ ...newProduct, category: e.target.value })
+                  setFormData((prev) => ({ ...prev, category: e.target.value }))
                 }
               />
             </div>
@@ -279,21 +285,21 @@ const ReceiptReview = (props: LoaderData) => {
                 <Input
                   id="unitQty"
                   type="number"
-                  value={newProduct.unitQty}
+                  value={formData.unitQty || ""}
                   onChange={(e) =>
-                    setNewProduct({
-                      ...newProduct,
-                      unitQty: Number(e.target.value),
-                    })
+                    setFormData((prev) => ({
+                      ...prev,
+                      unitQty: e.target.value ? Number(e.target.value) : 0,
+                    }))
                   }
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="unitType">Unit Type</Label>
                 <Select
-                  value={newProduct.unitType}
-                  onValueChange={(value) =>
-                    setNewProduct({ ...newProduct, unitType: value })
+                  value={formData.unitType}
+                  onValueChange={(value: UnitType) =>
+                    setFormData((prev) => ({ ...prev, unitType: value }))
                   }
                 >
                   <SelectTrigger>
@@ -309,7 +315,14 @@ const ReceiptReview = (props: LoaderData) => {
                 </Select>
               </div>
             </div>
-            <Button onClick={handleSubmit}>Create Product</Button>
+            <div className="flex flex-col gap-2">
+              <Button onClick={handleSubmit} disabled>
+                Create Product
+              </Button>
+              <p className="text-sm text-gray-500 italic">
+                This feature is not yet implemented
+              </p>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
