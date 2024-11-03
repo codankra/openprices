@@ -541,10 +541,10 @@ export default function NewPricePoint() {
                     type="text"
                     id="category"
                     name="category"
+                    placeholder="What is the core item? (1-2 words)"
                     className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
                   />
                 </div>
-
                 <div>
                   <Label
                     htmlFor="proofFiles"
@@ -559,9 +559,18 @@ export default function NewPricePoint() {
                     accept="image/*"
                     className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
                   />{" "}
+                </div>{" "}
+                <div className="mt-6 mb-0 md:col-span-2">
+                  <h3 className="text-lg font-semibold mb-2">
+                    Packaging Details
+                  </h3>
+                  <p className="text-sm text-stone-600">
+                    Most packages will have a label at the front describing the
+                    amount of the product being sold per package by its weight
+                    or volume. Examples: 12 fl. oz. water bottles, or 2 lb bags
+                    of rice.
+                  </p>
                 </div>
-                <div className="h-1"></div>
-                <div className="h-1 hidden md:block"></div>
                 <div>
                   <Label
                     htmlFor="unitType"
@@ -603,27 +612,20 @@ export default function NewPricePoint() {
                     className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
                   />
                 </div>
-                <div className="flex self-center space-x-2 ">
+                <div className="flex self-center space-x-2 md:col-span-2">
                   <Checkbox id="unitPricing" name="unitPricing" />
-                  <Label
-                    htmlFor="unitPricing"
-                    className="text-stone-700 font-semibold"
-                  >
-                    Is it Priced by Weight/Volume?{" "}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger type="button">
-                          <FaCircleInfo />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>
-                            Common with Produce, Meats/Cheeses, and Deli
-                            Prepared Food{" "}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </Label>
+                  <div className="flex flex-col space-y-1">
+                    {" "}
+                    <Label
+                      htmlFor="unitPricing"
+                      className="text-stone-700 font-semibold"
+                    >
+                      Is it Priced by Weight/Volume?{" "}
+                    </Label>
+                    <p className="text-sm text-stone-600">
+                      (Common with deli-prepared foods)
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
