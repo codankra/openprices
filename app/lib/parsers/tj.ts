@@ -1,3 +1,5 @@
+import { findItemBounds } from "~/services/vision.server";
+
 interface ReceiptData {
   storeName: string;
   storeAddress: string;
@@ -18,7 +20,10 @@ interface Item {
   confidence: number;
 }
 
-export function parseTraderJoesReceipt(ocrLines: string[]): ReceiptData {
+export function parseTraderJoesReceipt(
+  ocrLines: string[],
+  blocks: any[]
+): ReceiptData {
   const receiptData: ReceiptData = {
     storeName: "",
     storeAddress: "",
@@ -39,10 +44,10 @@ export function parseTraderJoesReceipt(ocrLines: string[]): ReceiptData {
   const items: Item[] = [];
   let i = 7; // Start parsing items from line 7
   while (i < ocrLines.length) {
-    const item = parseItem(ocrLines, i);
+    const item = parseItem(ocrLines, blocks, i);
     if (item) {
       items.push(item);
-      i += item.unitPrice !== undefined ? 3 : 2; // Skip name, price, and quantity (if present)
+      i += item.unitPrice !== undefined ? 3 : 2;
     } else if (ocrLines[i].includes("Tax:")) {
       receiptData.taxAmount = extractTaxAmount(ocrLines[i]);
       break;
@@ -50,7 +55,6 @@ export function parseTraderJoesReceipt(ocrLines: string[]): ReceiptData {
       i++;
     }
   }
-
   receiptData.items = mergeDuplicateItems(items);
   receiptData.totalAmount = extractTotalAmount(ocrLines);
   receiptData.totalItemsCount = receiptData.items.reduce(
@@ -90,15 +94,20 @@ function extractDate(ocrLines: string[]): string {
   return "";
 }
 
-function parseItem(ocrLines: string[], index: number): Item | null {
+function parseItem(
+  ocrLines: string[],
+  annotations: any[],
+  index: number
+): Item | null {
   if (index + 1 >= ocrLines.length) return null;
 
   const itemName = ocrLines[index];
   const priceMatch = ocrLines[index + 1].match(/\$(\d+\.\d{2})/);
 
   if (!priceMatch) return null;
-
-  const item: Item = {
+  // Collect all lines that belong to this item
+  const itemText = [itemName, priceMatch[0]];
+  let item: Item = {
     name: itemName,
     price: parseFloat(priceMatch[1]),
     unitQuantity: 1,
@@ -108,6 +117,7 @@ function parseItem(ocrLines: string[], index: number): Item | null {
   if (index + 2 < ocrLines.length) {
     const quantityMatch = ocrLines[index + 2].match(/(\d+) @ \$(\d+\.?\d*)/);
     if (quantityMatch) {
+      itemText.push(quantityMatch[0]);
       item.unitQuantity = parseInt(quantityMatch[1]);
       item.unitPrice = parseFloat(quantityMatch[2]);
 
@@ -121,6 +131,11 @@ function parseItem(ocrLines: string[], index: number): Item | null {
       }
     }
   }
+  // Find the bounding box that encompasses all the item's text
+  const bounds = findItemBounds(annotations, itemText);
+  console.log("bounding receipt item ");
+  console.log(bounds);
+  item = { ...item, ...bounds };
 
   // Additional confidence adjustments
   if (

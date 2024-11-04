@@ -206,7 +206,6 @@ export const receipts = sqliteTable(
     createdAtIdx: index("receipts_created_at_idx").on(table.createdAt),
   })
 );
-
 export const draftItems = sqliteTable(
   "DraftItems",
   {
@@ -218,6 +217,10 @@ export const draftItems = sqliteTable(
     price: real("price").notNull(),
     unitQuantity: real("unit_quantity"),
     unitPrice: real("unit_price"),
+    minX: real("min_x").notNull().default(0),
+    minY: real("min_y").notNull().default(0),
+    maxX: real("max_x").notNull().default(0),
+    maxY: real("max_y").notNull().default(0),
     status: text("status", {
       enum: ["pending", "matched", "completed", "ignored"],
     })

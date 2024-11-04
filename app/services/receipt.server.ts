@@ -239,6 +239,10 @@ export async function processReceiptItems(
                 unitPrice: item.unitPrice,
                 status: "pending",
                 confidence: item.confidence,
+                maxX: item.maxX,
+                maxY: item.maxY,
+                minX: item.minX,
+                minY: item.minY,
               });
               results.unmatched++;
               continue;
@@ -263,6 +267,10 @@ export async function processReceiptItems(
                 status: "matched",
                 confidence: item.confidence,
                 notes: `Customer bought a specific amount of this item.`,
+                maxX: item.maxX,
+                maxY: item.maxY,
+                minX: item.minX,
+                minY: item.minY,
               });
               results.matchedUnitPriced++;
             } else {
@@ -287,6 +295,10 @@ export async function processReceiptItems(
                 status: "completed",
                 confidence: item.confidence,
                 notes: `Product and price Auto-Detected`,
+                maxX: item.maxX,
+                maxY: item.maxY,
+                minX: item.minX,
+                minY: item.minY,
               });
 
               results.priceEntriesCreated++;

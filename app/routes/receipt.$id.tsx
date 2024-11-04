@@ -1,28 +1,9 @@
-import type {
-  MetaFunction,
-  LoaderFunction,
-  ActionFunction,
-} from "@remix-run/node";
+import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import {
-  Form,
-  Link,
-  useActionData,
-  useLoaderData,
-  useNavigation,
-  useParams,
-} from "@remix-run/react";
-import { useState, useRef, useEffect } from "react";
+import { Link, useLoaderData, useParams } from "@remix-run/react";
+import { useState } from "react";
 import { auth } from "../services/auth.server";
-import {
-  Upload,
-  X,
-  Loader2,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-} from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { X, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -52,6 +33,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog";
+import ReceiptLinePreview from "~/components/custom/ReceiptLinePreview";
 
 export const meta: MetaFunction = () => {
   return [
@@ -80,7 +62,6 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 };
 
 export default function ReceiptPage() {
-  const { id } = useParams();
   const { receipt, receiptItems } = useLoaderData<LoaderData>();
 
   return (
@@ -100,7 +81,7 @@ export default function ReceiptPage() {
             </Link>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Receipt History </BreadcrumbPage>
+              <BreadcrumbPage>Receipt Details</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -224,8 +205,10 @@ const ReceiptReview = (props: LoaderData) => {
 
   const NewProductForm = ({
     draftItem,
+    receiptURL,
   }: {
-    draftItem: typeof draftItems.$inferInsert;
+    draftItem: typeof draftItems.$inferSelect;
+    receiptURL: string;
   }) => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [formData, setFormData] = useState({
@@ -258,6 +241,9 @@ const ReceiptReview = (props: LoaderData) => {
           <DialogHeader>
             <DialogTitle>Create New Product</DialogTitle>
           </DialogHeader>
+          <div className="p-2">
+            <ReceiptLinePreview imageUrl={receiptURL} item={draftItem} />
+          </div>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Product Name</Label>
@@ -350,7 +336,9 @@ const ReceiptReview = (props: LoaderData) => {
 
         <div className="mt-4">
           {item.status === "matched" && <QuantityInput draftItem={item} />}
-          {item.status === "pending" && <NewProductForm draftItem={item} />}
+          {item.status === "pending" && (
+            <NewProductForm draftItem={item} receiptURL={receipt.imageUrl} />
+          )}
           {item.status === "completed" && (
             <div className="flex items-center text-green-600">
               <CheckCircle2 className="w-5 h-5 mr-2" />
