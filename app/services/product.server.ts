@@ -1,6 +1,6 @@
-import { products, productBrands } from "~/db/schema";
+import { products, productBrands, draftItems } from "~/db/schema";
 import { db } from "~/db/index";
-import { eq, like } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import {
   productInfoCache,
   productSearchCache,
@@ -119,4 +119,14 @@ export async function updateProductLatestPrice(id: number, newPrice: number) {
     return product;
   }
   return null;
+}
+
+export function ignoreProductDraftItem(id: number) {
+  return db
+    .update(draftItems)
+    .set({ status: "ignored", updatedAt: new Date() })
+    .where(and(eq(draftItems.id, id), eq(draftItems.status, "pending")))
+    .catch((error) => {
+      console.error(`Failed to ignore draft item ${id}:`, error);
+    });
 }
