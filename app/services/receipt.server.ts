@@ -46,7 +46,10 @@ export function determineReceiptLocation(
   return `${storeBrandName} ${storeNumber} - ${storeAddress}`;
 }
 
-export async function getReceiptByID(receiptId: number, contributorId: string) {
+export async function getReceiptByID(
+  receiptId: number,
+  contributorId: string
+): Promise<typeof receipts.$inferSelect | null> {
   try {
     // Get receipt details and verify ownership
     const receipt = await db
@@ -56,6 +59,10 @@ export async function getReceiptByID(receiptId: number, contributorId: string) {
         and(eq(receipts.id, receiptId), eq(receipts.userId, contributorId))
       )
       .limit(1);
+
+    if (receipt.length === 0) {
+      return null;
+    }
 
     return receipt[0];
   } catch (error) {

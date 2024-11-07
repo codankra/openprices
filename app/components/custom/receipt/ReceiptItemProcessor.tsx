@@ -22,7 +22,7 @@ import { draftItems, UnitType } from "~/db/schema";
 
 type DraftItem = typeof draftItems.$inferSelect;
 
-interface FormData {
+interface CreateItemData {
   receiptText: string;
   name: string;
   category: string;
@@ -38,7 +38,7 @@ interface ReceiptItemProcessorProps {
   item: DraftItem;
   imageUrl: string;
   storeLocation: string;
-  onSubmit: (formData: FormData) => Promise<void>;
+  onSubmit: (formData: CreateItemData) => Promise<void>;
   onIgnore: () => Promise<void>;
   onQuantityUpdate?: (quantity: number) => Promise<void>;
 }
@@ -52,7 +52,7 @@ const ReceiptItemProcessor = ({
   onQuantityUpdate,
 }: ReceiptItemProcessorProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<CreateItemData>({
     receiptText: item.receiptText,
     name: "",
     category: "",
@@ -65,9 +65,9 @@ const ReceiptItemProcessor = ({
 
   const toggleExpand = () => setIsExpanded(!isExpanded);
 
-  const handleChange = <K extends keyof FormData>(
+  const handleChange = <K extends keyof CreateItemData>(
     field: K,
-    value: FormData[K]
+    value: CreateItemData[K]
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };

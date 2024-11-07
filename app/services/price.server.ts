@@ -1,4 +1,11 @@
-import { priceEntries, users } from "~/db/schema";
+import {
+  priceEntries,
+  users,
+  receipts,
+  productReceiptIdentifiers,
+  draftItems,
+  products,
+} from "~/db/schema";
 import { db } from "~/db/index";
 import { eq, desc, gte, and } from "drizzle-orm";
 import { priceEntriesCache } from "~/db/cache";
@@ -140,4 +147,86 @@ export async function addNewPriceEntry(
     return addedPriceEntry.id.toString();
   }
   return 0;
+}
+
+// If unitpriced, we'll need to mark the item matched, but confirm quantity before inserting the priceEntry.
+// insertUnitPricedEntry()
+
+// all other items are drafts. what I want to do is get the couple closest productReceiptIdentifiers that exist and suggest them. if the product does not exist, the user will need to create the product, and we'll then do 4 things: add the product, add the price entry, add the productReceiptIdentifier, and mark the draftItem as complete.
+// createNewReceiptItemPriceEntry()
+export async function createNewReceiptItemPriceEntry(
+  receiptInfo: typeof receipts.$inferSelect,
+  createItemData: {
+    draftItemId: number;
+    receiptText: string;
+    name: string;
+    category: string;
+    unitQty: number;
+    unitType: string;
+    productBrandName: string;
+    pricePerUnit: number;
+    quantity: number;
+  },
+  userId: string,
+  productImageUrl: string
+) {
+  return await db.transaction(async (tx) => {
+    const [newProduct] = await tx
+      .insert(products)
+      .values({
+        name: createItemData.name,
+        category: createItemData.category,
+        latestPrice: createItemData.pricePerUnit,
+        unitPricing: createItemData.quantity !== 1,
+        unitQty: createItemData.unitQty,
+        unitType: createItemData.unitType,
+        productBrandName: createItemData.productBrandName,
+        image: productImageUrl,
+        active: true,
+      })
+      .returning({ id: products.id });
+
+    if (!newProduct) throw new Error("PRODUCT_CREATION_FAILED");
+
+    // Create receipt identifier
+    await tx.insert(productReceiptIdentifiers).values({
+      productId: newProduct.id,
+      storeBrandName: receiptInfo.storeBrandName!,
+      receiptIdentifier: createItemData.receiptText,
+    });
+
+    // Create price entry
+    const [newPriceEntry] = await tx
+      .insert(priceEntries)
+      .values({
+        contributorId: userId,
+        productId: newProduct.id,
+        price: createItemData.pricePerUnit,
+        date: receiptInfo.purchaseDate,
+        storeLocation: receiptInfo.storeLocation,
+        entrySource: "receipt",
+        receiptId: receiptInfo.id,
+        proof: receiptInfo.imageUrl,
+      })
+      .returning();
+
+    if (!newPriceEntry) throw new Error("PRICE_ENTRY_CREATION_FAILED");
+
+    // Update draft item status
+    await tx
+      .update(draftItems)
+      .set({
+        status: "completed",
+        updatedAt: new Date(),
+      })
+      .where(eq(draftItems.id, createItemData.draftItemId));
+
+    // Clear cache for this product's price entries
+    await priceEntriesCache.set(`product-${newProduct.id}`, [newPriceEntry]);
+
+    return {
+      productId: newProduct.id,
+      priceEntryId: newPriceEntry.id.toString(),
+    };
+  });
 }

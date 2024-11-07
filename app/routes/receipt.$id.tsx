@@ -1,6 +1,6 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Link, useLoaderData } from "@remix-run/react";
+import { Link, useFetcher, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
 import { auth } from "../services/auth.server";
 import { X, CheckCircle2, Clock, AlertCircle } from "lucide-react";
@@ -240,8 +240,32 @@ const ReceiptReview = (props: LoaderData) => {
             key={item.id}
             imageUrl={receipt.imageUrl}
             storeLocation={receipt.storeLocation!}
-            onSubmit={async () => {
-              // WIP: Handle product creation and price entry
+            onSubmit={async (createItemData) => {
+              const formData = new FormData();
+              for (let [key, value] of Object.entries(createItemData)) {
+                if (value instanceof File) {
+                  formData.append(key, value);
+                } else {
+                  formData.append(key, String(value));
+                }
+              }
+              formData.append("receiptId", receipt.id.toString());
+              formData.append("draftItemId", item.id.toString());
+
+              try {
+                await fetch("/draftItem/create", {
+                  method: "POST",
+                  body: formData,
+                });
+                updateItemStatus(item.id, item.status, "completed");
+                console.log(
+                  "Completed the creation of priceEntry, product, and RTI for item ",
+                  item.id
+                );
+              } catch (error) {
+                console.error("Failed to process receipt item:", error);
+                // TODO: show error toast
+              }
             }}
             onIgnore={async () => {
               console.log("Starting the ignore");
@@ -249,7 +273,7 @@ const ReceiptReview = (props: LoaderData) => {
 
               const formData = new FormData();
               formData.append("id", item.id.toString());
-              await fetch(`/ignore/draftItem`, {
+              await fetch(`/draftItem/ignore`, {
                 method: "POST",
                 body: formData,
               }).catch((error) =>
