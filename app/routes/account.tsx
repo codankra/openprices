@@ -10,7 +10,7 @@ import {
   EmptyState,
   PriceEntryItem,
   ReceiptItem,
-} from "~/components/custom/ItemLists";
+} from "~/components/custom/receipt/ContributionHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Receipt, Tag } from "lucide-react";
 

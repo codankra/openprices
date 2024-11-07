@@ -1,16 +1,9 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Link, useLoaderData, useParams } from "@remix-run/react";
+import { Link, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
 import { auth } from "../services/auth.server";
-import {
-  X,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  ChevronUp,
-  Plus,
-} from "lucide-react";
+import { X, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -21,28 +14,11 @@ import {
 } from "@/components/ui/breadcrumb";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import { getReceiptDetails } from "~/services/receipt.server";
-import { draftItems, receipts, UnitType } from "~/db/schema";
+import { draftItems, receipts } from "~/db/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
-import { Label } from "~/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "~/components/ui/dialog";
-import ReceiptLinePreview from "~/components/custom/ReceiptItemProcessor";
-import ReceiptItemProcessor from "~/components/custom/ReceiptItemProcessor";
-import { ignoreProductDraftItem } from "~/services/product.server";
+import ReceiptItemProcessor from "~/components/custom/receipt/ReceiptItemProcessor";
 
 export const meta: MetaFunction = () => {
   return [
@@ -106,6 +82,46 @@ export default function ReceiptPage() {
 
 const ReceiptReview = (props: LoaderData) => {
   const { receipt, receiptItems } = props;
+  const [itemsByStatus, setItemsByStatus] = useState(() => {
+    const groups = {
+      pending: [] as (typeof draftItems.$inferSelect)[],
+      matched: [] as (typeof draftItems.$inferSelect)[],
+      completed: [] as (typeof draftItems.$inferSelect)[],
+      ignored: [] as (typeof draftItems.$inferSelect)[],
+    };
+
+    receiptItems.forEach((item) => {
+      groups[item.status].push(item);
+    });
+
+    return groups;
+  });
+
+  const updateItemStatus = (
+    itemId: number,
+    oldStatus: typeof draftItems.$inferSelect.status,
+    newStatus: typeof draftItems.$inferSelect.status
+  ) => {
+    setItemsByStatus((prevGroups) => {
+      const newGroups = {
+        pending: [...prevGroups.pending],
+        matched: [...prevGroups.matched],
+        completed: [...prevGroups.completed],
+        ignored: [...prevGroups.ignored],
+      };
+
+      const index = newGroups[oldStatus].findIndex(
+        (item) => item.id === itemId
+      );
+      if (index !== -1) {
+        const [item] = newGroups[oldStatus].splice(index, 1);
+        item.status = newStatus;
+        newGroups[newStatus].push(item);
+      }
+
+      return newGroups;
+    });
+  };
 
   const ReceiptSummary = () => (
     <Card className="mb-6">
@@ -218,7 +234,7 @@ const ReceiptReview = (props: LoaderData) => {
 
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Receipt Items</h2>
-        {receiptItems.map((item) => (
+        {itemsByStatus.pending.map((item) => (
           <ReceiptItemProcessor
             item={item}
             key={item.id}
@@ -229,10 +245,10 @@ const ReceiptReview = (props: LoaderData) => {
             }}
             onIgnore={async () => {
               console.log("Starting the ignore");
+              updateItemStatus(item.id, item.status, "ignored");
+
               const formData = new FormData();
               formData.append("id", item.id.toString());
-
-              // Fire and forget the fetch too if we need more speed
               await fetch(`/ignore/draftItem`, {
                 method: "POST",
                 body: formData,
@@ -240,8 +256,6 @@ const ReceiptReview = (props: LoaderData) => {
                 console.error("Failed to send ignore request:", error)
               );
               console.log("Completed the ignore for item ", item.id);
-              // WIP: update UI immediately for perceived speed
-              // e.g., hide the item or show it as ignored
             }}
             onQuantityUpdate={async () => {
               // WIP: Handle quantity updates for matched items
