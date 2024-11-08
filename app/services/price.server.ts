@@ -150,10 +150,9 @@ export async function addNewPriceEntry(
 }
 
 // If unitpriced, we'll need to mark the item matched, but confirm quantity before inserting the priceEntry.
-// insertUnitPricedEntry()
+// insertMatchedUnitpricedEntry()
 
 // all other items are drafts. what I want to do is get the couple closest productReceiptIdentifiers that exist and suggest them. if the product does not exist, the user will need to create the product, and we'll then do 4 things: add the product, add the price entry, add the productReceiptIdentifier, and mark the draftItem as complete.
-// createNewReceiptItemPriceEntry()
 export async function createNewReceiptItemPriceEntry(
   receiptInfo: typeof receipts.$inferSelect,
   createItemData: {
@@ -163,24 +162,31 @@ export async function createNewReceiptItemPriceEntry(
     category: string;
     unitQty: number;
     unitType: string;
-    productBrandName: string;
     pricePerUnit: number;
-    quantity: number;
+    unitPricing: boolean;
   },
   userId: string,
-  productImageUrl: string
+  productImageUrl: string | null
 ) {
   return await db.transaction(async (tx) => {
+    const productBrandsMap: Record<string, string> = {
+      "Trader Joe's": "Trader Joe's",
+      "Costco Wholesale": "Kirkland Signature",
+      HEB: "H-E-B",
+    };
+    const productBrand =
+      productBrandsMap[receiptInfo.storeBrandName ?? ""] || null;
     const [newProduct] = await tx
       .insert(products)
       .values({
+        contributedBy: userId,
         name: createItemData.name,
         category: createItemData.category,
         latestPrice: createItemData.pricePerUnit,
-        unitPricing: createItemData.quantity !== 1,
+        unitPricing: createItemData.unitPricing,
         unitQty: createItemData.unitQty,
         unitType: createItemData.unitType,
-        productBrandName: createItemData.productBrandName,
+        productBrandName: productBrand,
         image: productImageUrl,
         active: true,
       })

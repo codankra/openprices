@@ -1,6 +1,7 @@
 import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { auth } from "~/services/auth.server";
 import { createNewReceiptItemPriceEntry } from "~/services/price.server";
+import { verifyDraftItemStatus } from "~/services/product.server";
 import { uploadToR2 } from "~/services/r2.server";
 import { getReceiptByID } from "~/services/receipt.server";
 
@@ -31,15 +32,16 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await auth.isAuthenticated(request);
   if (!user)
     return json(
-      { success: false, message: "Please retry after authenticating." },
+      { success: false, message: "Authentication Failure" },
       { status: 401 }
     );
 
   const formData = await request.formData();
   const receiptId = Number(formData.get("receiptId"));
+  const draftItemId = Number(formData.get("draftItemId"));
   // get receipt by draftItemId and userId
   // if null, error out 400
-  if (isNaN(receiptId)) {
+  if (isNaN(receiptId) || isNaN(draftItemId)) {
     return json(
       { success: false, message: "Critical item details are missing." },
       { status: 400 }
@@ -55,17 +57,30 @@ export async function action({ request }: ActionFunctionArgs) {
       { status: 400 }
     );
   }
+  const verifiedItemStatus = await verifyDraftItemStatus(
+    draftItemId,
+    "pending"
+  );
+  if (!verifiedItemStatus) {
+    return json(
+      {
+        success: false,
+        message: "Please review the accuracy of the provided details.",
+      },
+      { status: 400 }
+    );
+  }
 
   //otherwise get product image if exists and upload it, returning url
   const productImageFile: File | null = formData.get("productImage") as File;
   const productImageUrl = productImageFile
     ? (await uploadFiles([productImageFile], "plu"))[0]
-    : undefined;
+    : null;
+  const createItemData = JSON.parse(formData.get("itemData") as string);
 
-  //finally pass draftItemInfo, receiptInfo, and productInfo to:
-  createNewReceiptItemPriceEntry(
+  const createdIds = await createNewReceiptItemPriceEntry(
     receiptInfo,
-    formData,
+    createItemData,
     user.id,
     productImageUrl
   );
@@ -74,6 +89,7 @@ export async function action({ request }: ActionFunctionArgs) {
     {
       success: true,
       message: "A new item was created, thank you for contributing!",
+      result: { ...createdIds },
     },
     { status: 200 }
   );

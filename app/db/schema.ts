@@ -92,9 +92,7 @@ export const priceEntries = sqliteTable(
     })
       .notNull()
       .default("manual"),
-    receiptId: integer("receipt_id").references(
-      () => productReceiptIdentifiers.id
-    ),
+    receiptId: integer("receipt_id").references(() => receipts.id),
     verified: integer("verified", { mode: "boolean" }).default(false),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()

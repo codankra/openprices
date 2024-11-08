@@ -241,14 +241,19 @@ const ReceiptReview = (props: LoaderData) => {
             imageUrl={receipt.imageUrl}
             storeLocation={receipt.storeLocation!}
             onSubmit={async (createItemData) => {
+              console.log("Firing submit event");
+              const { productImage, ...itemData } = createItemData;
               const formData = new FormData();
-              for (let [key, value] of Object.entries(createItemData)) {
-                if (value instanceof File) {
-                  formData.append(key, value);
-                } else {
-                  formData.append(key, String(value));
-                }
+
+              // Add the item data as a single JSON string
+              formData.append("itemData", JSON.stringify(itemData));
+
+              // Add image if it exists
+              if (productImage) {
+                formData.append("productImage", productImage);
               }
+
+              // Add essential IDs separately for easier server-side processing
               formData.append("receiptId", receipt.id.toString());
               formData.append("draftItemId", item.id.toString());
 

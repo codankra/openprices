@@ -518,6 +518,10 @@ export default function NewPricePoint() {
                               <SelectValue placeholder="Select a brand" />
                             </SelectTrigger>
                             <SelectContent>
+                              {" "}
+                              <SelectItem key="NotListed-1" value="___">
+                                <b>**</b>Other Brand (Not Listed)<b>**</b>
+                              </SelectItem>
                               {resolvedProductBrandsList.map((brand) => (
                                 <SelectItem key={brand.name} value={brand.name}>
                                   {brand.name}
@@ -683,7 +687,7 @@ export default function NewPricePoint() {
 
               <div>
                 <Label htmlFor="proof" className="text-stone-700 font-semibold">
-                  <span>Proof (Upload Images) </span>
+                  <span>Image Proof (Optional) </span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger type="button">
@@ -691,7 +695,7 @@ export default function NewPricePoint() {
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
-                          Verify your price entry (Optional, but adds validity)
+                          Verifying your price entry adds a verification badge!
                         </p>
                       </TooltipContent>
                     </Tooltip>

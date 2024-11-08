@@ -121,7 +121,7 @@ export async function updateProductLatestPrice(id: number, newPrice: number) {
   return null;
 }
 
-export function ignoreProductDraftItem(id: number) {
+export async function ignoreProductDraftItem(id: number) {
   return db
     .update(draftItems)
     .set({ status: "ignored", updatedAt: new Date() })
@@ -129,4 +129,22 @@ export function ignoreProductDraftItem(id: number) {
     .catch((error) => {
       console.error(`Failed to ignore draft item ${id}:`, error);
     });
+}
+
+export async function verifyDraftItemStatus(
+  id: number,
+  expectedStatus: typeof draftItems.$inferSelect.status
+) {
+  try {
+    const result = await db
+      .select()
+      .from(draftItems)
+      .where(and(eq(draftItems.id, id), eq(draftItems.status, expectedStatus)))
+      .limit(1);
+
+    return result.length > 0;
+  } catch (error) {
+    console.error(`Failed to verify draft item ${id} status:`, error);
+    return false;
+  }
 }

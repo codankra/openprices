@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-import {
-  X,
-  Plus,
-  ChevronDown,
-  ChevronUp,
-  CheckCircle2,
-  Upload,
-} from "lucide-react";
+import { X, Plus, ChevronUp, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { draftItems, UnitType } from "~/db/schema";
+import { Checkbox } from "~/components/ui/checkbox";
 
 type DraftItem = typeof draftItems.$inferSelect;
 
@@ -28,16 +22,14 @@ interface CreateItemData {
   category: string;
   unitQty: number;
   unitType: UnitType;
-  productBrandName: string;
   pricePerUnit: number;
-  quantity: number;
+  unitPricing: boolean;
   productImage?: File;
 }
 
 interface ReceiptItemProcessorProps {
   item: DraftItem;
   imageUrl: string;
-  storeLocation: string;
   onSubmit: (formData: CreateItemData) => Promise<void>;
   onIgnore: () => Promise<void>;
   onQuantityUpdate?: (quantity: number) => Promise<void>;
@@ -46,7 +38,6 @@ interface ReceiptItemProcessorProps {
 const ReceiptItemProcessor = ({
   item,
   imageUrl,
-  storeLocation,
   onSubmit,
   onIgnore,
   onQuantityUpdate,
@@ -58,9 +49,8 @@ const ReceiptItemProcessor = ({
     category: "",
     unitQty: item.unitQuantity || 1,
     unitType: UnitType.PIECE,
-    productBrandName: "",
     pricePerUnit: item.unitPrice || item.price,
-    quantity: item.unitQuantity || 1,
+    unitPricing: false,
   });
 
   const toggleExpand = () => setIsExpanded(!isExpanded);
@@ -80,6 +70,7 @@ const ReceiptItemProcessor = ({
   };
 
   const handleSubmit = () => {
+    console.log("Submitting ,", formData);
     onSubmit(formData);
     setIsExpanded(false);
   };
@@ -93,10 +84,10 @@ const ReceiptItemProcessor = ({
             <Input
               id="quantity"
               type="number"
-              value={formData.quantity}
+              value={formData.unitQty}
               onChange={(e) => {
                 const newQuantity = Number(e.target.value);
-                handleChange("quantity", newQuantity);
+                handleChange("unitQty", newQuantity);
                 onQuantityUpdate?.(newQuantity);
               }}
               className="w-24"
@@ -228,44 +219,10 @@ const ReceiptItemProcessor = ({
                   id="category"
                   value={formData.category}
                   onChange={(e) => handleChange("category", e.target.value)}
+                  placeholder="What is the core item? (1-2 words)"
                 />
-              </div>
+              </div>{" "}
             </div>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  value={formData.quantity}
-                  onChange={(e) =>
-                    handleChange("quantity", Number(e.target.value))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="unitType">Unit</Label>
-                <Select
-                  value={formData.unitType}
-                  onValueChange={(value) =>
-                    handleChange("unitType", value as UnitType)
-                  }
-                >
-                  <SelectTrigger id="unitType">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(UnitType).map(([key, value]) => (
-                      <SelectItem key={key} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="productImage">Product Image (Optional)</Label>
               <Input
@@ -277,6 +234,76 @@ const ReceiptItemProcessor = ({
               />
             </div>
 
+            {/* Packaging Details Section */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Packaging Details</h3>
+                <p className="text-sm text-stone-600">
+                  Most packages will have a label describing the amount of the
+                  product being sold per package by its weight or volume.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="unitType">Unit Type</Label>
+                  <Select
+                    value={formData.unitType}
+                    onValueChange={(value) =>
+                      handleChange("unitType", value as UnitType)
+                    }
+                  >
+                    <SelectTrigger id="unitType">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(UnitType).map(([key, value]) => (
+                        <SelectItem key={value} value={value}>
+                          {`${key[0]}${key
+                            .substring(1)
+                            .toLowerCase()} (${value})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="unitQty">Quantity of Unit</Label>
+                  <Input
+                    id="unitQty"
+                    type="number"
+                    value={formData.unitQty}
+                    onChange={(e) =>
+                      handleChange("unitQty", Number(e.target.value))
+                    }
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+              </div>
+              <div className="flex self-center space-x-2 ">
+                <Checkbox
+                  id="unitPricing"
+                  checked={formData.unitPricing}
+                  onCheckedChange={(checked) =>
+                    handleChange("unitPricing", checked as boolean)
+                  }
+                />
+                <div className="flex flex-col space-y-1">
+                  {" "}
+                  <Label
+                    htmlFor="unitPricing"
+                    className="text-stone-700 font-semibold"
+                  >
+                    Is it Priced by Weight/Volume?{" "}
+                  </Label>
+                  <p className="text-sm text-stone-600">
+                    (Common with deli-prepared foods)
+                  </p>
+                </div>
+              </div>
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={toggleExpand}>
                 Cancel
