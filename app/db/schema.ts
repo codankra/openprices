@@ -131,6 +131,7 @@ export const products = sqliteTable(
   "Products",
   {
     id: integer("id").primaryKey({ autoIncrement: true }).notNull(),
+    upc: text("upc").notNull(),
     name: text("name").notNull(),
     category: text("category"),
     latestPrice: real("latest_price"),
@@ -153,6 +154,7 @@ export const products = sqliteTable(
       .default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({
+    upcIdx: index("upc_idx").on(table.upc),
     productBrandNameIdx: index("product_brand_name_idx").on(
       table.productBrandName
     ),

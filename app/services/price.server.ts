@@ -156,9 +156,9 @@ export async function addNewPriceEntry(
 export async function createNewReceiptItemPriceEntry(
   receiptInfo: typeof receipts.$inferSelect,
   createItemData: {
-    draftItemId: number;
     receiptText: string;
     name: string;
+    upc: string;
     category: string;
     unitQty: number;
     unitType: string;
@@ -166,7 +166,8 @@ export async function createNewReceiptItemPriceEntry(
     unitPricing: boolean;
   },
   userId: string,
-  productImageUrl: string | null
+  productImageUrl: string | null,
+  draftItemId: number
 ) {
   return await db.transaction(async (tx) => {
     const productBrandsMap: Record<string, string> = {
@@ -181,6 +182,7 @@ export async function createNewReceiptItemPriceEntry(
       .values({
         contributedBy: userId,
         name: createItemData.name,
+        upc: createItemData.upc,
         category: createItemData.category,
         latestPrice: createItemData.pricePerUnit,
         unitPricing: createItemData.unitPricing,
@@ -225,7 +227,7 @@ export async function createNewReceiptItemPriceEntry(
         status: "completed",
         updatedAt: new Date(),
       })
-      .where(eq(draftItems.id, createItemData.draftItemId));
+      .where(eq(draftItems.id, draftItemId));
 
     // Clear cache for this product's price entries
     await priceEntriesCache.set(`product-${newProduct.id}`, [newPriceEntry]);

@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select";
 import { draftItems, UnitType } from "~/db/schema";
 import { Checkbox } from "~/components/ui/checkbox";
+import { FaBarcode } from "react-icons/fa";
+import { PiReceipt } from "react-icons/pi";
 
 type DraftItem = typeof draftItems.$inferSelect;
 
@@ -24,6 +26,7 @@ interface CreateItemData {
   unitType: UnitType;
   pricePerUnit: number;
   unitPricing: boolean;
+  upc: string;
   productImage?: File;
 }
 
@@ -47,6 +50,7 @@ const ReceiptItemProcessor = ({
     receiptText: item.receiptText,
     name: "",
     category: "",
+    upc: "",
     unitQty: item.unitQuantity || 1,
     unitType: UnitType.PIECE,
     pricePerUnit: item.unitPrice || item.price,
@@ -182,7 +186,10 @@ const ReceiptItemProcessor = ({
             {/* Original Receipt Text and Price */}
             <div className="flex gap-4">
               <div className="flex-grow space-y-2">
-                <Label htmlFor="receiptText">Receipt Text</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="receiptText">Receipt Text</Label>{" "}
+                  <PiReceipt className="w-4 h-4 text-stone-500" />
+                </div>
                 <Input
                   id="receiptText"
                   value={formData.receiptText}
@@ -202,6 +209,20 @@ const ReceiptItemProcessor = ({
                   className="bg-stone-50"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="upcCode">UPC/PLU Code</Label>
+                <FaBarcode className="w-4 h-4 text-stone-500" />
+              </div>
+              <Input
+                id="upc"
+                value={formData.upc}
+                onChange={(e) => handleChange("upc", e.target.value)}
+                placeholder="Enter UPC or PLU code"
+                className="bg-stone-50"
+              />
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">

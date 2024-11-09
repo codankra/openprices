@@ -82,7 +82,8 @@ export async function action({ request }: ActionFunctionArgs) {
     receiptInfo,
     createItemData,
     user.id,
-    productImageUrl
+    productImageUrl,
+    draftItemId
   );
 
   return json(
