@@ -453,8 +453,8 @@ export async function processReceiptInBackground(
     const summary =
       `Created ${receiptProcessingResponse.priceEntriesCreated} price entries, ` +
       `matched ${receiptProcessingResponse.matchedUnitPriced} unit-priced items, ` +
-      `and found ${receiptProcessingResponse.unmatched} unmatched items.` +
-      updateStatus(4, "completed", "🏁 Results Ready");
+      `and found ${receiptProcessingResponse.unmatched} unmatched items.`;
+    updateStatus(4, "completed", "🏁 Results Ready");
 
     const receiptProcessResults: ReceiptProcessResults = {
       statusList,
