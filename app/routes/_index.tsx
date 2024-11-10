@@ -74,8 +74,8 @@ export default function Index() {
       </header>
 
       <main>
-        <section className="bg-ogprime text-stone-700 py-20">
-          <div className="container mx-auto px-4">
+        <section className="bg-ogprime text-stone-700 py-40">
+          <div className="container mx-auto px-10">
             <div className="flex flex-col lg:flex-row items-center">
               <div className="w-full lg:w-1/2 text-center lg:text-left mb-8 lg:mb-0">
                 <h2 className="text-4xl md:text-5xl xl:text-5xl font-bold mb-6">

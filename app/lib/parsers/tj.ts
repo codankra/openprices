@@ -155,10 +155,9 @@ function parseItem(
 function mergeDuplicateItems(items: Item[]): Item[] {
   const mergedItems: { [key: string]: Item } = {};
   for (const item of items) {
-    const key = `${item.name}-${item.unitPrice || item.price}`;
+    const key = `${item.name}-${item.price}`;
     if (key in mergedItems) {
       mergedItems[key].unitQuantity += item.unitQuantity;
-      mergedItems[key].price += item.price;
       mergedItems[key].confidence = Math.min(
         mergedItems[key].confidence,
         item.confidence
