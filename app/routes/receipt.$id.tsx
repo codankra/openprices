@@ -239,9 +239,9 @@ const ReceiptReview = (props: LoaderData) => {
             item={item}
             key={item.id}
             imageUrl={receipt.imageUrl}
-            storeLocation={receipt.storeLocation!}
             onSubmit={async (createItemData) => {
               console.log("Firing submit event");
+              console.log(createItemData);
               const { productImage, ...itemData } = createItemData;
               const formData = new FormData();
 
