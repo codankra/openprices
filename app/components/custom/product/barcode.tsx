@@ -11,11 +11,11 @@ const BarcodeScanner: React.FC = () => {
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string>("");
   const [manualInput, setManualInput] = useState<string>("");
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
 
-  // Setup hints for supported barcode formats
   const createHints = useCallback(() => {
     const hints = new Map<DecodeHintType, any>();
     hints.set(DecodeHintType.POSSIBLE_FORMATS, [
@@ -27,38 +27,95 @@ const BarcodeScanner: React.FC = () => {
     return hints;
   }, []);
 
+  const cleanupScanner = useCallback(() => {
+    if (codeReaderRef.current) {
+      codeReaderRef.current = null;
+    }
+
+    // Clean up media stream
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+  }, [stream]);
+
   const initializeCodeReader = useCallback(() => {
-    // Create a new code reader with our hints
+    cleanupScanner();
     const codeReader = new BrowserMultiFormatReader(createHints());
     codeReaderRef.current = codeReader;
-
     return codeReader;
-  }, [createHints]);
+  }, [cleanupScanner, createHints]);
+
+  const requestCameraAccess = async () => {
+    try {
+      const constraints = {
+        video: {
+          facingMode: { ideal: "environment" }, // Prefer back camera
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 },
+        },
+      };
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia(
+        constraints
+      );
+      setStream(mediaStream);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        // Wait for video to be ready
+        await new Promise((resolve) => {
+          if (videoRef.current) {
+            videoRef.current.onloadedmetadata = () => resolve(true);
+          }
+        });
+      }
+
+      return mediaStream;
+    } catch (err) {
+      console.error("Camera access error:", err);
+      if (err instanceof DOMException) {
+        switch (err.name) {
+          case "NotFoundError":
+            throw new Error("No camera found on this device");
+          case "NotAllowedError":
+            throw new Error("Camera permission denied");
+          case "NotReadableError":
+            throw new Error("Camera already in use");
+          default:
+            throw new Error(`Camera error: ${err.message}`);
+        }
+      }
+      throw err;
+    }
+  };
 
   const startScanning = useCallback(async () => {
     console.log("🎥 Starting scanning process...");
     try {
-      console.log("Resetting previous states...");
       setError("");
       setResult(null);
       setScanning(true);
+
+      console.log("Requesting camera access...");
+      await requestCameraAccess();
+
       console.log("Initializing code reader...");
       const codeReader = initializeCodeReader();
 
-      console.log("Checking video reference...");
       if (!videoRef.current) {
-        console.error("❌ Video element not found");
-        throw new Error("Video element not found");
+        throw new Error("Video element initialization failed");
       }
 
       console.log("Starting video device decode...");
-      await codeReader.decodeFromVideoDevice(
-        undefined, // Use default camera
+      const controls = codeReader.decodeFromVideoDevice(
+        undefined, // Use default device
         videoRef.current,
         (result) => {
           if (result) {
-            console.log("✅ Barcode detected:", result.getText());
-            setResult(result.getText());
+            const text = result.getText();
+            console.log("✅ Barcode detected:", text);
+            setResult(text);
             stopScanning();
           }
         }
@@ -72,14 +129,13 @@ const BarcodeScanner: React.FC = () => {
 
   const stopScanning = useCallback(() => {
     console.log("🛑 Stopping scanner...");
-    codeReaderRef.current = null;
+    cleanupScanner();
     setScanning(false);
     console.log("Scanner stopped, resources cleared");
-  }, []);
+  }, [cleanupScanner]);
 
   const handleManualInput = () => {
     console.log("📝 Processing manual input:", manualInput);
-    // Validate UPC, EAN, or PLU code
     const codeRegex = /^\d{4,13}$/;
 
     if (codeRegex.test(manualInput)) {
@@ -93,12 +149,11 @@ const BarcodeScanner: React.FC = () => {
     }
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      stopScanning();
+      cleanupScanner();
     };
-  }, [stopScanning]);
+  }, [cleanupScanner]);
 
   return (
     <div className="w-full max-w-md mx-auto p-4">
