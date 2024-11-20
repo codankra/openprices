@@ -1,7 +1,8 @@
+#Replace YOUR_USERNAME, YOUR_TUNNEL_ID, YOUR_HOSTNAME
 tunnel: YOUR_TUNNEL_ID
-credentials-file: /home/YOUR_USERNAME/.cloudflared/YOUR_TUNNEL_ID.json #Replace YOUR_USERNAME and YOUR_TUNNEL_ID
+credentials-file: /home/YOUR_USERNAME/.cloudflared/YOUR_TUNNEL_ID.json 
 
 ingress:
-  - hostname: dev-cft.openpricedata.com
+  - hostname: YOUR_HOSTNAME
     service: http://localhost:3000
   - service: http_status:404
