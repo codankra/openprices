@@ -17,7 +17,7 @@ tmux new-window -t $SESSION:1 -n 'server'
 tmux send-keys -t $SESSION:1 'npm run dev' C-m
 
 tmux new-window -t $SESSION:2 -n 'tunnel'
-tmux send-keys -t $SESSION:2 'cloudflared tunnel run openprice-dev' C-m
+tmux send-keys -t $SESSION:2 'cloudflared tunnel --config ./cloudflared.yml run openprice-dev' C-m
 
 tmux new-window -t $SESSION:3 -n 'drizzle'
 tmux send-keys -t $SESSION:3 'npx drizzle-kit studio' C-m
