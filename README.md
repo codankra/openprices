@@ -54,6 +54,31 @@ I try to keep things simple. This should be familiar 😇
 
 5. Open your browser and visit `http://localhost:3000`
 
+### Cloudflare Tunnel Setup (Optional)
+
+This project includes a `cloudflared.yml` configuration file for setting up a Cloudflare Tunnel. This is useful for testing mobile or device-specific features locally. To use it:
+
+1. Install cloudflared CLI tool from [Cloudflare's documentation](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)
+
+2. Create a tunnel in your Cloudflare account:
+
+   ```bash
+   cloudflared tunnel create my-tunnel
+   ```
+
+3. Update the `cloudflared.yml` file with your values:
+
+   - Replace `YOUR_USERNAME` with your Cloudflare username
+   - Replace `YOUR_TUNNEL_ID` with the ID from step 2
+   - Replace `YOUR_HOSTNAME` with your desired hostname
+
+4. Start the tunnel as part of the project setup in `tmux-sesion.sh`, or manually with:
+   ```bash
+   cloudflared tunnel --config ./cloudflared.yml run your-tunnel-name
+   ```
+
+The tunnel will now proxy requests from your Cloudflare hostname to your local development server.
+
 ## 🤝 Contributing
 
 I'd love your help in making Open Price even better! If you have an awesome idea, or notice any bug or area of improvement, here's how you can contribute:
