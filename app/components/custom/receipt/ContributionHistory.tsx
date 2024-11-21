@@ -7,6 +7,7 @@ import {
   DollarSign,
   AlertCircle,
   CheckCircle2,
+  Image,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -44,7 +45,7 @@ export const ReceiptItem = ({
   receipt: typeof receipts.$inferInsert;
 }) => (
   <Link to={`/receipt/${receipt.id}`}>
-    <Card className="mb-4 hover:shadow-md hover:bg-stone-100 transition-shadow transition-colors">
+    <Card className="mb-4 hover:shadow-md hover:bg-stone-100 transition-all">
       <CardContent className="p-6">
         <div className="flex justify-between items-start">
           <div className="space-y-2">
@@ -82,14 +83,13 @@ export const ReceiptItem = ({
     </Card>
   </Link>
 );
-
 export const PriceEntryItem = ({
   entry,
 }: {
   entry: typeof priceEntries.$inferInsert;
 }) => (
   <Link to={`/product/${entry.productId}`}>
-    <Card className="mb-4 hover:shadow-md hover:bg-stone-100 transition-shadow transition-colors">
+    <Card className="mb-4 hover:shadow-md hover:bg-stone-50 transition-all">
       <CardContent className="p-6">
         <div className="flex justify-between items-start">
           <div className="space-y-2">
@@ -122,14 +122,24 @@ export const PriceEntryItem = ({
         </div>
         {entry.proof && (
           <div className="mt-4 text-sm text-stone-500">
-            <p
-              //href={entry.proof}
-              //target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline flex items-center gap-1"
-            >
-              View proof: {entry.proof}
-            </p>
+            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+              {entry.proof.split(",").map((proofUrl, index) => (
+                <a
+                  key={index}
+                  href={proofUrl.trim()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-2 py-1 rounded-md bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors"
+                >
+                  <span>
+                    {entry.entrySource === "receipt"
+                      ? "Receipt"
+                      : `Proof ${index + 1}`}
+                  </span>
+                  <Image className="w-3 h-3 ml-1" />
+                </a>
+              ))}
+            </div>
           </div>
         )}
       </CardContent>

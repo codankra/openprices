@@ -41,11 +41,11 @@ export const meta: MetaFunction = () => {
 export default function UserAccount() {
   const { user, userContributions } = useLoaderData<LoaderData>();
   return (
-    <div className="font-sans p-4 bg-gradient-to-b from-[#f7f2ec] to-[#efebe7] min-h-screen">
+    <div className="font-sans bg-ogprime min-h-screen px-4">
       <header>
         <HeaderLinks />
       </header>
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-6xl mx-auto ">
         <h1 className="text-3xl">Your Account </h1>
 
         <div>

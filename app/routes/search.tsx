@@ -95,16 +95,28 @@ export default function ProductSearch() {
                 <Link
                   to={`/product/${product.id}`}
                   key={product.id}
-                  className="bg-white border border-stone-200 rounded-md p-4 cursor-pointer hover:bg-stone-50 transition duration-150 ease-in-out"
-                  onClick={() => {
-                    setSearchTerm(product.name);
-                  }}
+                  className="bg-white border border-stone-200 rounded-md p-4 cursor-pointer hover:bg-stone-50 hover:shadow-lg hover:scale-[1.02] hover:border-ogfore transition-all duration-150 ease-in-out h-[160px] flex flex-col shadow-sm"
                 >
-                  <h3 className="font-bold text-stone-800">{product.name}</h3>
-                  <p className="text-stone-600">
-                    Price: ${product.latestPrice?.toFixed(2)}
-                  </p>
-                  <p className="text-stone-500">Category: {product.category}</p>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold text-stone-800 text-left line-clamp-3 leading-tight">
+                      {product.name}
+                    </h3>
+                    {product.latestPrice && (
+                      <span className="font-semibold text-stone-600 whitespace-nowrap ml-2">
+                        ${product.latestPrice.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mb-2">
+                    {product.productBrandName && (
+                      <p className="text-stone-500 truncate leading-tight">
+                        {product.productBrandName}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-stone-500 truncate leading-tight mt-auto">
+                    {product.unitQty} {product.unitType}
+                  </div>
                 </Link>
               ))}
             </div>
