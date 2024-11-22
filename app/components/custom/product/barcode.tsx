@@ -19,14 +19,23 @@ const BarcodeScanner: React.FC = () => {
   const createHints = useCallback(() => {
     const hints = new Map<DecodeHintType, any>();
     hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+      BarcodeFormat.QR_CODE, // Add QR support
+      BarcodeFormat.DATA_MATRIX, // Add Data Matrix support
       BarcodeFormat.UPC_A,
       BarcodeFormat.UPC_E,
       BarcodeFormat.EAN_8,
       BarcodeFormat.EAN_13,
       BarcodeFormat.CODE_128,
       BarcodeFormat.CODE_39,
+      BarcodeFormat.ITF, // Add ITF support
+      BarcodeFormat.CODABAR,
     ]);
+    // Add additional hints to improve detection
     hints.set(DecodeHintType.TRY_HARDER, true);
+    hints.set(DecodeHintType.CHARACTER_SET, "UTF-8");
+    hints.set(DecodeHintType.ASSUME_GS1, true);
+    hints.set(DecodeHintType.PURE_BARCODE, false);
+    hints.set(DecodeHintType.RETURN_CODABAR_START_END, true);
     return hints;
   }, []);
 
@@ -34,12 +43,12 @@ const BarcodeScanner: React.FC = () => {
     if (codeReaderRef.current) {
       try {
         // Stop any ongoing scanning
+        codeReaderRef.current.stop();
       } catch (e) {
         console.warn("Error stopping scanner:", e);
       }
       codeReaderRef.current = null;
     }
-
     if (stream) {
       stream.getTracks().forEach((track) => {
         try {
@@ -66,51 +75,56 @@ const BarcodeScanner: React.FC = () => {
 
   const requestCameraAccess = async () => {
     try {
-      // Start with basic constraints that work across browsers
-      let constraints = {
+      // Basic constraints that work across browsers
+      const constraints = {
         video: {
           facingMode: "environment",
           width: { ideal: 1280 },
           height: { ideal: 720 },
+          aspectRatio: { ideal: 1.7777777778 },
+          frameRate: { ideal: 30 },
         },
       };
 
-      // Try to get the stream with basic constraints first
-      let mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-      // If successful, try to get the best video track
-      const videoTrack = mediaStream.getVideoTracks()[0];
-
-      // Some browsers might not support these advanced features
-      try {
-        if (videoTrack.getSettings) {
-          const settings = videoTrack.getSettings();
-          console.log("Video track settings:", settings);
-        }
-      } catch (e) {
-        console.warn("Advanced video track features not supported:", e);
-      }
-
-      setStream(mediaStream);
+      console.log("Requesting camera access with constraints:", constraints);
+      const mediaStream = await navigator.mediaDevices.getUserMedia(
+        constraints
+      );
+      console.log("Camera access granted");
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
 
-        // Wait for video to be ready using multiple events for better cross-browser support
+        // Wait for video to be ready
         await new Promise<void>((resolve) => {
           if (!videoRef.current) return;
 
-          const handleVideoReady = () => resolve();
+          const handleVideoReady = () => {
+            console.log("Video element ready");
+            resolve();
+          };
 
-          videoRef.current.onloadeddata = handleVideoReady;
           videoRef.current.onloadedmetadata = handleVideoReady;
+          videoRef.current.onloadeddata = handleVideoReady;
 
           // If video is already loaded, resolve immediately
           if (videoRef.current.readyState >= 2) {
+            console.log("Video already loaded");
             resolve();
           }
         });
+
+        // Start playing the video
+        try {
+          await videoRef.current.play();
+          console.log("Video playback started");
+        } catch (e) {
+          console.error("Error playing video:", e);
+          throw new Error("Failed to start video playback");
+        }
       }
 
+      setStream(mediaStream);
       return mediaStream;
     } catch (err) {
       console.error("Camera access error:", err);
@@ -141,18 +155,17 @@ const BarcodeScanner: React.FC = () => {
       setResult(null);
       setScanning(true);
 
-      console.log("Requesting camera access...");
       await requestCameraAccess();
+      console.log("Camera access successful");
 
-      console.log("Initializing code reader...");
       const codeReader = initializeCodeReader();
-
+      console.log("Code reader initialized");
       if (!videoRef.current) {
         throw new Error("Video element initialization failed");
       }
 
       // Add a small delay to ensure video is ready
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       console.log("Starting decode from video device...");
       await codeReader.decodeFromVideoDevice(
@@ -162,14 +175,22 @@ const BarcodeScanner: React.FC = () => {
           if (result) {
             const text = result.getText();
             console.log("Barcode detected:", text);
+            console.log("Barcode format:", result.getBarcodeFormat());
+            console.log("Result data:", {
+              format: result.getBarcodeFormat(),
+              text: result.getText(),
+              numBits: result.getNumBits(),
+              timestamp: result.getTimestamp(),
+            });
             setResult(text);
             stopScanning();
           }
-          if (error) {
-            // Only log certain types of errors to avoid console spam
-            if (error.name !== "NotFoundException") {
-              console.log("Detection error:", error);
-            }
+          if (
+            error &&
+            error.name !== "NotFoundException" &&
+            error.name !== "NotFoundException2"
+          ) {
+            console.log("Detection error:", error);
           }
         }
       );
@@ -216,7 +237,17 @@ const BarcodeScanner: React.FC = () => {
               autoPlay
               playsInline
               muted
+              style={{
+                minHeight: "300px",
+                backgroundColor: "black",
+                objectFit: "cover",
+              }}
             />
+            <div className="absolute inset-0 pointer-events-none border-2 border-blue-500 rounded-lg">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-64 h-64 border-2 border-white border-dashed rounded-lg"></div>
+              </div>
+            </div>
             <Button
               onClick={stopScanning}
               variant="secondary"
