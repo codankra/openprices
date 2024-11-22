@@ -1,7 +1,7 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { defer, json, redirect } from "@remix-run/node";
 import { Await, Form, useLoaderData } from "@remix-run/react";
-import { auth } from "../services/auth.server";
+import { auth, requireAuth } from "../services/auth.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import { getUserContributionsById } from "~/services/user.server";
 import { users } from "drizzle/schema";
@@ -19,10 +19,7 @@ type LoaderData = {
   user: typeof users.$inferSelect;
 };
 export const loader: LoaderFunction = async ({ request }) => {
-  const user = await auth.isAuthenticated(request);
-  if (!user) {
-    return redirect("/login");
-  }
+  const user = await requireAuth(request);
   let userContributionsPromise = getUserContributionsById(user.id);
   return defer({ user, userContributions: userContributionsPromise });
 };

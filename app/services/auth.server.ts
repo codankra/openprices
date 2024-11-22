@@ -1,4 +1,4 @@
-import { createCookieSessionStorage } from "@remix-run/node";
+import { createCookieSessionStorage, redirect } from "@remix-run/node";
 import { Authenticator } from "remix-auth";
 import { GitHubStrategy } from "remix-auth-github";
 import { GoogleStrategy } from "remix-auth-google";
@@ -55,3 +55,22 @@ auth.use(
     }
   )
 );
+export async function requireAuth(request: Request, redirectTo?: string) {
+  const user = await auth.isAuthenticated(request);
+  if (!user) {
+    const session = await sessionStorage.getSession(
+      request.headers.get("cookie")
+    );
+
+    const originalPath = redirectTo || new URL(request.url).pathname;
+    session.set("redirectTo", originalPath);
+    const commitedSession = await sessionStorage.commitSession(session);
+
+    throw redirect(`/login`, {
+      headers: {
+        "Set-Cookie": commitedSession,
+      },
+    });
+  }
+  return user;
+}
