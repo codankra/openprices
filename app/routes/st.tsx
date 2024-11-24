@@ -3,7 +3,7 @@ import { json, redirect } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 import { auth } from "../services/auth.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
-import BarcodeScanner from "~/components/custom/product/barcode";
+import BarcodeScanner from "~/components/custom/product/CaptureBarcode";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const user = await auth.isAuthenticated(request);
