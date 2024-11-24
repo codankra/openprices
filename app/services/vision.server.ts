@@ -1,4 +1,6 @@
-import { ImageAnnotatorClient } from "@google-cloud/vision";
+import { ImageAnnotatorClient, protos } from "@google-cloud/vision";
+import type { google } from "@google-cloud/vision/build/protos/protos";
+
 import {
   determineReceiptBrand,
   determineReceiptLocation,
@@ -24,6 +26,26 @@ type ParsedReceipt = Omit<
 > & {
   items: ReceiptItem[];
 };
+
+type BarcodeInfo = {
+  value: string;
+  format: string;
+  confidence: number;
+};
+
+type DetectedBarcode = {
+  barcode: BarcodeInfo;
+  textValue?: string; // Optional OCR'd text value below barcode
+  confidence: number;
+};
+// Define the correct interface for barcode annotations
+interface IBarcodeAnnotation {
+  boundingBox?: google.cloud.vision.v1.IBoundingPoly;
+  rawValue?: string;
+  format?: string;
+  displayValue?: string;
+  confidence?: number;
+}
 
 type BoundingBox = {
   minX: number;
@@ -158,4 +180,160 @@ const detectReceiptText = async (
     throw error;
   }
 };
-export { detectReceiptText };
+
+const detectBarcodes = async (
+  imageBuffer: Buffer
+): Promise<DetectedBarcode[]> => {
+  const client = createVisionClient();
+
+  try {
+    console.log("Receiving Image to detect");
+    const [result] = await client.annotateImage({
+      image: { content: imageBuffer },
+      features: [
+        { type: protos.google.cloud.vision.v1.Feature.Type.TEXT_DETECTION },
+        {
+          type: protos.google.cloud.vision.v1.Feature.Type.OBJECT_LOCALIZATION,
+        },
+      ],
+    });
+
+    // Cast the result to include barcode annotations
+    const barcodeResults = (result as any).localizedObjectAnnotations?.filter(
+      (obj: any) => obj.name === "Barcode"
+    );
+    console.log("Detected possible barcodes");
+    console.log(barcodeResults);
+
+    if (!result.fullTextAnnotation && !barcodeResults?.length) {
+      return [];
+    }
+
+    // Extract barcode information
+    const barcodes: DetectedBarcode[] =
+      barcodeResults?.map((barcode: IBarcodeAnnotation) => {
+        const boundingBox = barcode.boundingBox;
+
+        // Extract nearby text that might be the barcode number
+        const nearbyText = boundingBox
+          ? findNearbyText(
+              boundingBox,
+              result.fullTextAnnotation?.pages?.[0].blocks ?? undefined
+            )
+          : undefined;
+
+        return {
+          barcode: {
+            value: barcode.displayValue || barcode.rawValue || "",
+            format: barcode.format || "UNKNOWN",
+            confidence: barcode.confidence || 0,
+          },
+          textValue: nearbyText,
+          confidence: barcode.confidence || 0,
+        };
+      }) || [];
+
+    console.log(barcodes);
+
+    // Validate and clean up results
+    return barcodes
+      .filter((b) => b.barcode.value || b.textValue)
+      .map((b) => ({
+        ...b,
+        barcode: {
+          ...b.barcode,
+          value: selectBestBarcodeValue(b.barcode.value, b.textValue),
+        },
+      }));
+  } catch (error) {
+    console.error("Error detecting barcodes:", error);
+    throw error;
+  }
+};
+
+// Updated helper function to work with text blocks
+const findNearbyText = (
+  barcodeBounds: google.cloud.vision.v1.IBoundingPoly,
+  textBlocks?: google.cloud.vision.v1.IBlock[]
+): string | undefined => {
+  if (!barcodeBounds?.vertices || !textBlocks) return undefined;
+
+  // Calculate the area below the barcode
+  const vertices = barcodeBounds.vertices;
+  const barcodeBottom = Math.max(...vertices.map((v) => v.y || 0));
+  const barcodeLeft = Math.min(...vertices.map((v) => v.x || 0));
+  const barcodeRight = Math.max(...vertices.map((v) => v.x || 0));
+
+  // Look for text blocks below the barcode
+  const nearbyText = textBlocks
+    .filter((block) => {
+      const blockBounds = block.boundingBox?.vertices;
+      if (!blockBounds) return false;
+
+      const blockTop = Math.min(...blockBounds.map((v) => v.y || 0));
+      const blockLeft = Math.min(...blockBounds.map((v) => v.x || 0));
+      const blockRight = Math.max(...blockBounds.map((v) => v.x || 0));
+
+      // Check if the text is below and roughly aligned with the barcode
+      return (
+        blockTop > barcodeBottom &&
+        blockTop < barcodeBottom + 50 && // Within 50 pixels
+        blockLeft >= barcodeLeft - 20 && // Allow 20 pixels misalignment
+        blockRight <= barcodeRight + 20
+      );
+    })
+    .map((block) => {
+      // Access the text content through paragraphs and words
+      return (
+        block.paragraphs
+          ?.map((paragraph) =>
+            paragraph.words
+              ?.map((word) =>
+                word.symbols?.map((symbol) => symbol.text).join("")
+              )
+              .join(" ")
+          )
+          .join(" ") || ""
+      );
+    })
+    .join(" ")
+    .replace(/[^\d]/g, ""); // Keep only digits
+
+  console.log("Found nearbyText?? ", nearbyText);
+
+  return nearbyText || undefined;
+};
+
+const selectBestBarcodeValue = (
+  barcodeValue: string,
+  textValue: string | undefined
+): string => {
+  const validLengths = [8, 12, 13, 14];
+
+  const cleaned = {
+    barcode: barcodeValue.replace(/[^\d]/g, ""),
+    text: (textValue || "").replace(/[^\d]/g, ""),
+  };
+
+  if (!cleaned.barcode) return cleaned.text;
+  if (!cleaned.text) return cleaned.barcode;
+
+  const barcodeValid = validLengths.includes(cleaned.barcode.length);
+  const textValid = validLengths.includes(cleaned.text.length);
+
+  if (barcodeValid && !textValid) return cleaned.barcode;
+  if (!textValid && textValid) return cleaned.text;
+
+  return cleaned.barcode;
+};
+
+const testBarcodeDetection = async (imageBuffer: Buffer) => {
+  const client = createVisionClient();
+  const [result] = await client.annotateImage({
+    image: { content: imageBuffer },
+    features: [{ type: "BARCODE_DETECTION" }],
+  });
+  console.log("Raw result:", JSON.stringify(result, null, 2));
+};
+
+export { detectReceiptText, detectBarcodes, testBarcodeDetection };
