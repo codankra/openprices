@@ -6,9 +6,8 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { auth } from "../services/auth.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  // If the user is already authenticated redirect to /dashboard directly
   return await auth.isAuthenticated(request, {
-    successRedirect: "/price-entry",
+    successRedirect: "/account",
   });
 }
 

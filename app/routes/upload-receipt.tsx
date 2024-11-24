@@ -6,7 +6,7 @@ import type {
 import { json, redirect } from "@remix-run/node";
 import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
 import { useState, useRef, useEffect } from "react";
-import { auth } from "../services/auth.server";
+import { auth, requireAuth } from "../services/auth.server";
 import {
   Upload,
   X,
@@ -52,8 +52,7 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const user = await auth.isAuthenticated(request);
-  if (!user) return redirect("/login");
+  await requireAuth(request);
   return null;
 };
 

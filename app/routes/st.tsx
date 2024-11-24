@@ -1,16 +1,11 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
-import { Form, useLoaderData } from "@remix-run/react";
-import { auth } from "../services/auth.server";
+import { requireAuth } from "../services/auth.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import BarcodeScanner from "~/components/custom/product/CaptureBarcode";
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const user = await auth.isAuthenticated(request);
-  if (!user) {
-    return redirect("/login");
-  }
-  return json({ user });
+  const user = await requireAuth(request);
+  return user;
 };
 
 export const meta: MetaFunction = () => {
@@ -21,16 +16,17 @@ export const meta: MetaFunction = () => {
 };
 
 export default function ContributorProfile() {
-  const { user } = useLoaderData<typeof loader>();
   return (
     <div className="font-sans bg-ogprime min-h-screen">
       <header>
         <HeaderLinks />
       </header>
       <div>
-        <h1>Barcode & PLU Scanner</h1>
+        <h1 className="text-center text-2xl font-bold">
+          Barcode & PLU Scanner
+        </h1>
         <BarcodeScanner />
-      </div>{" "}
+      </div>
     </div>
   );
 }

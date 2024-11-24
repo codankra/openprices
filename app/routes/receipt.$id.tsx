@@ -1,8 +1,8 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Link, useFetcher, useLoaderData } from "@remix-run/react";
+import { Link, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
-import { auth } from "../services/auth.server";
+import { requireAuth } from "../services/auth.server";
 import { X, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import {
   Breadcrumb,
@@ -36,8 +36,7 @@ type LoaderData = {
 };
 
 export const loader: LoaderFunction = async ({ request, params }) => {
-  const user = await auth.isAuthenticated(request);
-  if (!user) return redirect("/login");
+  const user = await requireAuth(request);
   // else return receipt. but first check if user is owner of the receipt. otherwise redirect to receipt upload page
   const result = await getReceiptDetails(parseInt(params.id!), user.id);
   if (!result) return redirect("/upload-receipt");

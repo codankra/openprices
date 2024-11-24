@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { products, UnitType } from "~/db/schema";
-import { auth } from "~/services/auth.server";
+import { auth, requireAuth } from "~/services/auth.server";
 import { z } from "zod";
 import { AuthUser } from "~/services/user.server";
 import {
@@ -114,11 +114,7 @@ const formSchema = z
   );
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const user = await auth.isAuthenticated(request);
-  if (!user) {
-    return redirect("/login");
-  }
-
+  const user = await requireAuth(request);
   const url = new URL(request.url);
 
   const searchTerm = url.searchParams.get("search") || "";

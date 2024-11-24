@@ -5,7 +5,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
-import { useLoaderData, Link, Form } from "@remix-run/react";
+import { useLoaderData, Form } from "@remix-run/react";
 import { useState } from "react";
 import { FaSearch } from "react-icons/fa";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
