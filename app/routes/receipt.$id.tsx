@@ -285,8 +285,11 @@ const ReceiptReview = (props: LoaderData) => {
               );
               console.log("Completed the ignore for item ", item.id);
             }}
-            onQuantityUpdate={async () => {
-              // WIP: Handle quantity updates for matched items
+            onBarcodeMatch={async (productId) => {
+              // New: Handle matched product
+            }}
+            onProductMismatch={async (upc, description) => {
+              // New: Handle product mismatch feedback
             }}
           />
         ))}

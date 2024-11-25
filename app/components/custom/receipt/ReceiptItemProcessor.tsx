@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { X, Plus, ChevronUp, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { X, Plus, ChevronUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { draftItems, UnitType } from "~/db/schema";
-import { Checkbox } from "~/components/ui/checkbox";
-import { FaBarcode } from "react-icons/fa";
+import { draftItems, UnitType, products } from "~/db/schema";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PiReceipt } from "react-icons/pi";
+import BarcodeScanner from "../product/CaptureBarcode";
 
+// Types for our component
 type DraftItem = typeof draftItems.$inferSelect;
+type Product = typeof products.$inferSelect;
 
 interface CreateItemData {
   receiptText: string;
@@ -35,7 +37,16 @@ interface ReceiptItemProcessorProps {
   imageUrl: string;
   onSubmit: (formData: CreateItemData) => Promise<void>;
   onIgnore: () => Promise<void>;
-  onQuantityUpdate?: (quantity: number) => Promise<void>;
+  onBarcodeMatch?: (productId: number) => Promise<void>;
+  onProductMismatch?: (upc: string, description: string) => Promise<void>;
+}
+
+// Enum for our different form steps
+enum ProcessingStep {
+  INITIAL = "initial",
+  BARCODE = "barcode",
+  PRODUCT_CONFIRM = "product_confirm",
+  PRODUCT_DETAILS = "product_details",
 }
 
 const ReceiptItemProcessor = ({
@@ -43,9 +54,17 @@ const ReceiptItemProcessor = ({
   imageUrl,
   onSubmit,
   onIgnore,
-  onQuantityUpdate,
+  onBarcodeMatch,
+  onProductMismatch,
 }: ReceiptItemProcessorProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [currentStep, setCurrentStep] = useState(ProcessingStep.INITIAL);
+  const [matchedProduct, setMatchedProduct] = useState<Product | null>(null);
+  const [mismatchDescription, setMismatchDescription] = useState("");
+  const [originalReceiptText, _setOriginalReceiptText] = useState(
+    item.receiptText
+  );
+
   const [formData, setFormData] = useState<CreateItemData>({
     receiptText: item.receiptText,
     name: "",
@@ -56,140 +75,83 @@ const ReceiptItemProcessor = ({
     pricePerUnit: item.unitPrice || item.price,
     unitPricing: false,
   });
-
-  const toggleExpand = () => setIsExpanded(!isExpanded);
-
   const handleChange = <K extends keyof CreateItemData>(
     field: K,
     value: CreateItemData[K]
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleChange("productImage", file);
+    // Check for receipt text changes and lookup product
+    if (field === "receiptText" && value !== originalReceiptText) {
+      checkProductReceiptIdentifier(value as string);
+    }
+  };
+  const checkProductReceiptIdentifier = async (receiptText: string) => {
+    try {
+      const response = await fetch(
+        `/api/product-receipt-identifier?text=${encodeURIComponent(
+          receiptText
+        )}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.product) {
+          setMatchedProduct(data.product);
+          setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check product receipt identifier:", error);
+    }
+  };
+  const handleBarcodeDetected = async (upc: string) => {
+    handleChange("upc", upc);
+
+    try {
+      const response = await fetch(
+        `/api/product?upc=${encodeURIComponent(upc)}`
+      );
+      if (response.ok) {
+        const product = await response.json();
+        if (product) {
+          setMatchedProduct(product);
+          setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
+        } else {
+          setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check product:", error);
+      setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
     }
   };
 
-  const handleSubmit = () => {
-    console.log("Submitting ,", formData);
-    onSubmit(formData);
-    setIsExpanded(false);
-  };
-
-  const renderStatusContent = () => {
-    switch (item.status) {
-      case "matched":
-        return (
-          <div className="flex items-center gap-4">
-            <Label htmlFor="quantity">Update Quantity:</Label>
-            <Input
-              id="quantity"
-              type="number"
-              value={formData.unitQty}
-              onChange={(e) => {
-                const newQuantity = Number(e.target.value);
-                handleChange("unitQty", newQuantity);
-                onQuantityUpdate?.(newQuantity);
-              }}
-              className="w-24"
-            />
-          </div>
-        );
-
-      case "completed":
-        return (
-          <div className="flex items-center text-green-600">
-            <CheckCircle2 className="w-5 h-5 mr-2" />
-            <span>Processed</span>
-          </div>
-        );
-
-      case "pending":
-        return (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleExpand}
-            className="gap-1"
-            type="button"
-          >
-            {isExpanded ? (
-              <>
-                <ChevronUp className="w-4 h-4" />
-                Less
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4" />
-                Add
-              </>
-            )}
-          </Button>
-        );
-
-      default:
-        return null;
+  const handleProductConfirm = async (confirmed: boolean) => {
+    if (confirmed && matchedProduct) {
+      await onBarcodeMatch?.(matchedProduct.id);
+      setIsExpanded(false);
+    } else {
+      if (mismatchDescription && onProductMismatch) {
+        await onProductMismatch(formData.upc, mismatchDescription);
+      }
+      setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
     }
   };
 
-  return (
-    <Card className="mb-4">
-      <CardContent className="p-4">
-        {/* Preview Row - Always Visible */}
-        <div className="flex items-center gap-4">
-          <div className="flex-grow min-w-0">
-            <p className="font-medium truncate">{item.receiptText}</p>
-            <p className="text-sm text-stone-500">
-              ${item.price.toFixed(2)}
-              {item.unitPrice &&
-                ` ($${item.unitPrice.toFixed(2)} × ${item.unitQuantity})`}
-            </p>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            {item.status === "pending" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onIgnore}
-                className="text-stone-500"
-                type="button"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
-            {renderStatusContent()}
-          </div>
-        </div>
-
-        {/* Expanded Form */}
-        {isExpanded && (
-          <div className="mt-4 grid gap-4">
-            {/* Receipt Image Preview */}
-            <div className="relative h-24 w-full mx-auto sm:w-64 overflow-hidden bg-stone-100 rounded">
-              <img
-                src={imageUrl}
-                alt="Receipt item"
-                className="absolute"
-                style={{
-                  left: `${-item.minX + 10}px`,
-                  top: `${-item.minY + 10}px`,
-                  maxWidth: "none",
-                }}
-              />
-            </div>
-
-            {/* Original Receipt Text and Price */}
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case ProcessingStep.INITIAL:
+        return (
+          <div className="space-y-4">
             <div className="flex gap-4">
               <div className="flex-grow space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="receiptText">Receipt Text</Label>{" "}
+                <Label
+                  htmlFor="receiptText"
+                  className="flex items-center gap-2 h-4"
+                >
+                  Receipt Text
                   <PiReceipt className="w-4 h-4 text-stone-500" />
-                </div>
+                </Label>
                 <Input
                   id="receiptText"
                   value={formData.receiptText}
@@ -198,7 +160,13 @@ const ReceiptItemProcessor = ({
                 />
               </div>
               <div className="w-32 space-y-2">
-                <Label htmlFor="pricePerUnit">Price</Label>
+                <Label
+                  htmlFor="pricePerUnit"
+                  className="flex items-center gap-2 h-4"
+                >
+                  Price
+                  <span className="text-stone-500">$</span>
+                </Label>
                 <Input
                   id="pricePerUnit"
                   type="number"
@@ -210,21 +178,79 @@ const ReceiptItemProcessor = ({
                 />
               </div>
             </div>
+            <div className="flex justify-end gap-2">
+              {" "}
+              <Button
+                variant="ghost"
+                onClick={onIgnore}
+                className="text-stone-500"
+                type="button"
+              >
+                <X className="w-5 h-4" />
+                Skip
+              </Button>
+              <Button onClick={() => setCurrentStep(ProcessingStep.BARCODE)}>
+                Add
+              </Button>
+            </div>
+          </div>
+        );
 
+      case ProcessingStep.BARCODE:
+        return (
+          <div className="space-y-4">
+            <BarcodeScanner onBarcodeDetected={handleBarcodeDetected} />
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentStep(ProcessingStep.INITIAL)}
+              >
+                Back
+              </Button>
+            </div>
+          </div>
+        );
+      case ProcessingStep.PRODUCT_CONFIRM:
+        return matchedProduct ? (
+          <div className="space-y-4">
+            <div className="bg-stone-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Matched Product:</h3>
+              <p>{matchedProduct.name}</p>
+              <p className="text-sm text-stone-600">
+                UPC: {matchedProduct.upc}
+              </p>
+            </div>
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="upcCode">UPC/PLU Code</Label>
-                <FaBarcode className="w-4 h-4 text-stone-500" />
+              <Label>Is this the correct product?</Label>
+              <div className="flex gap-4">
+                <Button onClick={() => handleProductConfirm(true)}>
+                  Yes, Confirm Match
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentStep(ProcessingStep.PRODUCT_DETAILS)}
+                >
+                  No, Enter Details Manually
+                </Button>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mismatchDescription">
+                If incorrect, please describe why:
+              </Label>
               <Input
-                id="upc"
-                value={formData.upc}
-                onChange={(e) => handleChange("upc", e.target.value)}
-                placeholder="Enter UPC or PLU code"
-                className="bg-stone-50"
+                id="mismatchDescription"
+                value={mismatchDescription}
+                onChange={(e: any) => setMismatchDescription(e.target.value)}
+                placeholder="Describe any discrepancies..."
               />
             </div>
+          </div>
+        ) : null;
 
+      case ProcessingStep.PRODUCT_DETAILS:
+        return (
+          <div className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Product Name</Label>
@@ -242,97 +268,112 @@ const ReceiptItemProcessor = ({
                   onChange={(e) => handleChange("category", e.target.value)}
                   placeholder="What is the core item? (1-2 words)"
                 />
-              </div>{" "}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="productImage">Product Image (Optional)</Label>
-              <Input
-                id="productImage"
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="cursor-pointer"
-              />
+              </div>
             </div>
 
-            {/* Packaging Details Section */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold">Packaging Details</h3>
-                <p className="text-sm text-stone-600">
-                  Most packages will have a label describing the amount of the
-                  product being sold per package by its weight or volume.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="unitType">Unit Type</Label>
-                  <Select
-                    value={formData.unitType}
-                    onValueChange={(value) =>
-                      handleChange("unitType", value as UnitType)
-                    }
-                  >
-                    <SelectTrigger id="unitType">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(UnitType).map(([key, value]) => (
-                        <SelectItem key={value} value={value}>
-                          {`${key[0]}${key
-                            .substring(1)
-                            .toLowerCase()} (${value})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="unitQty">Quantity of Unit</Label>
-                  <Input
-                    id="unitQty"
-                    type="number"
-                    value={formData.unitQty}
-                    onChange={(e) =>
-                      handleChange("unitQty", Number(e.target.value))
-                    }
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-              </div>
-              <div className="flex self-center space-x-2 ">
-                <Checkbox
-                  id="unitPricing"
-                  checked={formData.unitPricing}
-                  onCheckedChange={(checked) =>
-                    handleChange("unitPricing", checked as boolean)
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="unitType">Unit Type</Label>
+                <Select
+                  value={formData.unitType}
+                  onValueChange={(value) =>
+                    handleChange("unitType", value as UnitType)
                   }
+                >
+                  <SelectTrigger id="unitType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(UnitType).map(([key, value]) => (
+                      <SelectItem key={value} value={value}>
+                        {`${key[0]}${key
+                          .substring(1)
+                          .toLowerCase()} (${value})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="unitQty">Quantity of Unit</Label>
+                <Input
+                  id="unitQty"
+                  type="number"
+                  value={formData.unitQty}
+                  onChange={(e) =>
+                    handleChange("unitQty", Number(e.target.value))
+                  }
+                  min="0"
+                  step="0.01"
                 />
-                <div className="flex flex-col space-y-1">
-                  {" "}
-                  <Label
-                    htmlFor="unitPricing"
-                    className="text-stone-700 font-semibold"
-                  >
-                    Is it Priced by Weight/Volume?{" "}
-                  </Label>
-                  <p className="text-sm text-stone-600">
-                    (Common with deli-prepared foods)
-                  </p>
-                </div>
               </div>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={toggleExpand}>
-                Cancel
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="unitPricing"
+                checked={formData.unitPricing}
+                onCheckedChange={(checked) =>
+                  handleChange("unitPricing", checked as boolean)
+                }
+              />
+              <Label htmlFor="unitPricing">Priced by Weight/Volume</Label>
+            </div>
+
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentStep(ProcessingStep.BARCODE)}
+              >
+                Back
               </Button>
-              <Button onClick={handleSubmit}>Save Product</Button>
+              <Button onClick={() => onSubmit(formData)}>Save Product</Button>
             </div>
           </div>
-        )}
+        );
+    }
+  };
+
+  return (
+    <Card className="mb-4">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center">
+            <PiReceipt className="w-8 h-8 text-stone-400" />
+          </div>
+          <div className="flex-grow min-w-0">
+            <p className="font-medium truncate">{item.receiptText}</p>
+            <p className="text-sm text-stone-500">
+              ${item.price.toFixed(2)}
+              {item.unitPrice &&
+                ` ($${item.unitPrice.toFixed(2)} × ${item.unitQuantity})`}
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="gap-1"
+              type="button"
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  Less
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Add
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {isExpanded && <div className="mt-4">{renderStepContent()}</div>}
       </CardContent>
     </Card>
   );

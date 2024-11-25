@@ -6,9 +6,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const BarcodeScanner: React.FC = () => {
+interface BarcodeScannerProps {
+  onBarcodeDetected: (code: string) => void;
+}
+
+const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
+  onBarcodeDetected,
+}) => {
   const [error, setError] = useState<string>("");
-  const [result, setResult] = useState<string | null>(null);
   const [manualInput, setManualInput] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,22 +34,14 @@ const BarcodeScanner: React.FC = () => {
   const processImage = async (file: File) => {
     try {
       setError("");
-      setResult(null);
 
-      // Create URL for the selected image
       const imageUrl = URL.createObjectURL(file);
-
-      // Initialize reader with hints
       const reader = new BrowserMultiFormatReader(createHints());
-
-      // Attempt to decode
       const result = await reader.decodeFromImageUrl(imageUrl);
-
-      // Clean up URL
       URL.revokeObjectURL(imageUrl);
 
       if (result) {
-        setResult(result.getText());
+        onBarcodeDetected(result.getText());
       }
     } catch (err) {
       console.error("Decoding error:", err);
@@ -54,7 +51,6 @@ const BarcodeScanner: React.FC = () => {
 
   const handleImageCapture = async () => {
     try {
-      // Check if device has camera support
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("Camera not supported on this device");
       }
@@ -63,12 +59,10 @@ const BarcodeScanner: React.FC = () => {
         video: { facingMode: "environment" },
       });
 
-      // Create video element to capture frame
       const video = document.createElement("video");
       video.srcObject = stream;
       await video.play();
 
-      // Create canvas to capture frame
       const canvas = document.createElement("canvas");
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -76,20 +70,15 @@ const BarcodeScanner: React.FC = () => {
 
       if (!ctx) throw new Error("Canvas context not available");
 
-      // Draw video frame to canvas
       ctx.drawImage(video, 0, 0);
-
-      // Stop video stream
       stream.getTracks().forEach((track) => track.stop());
 
-      // Convert canvas to blob
       const blob = await new Promise<Blob>((resolve) => {
         canvas.toBlob((blob) => {
           if (blob) resolve(blob);
         }, "image/jpeg");
       });
 
-      // Process the image
       await processImage(
         new File([blob], "capture.jpg", { type: "image/jpeg" })
       );
@@ -109,7 +98,7 @@ const BarcodeScanner: React.FC = () => {
   const handleManualInput = () => {
     const codeRegex = /^\d{4,13}$/;
     if (codeRegex.test(manualInput)) {
-      setResult(manualInput);
+      onBarcodeDetected(manualInput);
       setManualInput("");
       setError("");
     } else {
@@ -159,13 +148,6 @@ const BarcodeScanner: React.FC = () => {
             Enter
           </Button>
         </div>
-
-        {result && (
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-semibold mb-2">Scanned Code:</h3>
-            <p className="font-mono">{result}</p>
-          </div>
-        )}
       </div>
     </div>
   );
