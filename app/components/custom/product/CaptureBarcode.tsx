@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
-import { Camera } from "lucide-react";
+import { Camera, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,11 @@ const BarcodeScanner: React.FC = () => {
   const [error, setError] = useState<string>("");
   const [result, setResult] = useState<string | null>(null);
   const [manualInput, setManualInput] = useState<string>("");
+  const [isPreviewActive, setIsPreviewActive] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const createHints = () => {
     const hints = new Map<DecodeHintType, any>();
@@ -30,17 +34,9 @@ const BarcodeScanner: React.FC = () => {
     try {
       setError("");
       setResult(null);
-
-      // Create URL for the selected image
       const imageUrl = URL.createObjectURL(file);
-
-      // Initialize reader with hints
       const reader = new BrowserMultiFormatReader(createHints());
-
-      // Attempt to decode
       const result = await reader.decodeFromImageUrl(imageUrl);
-
-      // Clean up URL
       URL.revokeObjectURL(imageUrl);
 
       if (result) {
@@ -52,51 +48,66 @@ const BarcodeScanner: React.FC = () => {
     }
   };
 
-  const handleImageCapture = async () => {
+  const startPreview = async () => {
     try {
-      // Check if device has camera support
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("Camera not supported on this device");
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
       });
 
-      // Create video element to capture frame
-      const video = document.createElement("video");
-      video.srcObject = stream;
-      await video.play();
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
 
-      // Create canvas to capture frame
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-
-      if (!ctx) throw new Error("Canvas context not available");
-
-      // Draw video frame to canvas
-      ctx.drawImage(video, 0, 0);
-
-      // Stop video stream
-      stream.getTracks().forEach((track) => track.stop());
-
-      // Convert canvas to blob
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-        }, "image/jpeg");
-      });
-
-      // Process the image
-      await processImage(
-        new File([blob], "capture.jpg", { type: "image/jpeg" })
-      );
+      setStream(mediaStream);
+      setIsPreviewActive(true);
+      setError("");
     } catch (err) {
       console.error("Camera error:", err);
       setError("Camera access failed. Please try uploading an image instead.");
     }
+  };
+
+  const stopPreview = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsPreviewActive(false);
+  };
+
+  const captureImage = async () => {
+    if (!videoRef.current || !stream) return;
+
+    // Create canvas to capture frame
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) throw new Error("Canvas context not available");
+
+    // Draw video frame to canvas
+    ctx.drawImage(videoRef.current, 0, 0);
+
+    // Convert canvas to blob
+    const blob = await new Promise<Blob>((resolve) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+      }, "image/jpeg");
+    });
+
+    // Stop the preview
+    stopPreview();
+
+    // Process the image
+    await processImage(new File([blob], "capture.jpg", { type: "image/jpeg" }));
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,27 +137,48 @@ const BarcodeScanner: React.FC = () => {
       )}
 
       <div className="space-y-4">
-        <div className="flex flex-col gap-2">
-          <Button onClick={handleImageCapture}>
-            <Camera className="mr-2 h-4 w-4" />
-            Take Photo
-          </Button>
+        {isPreviewActive ? (
+          <div className="relative">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full rounded-lg border border-gray-200"
+            />
+            <div className="flex gap-2 mt-2">
+              <Button onClick={captureImage} className="flex-1">
+                <Camera className="mr-2 h-4 w-4" />
+                Capture
+              </Button>
+              <Button onClick={stopPreview} variant="secondary">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Button onClick={startPreview}>
+              <Camera className="mr-2 h-4 w-4" />
+              Open Camera
+            </Button>
 
-          <Button
-            variant="secondary"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Upload Image
-          </Button>
+            <Button
+              variant="secondary"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Upload Image
+            </Button>
+          </div>
+        )}
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
 
         <div className="flex gap-2">
           <Input
