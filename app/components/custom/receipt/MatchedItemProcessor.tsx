@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { draftItems } from "~/db/schema";
 import { FaWeightScale } from "react-icons/fa6";
+import { Input } from "~/components/ui/input";
 type DraftItem = typeof draftItems.$inferSelect;
 
 interface MatchedReceiptItemProcessorProps {
@@ -17,6 +18,13 @@ const MatchedReceiptItemProcessor = ({
   onProductMatch,
 }: MatchedReceiptItemProcessorProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [quantity, setQuantity] = useState(item.unitQuantity || 1);
+
+  const handleSubmit = async () => {
+    // TODO: Implement API call to create price entry and mark draft item complete
+    // createPriceEntry({ ...draftItem, quantity });
+    // markDraftItemComplete(draftItem.id);
+  };
 
   return (
     <Card className="mb-4">
@@ -57,7 +65,22 @@ const MatchedReceiptItemProcessor = ({
           </div>
         </div>
 
-        {isExpanded && <div className="mt-4">Expanded</div>}
+        {isExpanded && (
+          <div className="mt-4">
+            {" "}
+            <div className="flex items-center space-x-2">
+              <Input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+                className="w-24"
+                min="0"
+                step="0.01"
+              />
+              <Button onClick={handleSubmit}>Submit</Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

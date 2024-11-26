@@ -176,13 +176,17 @@ export async function updateProductLatestPrice(id: number, newPrice: number) {
   return null;
 }
 
-export async function requestProductEdit(upc: string, editNotes: string) {
+export async function requestProductEdit(
+  upc: string,
+  editNotes: string,
+  editType: string = "generic"
+) {
   const editRequest = await db
     .insert(requestedEdits)
     .values({
       productUpc: upc,
       editNotes: editNotes,
-      editType: "receipt-mismatch",
+      editType: editType,
       status: "pending",
     })
     .returning();
@@ -198,6 +202,16 @@ export async function ignoreProductDraftItem(id: number) {
     .update(draftItems)
     .set({ status: "ignored", updatedAt: new Date() })
     .where(and(eq(draftItems.id, id), eq(draftItems.status, "pending")))
+    .catch((error) => {
+      console.error(`Failed to ignore draft item ${id}:`, error);
+    });
+}
+
+export async function completeProductDraftItem(id: number) {
+  return db
+    .update(draftItems)
+    .set({ status: "completed", updatedAt: new Date() })
+    .where(eq(draftItems.id, id))
     .catch((error) => {
       console.error(`Failed to ignore draft item ${id}:`, error);
     });

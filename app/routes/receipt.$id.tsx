@@ -1,9 +1,8 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { data, redirect } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
 import { requireAuth } from "../services/auth.server";
-import { X, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,8 +15,6 @@ import HeaderLinks from "~/components/custom/HeaderLinks";
 import { getReceiptDetails } from "~/services/receipt.server";
 import { draftItems, receipts } from "~/db/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { Input } from "~/components/ui/input";
-import { Button } from "~/components/ui/button";
 import ReceiptItemProcessor from "~/components/custom/receipt/ReceiptItemProcessor";
 
 export const meta: MetaFunction = () => {
@@ -41,7 +38,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
   const result = await getReceiptDetails(parseInt(params.id!), user.id);
   if (!result) return redirect("/upload-receipt");
   else {
-    return json({ receipt: result.receipt, receiptItems: result.receiptItems });
+    return data({ receipt: result.receipt, receiptItems: result.receiptItems });
   }
 };
 
@@ -159,74 +156,6 @@ const ReceiptReview = (props: LoaderData) => {
     </Card>
   );
 
-  const StatusBadge = ({
-    status,
-  }: {
-    status: typeof draftItems.$inferSelect.status;
-  }) => {
-    const statusStyles = {
-      pending: "bg-yellow-100 text-yellow-800",
-      matched: "bg-blue-100 text-blue-800",
-      completed: "bg-green-100 text-green-800",
-      ignored: "bg-gray-100 text-gray-800",
-    };
-
-    let StatusIcon;
-    switch (status) {
-      case "pending":
-        StatusIcon = Clock;
-        break;
-      case "matched":
-        StatusIcon = AlertCircle;
-        break;
-      case "completed":
-        StatusIcon = CheckCircle2;
-        break;
-      case "ignored":
-        StatusIcon = X;
-        break;
-      default:
-        StatusIcon = AlertCircle;
-    }
-
-    return (
-      <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[status]}`}
-      >
-        <StatusIcon className="w-4 h-4 mr-1" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
-  };
-
-  const QuantityInput = ({
-    draftItem,
-  }: {
-    draftItem: typeof draftItems.$inferInsert;
-  }) => {
-    const [quantity, setQuantity] = useState(draftItem.unitQuantity || 1);
-
-    const handleSubmit = async () => {
-      // TODO: Implement API call to create price entry and mark draft item complete
-      // createPriceEntry({ ...draftItem, quantity });
-      // markDraftItemComplete(draftItem.id);
-    };
-
-    return (
-      <div className="flex items-center space-x-2">
-        <Input
-          type="number"
-          value={quantity}
-          onChange={(e) => setQuantity(Number(e.target.value))}
-          className="w-24"
-          min="0"
-          step="0.01"
-        />
-        <Button onClick={handleSubmit}>Submit</Button>
-      </div>
-    );
-  };
-
   return (
     <div className="max-w-3xl mx-auto space-y-6 p-4">
       <ReceiptSummary />
@@ -286,10 +215,31 @@ const ReceiptReview = (props: LoaderData) => {
               console.log("Completed the ignore for item ", item.id);
             }}
             onBarcodeMatch={async (productId) => {
-              // New: Handle matched product
+              //Link future receipt texts with this productId
             }}
             onProductMismatch={async (upc, description) => {
-              // New: Handle product mismatch feedback
+              // Send an edit request
+              const formData = new FormData();
+
+              formData.append("upc", upc);
+
+              const editNotes = `receipt id: ${receipt.id}; draftItemId: ${item.id}; user description: ${description}`;
+              formData.append("editNotes", editNotes);
+              formData.append("draftItemId", item.id.toString());
+
+              try {
+                await fetch("/draftItem/editRequest", {
+                  method: "POST",
+                  body: formData,
+                });
+                updateItemStatus(item.id, item.status, "completed");
+              } catch (error) {
+                console.error(
+                  "Failed to submit edit request for review: ",
+                  error
+                );
+                // TODO: show error toast
+              }
             }}
           />
         ))}
