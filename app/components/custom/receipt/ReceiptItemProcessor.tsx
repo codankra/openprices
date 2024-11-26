@@ -142,8 +142,12 @@ const ReceiptItemProcessor = ({
     switch (currentStep) {
       case ProcessingStep.INITIAL:
         return (
-          <div className="space-y-4">
-            <div className="flex gap-4">
+          <div className="">
+            {" "}
+            <h1 className="text-lg text-center font-semibold mb-4">
+              Double Check - Everything Right?{" "}
+            </h1>
+            <div className="flex gap-4 mb-11">
               <div className="flex-grow space-y-2">
                 <Label
                   htmlFor="receiptText"
@@ -162,7 +166,7 @@ const ReceiptItemProcessor = ({
               <div className="w-32 space-y-2">
                 <Label
                   htmlFor="pricePerUnit"
-                  className="flex items-center gap-2 h-4"
+                  className="flex items-center gap-1 h-4"
                 >
                   Price
                   <span className="text-stone-500">$</span>
@@ -187,7 +191,7 @@ const ReceiptItemProcessor = ({
                 type="button"
               >
                 <X className="w-5 h-4" />
-                Skip
+                Skip Product
               </Button>
               <Button onClick={() => setCurrentStep(ProcessingStep.BARCODE)}>
                 Add
@@ -251,6 +255,9 @@ const ReceiptItemProcessor = ({
       case ProcessingStep.PRODUCT_DETAILS:
         return (
           <div className="space-y-4">
+            <h1 className="text-lg text-center font-semibold mb-4">
+              You Found a New Product 🎉
+            </h1>
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Product Name</Label>
@@ -270,7 +277,6 @@ const ReceiptItemProcessor = ({
                 />
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="unitType">Unit Type</Label>
@@ -308,7 +314,6 @@ const ReceiptItemProcessor = ({
                 />
               </div>
             </div>
-
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="unitPricing"
@@ -319,7 +324,6 @@ const ReceiptItemProcessor = ({
               />
               <Label htmlFor="unitPricing">Priced by Weight/Volume</Label>
             </div>
-
             <div className="flex justify-between">
               <Button
                 variant="outline"
@@ -327,7 +331,12 @@ const ReceiptItemProcessor = ({
               >
                 Back
               </Button>
-              <Button onClick={() => onSubmit(formData)}>Save Product</Button>
+              <div className="justify-end flex flex-col items-end space-y-1">
+                <Button onClick={() => onSubmit(formData)}>Save Product</Button>
+                <p className="text-sm text-stone-600 font-bold">
+                  (Thank You!){" "}
+                </p>
+              </div>{" "}
             </div>
           </div>
         );

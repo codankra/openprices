@@ -8,13 +8,16 @@ import { Input } from "@/components/ui/input";
 
 interface BarcodeScannerProps {
   onBarcodeDetected: (code: string) => void;
+  initialUPC?: string;
 }
 
 const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
   onBarcodeDetected,
+  initialUPC,
 }) => {
   const [error, setError] = useState<string>("");
-  const [manualInput, setManualInput] = useState<string>("");
+  const [showInput, setShowInput] = useState(false);
+  const [manualInput, setManualInput] = useState<string>(initialUPC ?? "");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const createHints = () => {
@@ -49,45 +52,6 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
     }
   };
 
-  const handleImageCapture = async () => {
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("Camera not supported on this device");
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-
-      const video = document.createElement("video");
-      video.srcObject = stream;
-      await video.play();
-
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-
-      if (!ctx) throw new Error("Canvas context not available");
-
-      ctx.drawImage(video, 0, 0);
-      stream.getTracks().forEach((track) => track.stop());
-
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-        }, "image/jpeg");
-      });
-
-      await processImage(
-        new File([blob], "capture.jpg", { type: "image/jpeg" })
-      );
-    } catch (err) {
-      console.error("Camera error:", err);
-      setError("Camera access failed. Please try uploading an image instead.");
-    }
-  };
-
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -107,27 +71,21 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-4 space-y-4">
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
+    <div className="w-full max-w-md mx-auto space-y-4">
       <div className="space-y-4">
-        <div className="flex flex-col gap-2">
-          <Button onClick={handleImageCapture}>
+        <h1 className="text-lg text-center font-semibold">
+          Find the Item's UPC/PLU# Barcode
+        </h1>
+        <div className="flex flex-col gap-4">
+          <Button onClick={() => fileInputRef.current?.click()}>
             <Camera className="mr-2 h-4 w-4" />
-            Take Photo
+            Take a Barcode Picture
           </Button>
-
-          <Button
-            variant="secondary"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Upload Image
-          </Button>
-
+          {!showInput && (
+            <Button variant="secondary" onClick={() => setShowInput(true)}>
+              Or Enter Manually{" "}
+            </Button>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -137,17 +95,24 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
           />
         </div>
 
-        <div className="flex gap-2">
-          <Input
-            placeholder="Enter barcode manually"
-            value={manualInput}
-            onChange={(e) => setManualInput(e.target.value)}
-            className="flex-1"
-          />
-          <Button onClick={handleManualInput} variant="secondary">
-            Enter
-          </Button>
-        </div>
+        {showInput && (
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter barcode number"
+              value={manualInput}
+              onChange={(e) => setManualInput(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={handleManualInput} variant="secondary">
+              Enter
+            </Button>
+          </div>
+        )}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
       </div>
     </div>
   );
