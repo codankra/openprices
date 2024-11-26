@@ -1,4 +1,10 @@
-import { products, productBrands, draftItems } from "~/db/schema";
+import {
+  products,
+  productBrands,
+  draftItems,
+  productReceiptIdentifiers,
+  requestedEdits,
+} from "~/db/schema";
 import { db } from "~/db/index";
 import { and, eq, like } from "drizzle-orm";
 import {
@@ -23,6 +29,54 @@ export async function getProductById(id: string) {
 
     if (result.length > 0) {
       await productInfoCache.set(id, result[0]);
+      return result[0];
+    }
+    return null;
+  }
+}
+
+export async function getProductByUpc(upc: string) {
+  const cached: typeof products.$inferSelect | undefined =
+    await productInfoCache.get(`upc-${upc}`);
+
+  if (cached) return cached;
+  else {
+    const result = await db
+      .select()
+      .from(products)
+      .where(eq(products.upc, upc))
+      .limit(1);
+
+    if (result.length > 0) {
+      await productInfoCache.set(`upc-${upc}`, result[0]);
+      return result[0];
+    }
+    return null;
+  }
+}
+
+export async function getProductByReceiptText(
+  text: string,
+  storeBrand: string
+) {
+  const cached: typeof products.$inferSelect | undefined =
+    await productInfoCache.get(`pri_${text}_${storeBrand}`);
+
+  if (cached) return cached;
+  else {
+    const result = await db
+      .select()
+      .from(productReceiptIdentifiers)
+      .where(
+        and(
+          eq(productReceiptIdentifiers.receiptIdentifier, text),
+          eq(productReceiptIdentifiers.storeBrandName, storeBrand)
+        )
+      )
+      .limit(1);
+
+    if (result.length > 0) {
+      await productInfoCache.set(`pri_${text}_${storeBrand}`, result[0]);
       return result[0];
     }
     return null;
@@ -91,6 +145,7 @@ export async function addNewProduct(productDetails: {
   unitQty: number;
   unitType: string;
   productBrandName: string;
+  upc: string;
   image?: string;
 }) {
   const newProduct = await db
@@ -117,6 +172,23 @@ export async function updateProductLatestPrice(id: number, newPrice: number) {
     const product = updatedProduct[0];
     await productInfoCache.set(id.toString(), product);
     return product;
+  }
+  return null;
+}
+
+export async function requestProductEdit(upc: string, editNotes: string) {
+  const editRequest = await db
+    .insert(requestedEdits)
+    .values({
+      productUpc: upc,
+      editNotes: editNotes,
+      editType: "receipt-mismatch",
+      status: "pending",
+    })
+    .returning();
+
+  if (editRequest.length > 0) {
+    return editRequest[0];
   }
   return null;
 }
