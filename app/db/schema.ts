@@ -124,6 +124,10 @@ export const productReceiptIdentifiers = sqliteTable(
   (table) => ({
     productIdIdx: index("product_receipt_id_idx").on(table.productId),
     storeBrandsIdx: index("store_brands_idx").on(table.storeBrandName),
+    productStoreIdx: index("product_store_idx").on(
+      table.productId,
+      table.storeBrandName
+    ),
   })
 );
 
@@ -173,7 +177,9 @@ export const receipts = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id),
-    storeBrandName: text("store_brand_name").references(() => storeBrands.name),
+    storeBrandName: text("store_brand_name")
+      .references(() => storeBrands.name)
+      .notNull(),
     storeLocation: text("store_location"),
     purchaseDate: text("purchase_date").notNull(),
     totalAmount: real("total_amount"),

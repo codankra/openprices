@@ -5,15 +5,24 @@ import {
   getProductIDByReceiptText,
 } from "~/services/product.server";
 
-export async function loader({ request, params }: LoaderFunctionArgs) {
-  const user = await auth.isAuthenticated(request);
-  if (!user)
+export async function loader({ request }: LoaderFunctionArgs) {
+  // Run auth check and param validation in parallel
+  const [user, url] = await Promise.all([
+    auth.isAuthenticated(request),
+    Promise.resolve(new URL(request.url)),
+  ]);
+
+  if (!user) {
     return data(
       { success: false, message: "You must log in to use this API" },
       { status: 401 }
     );
-  const { text, brand } = params;
-  if (!text || !brand)
+  }
+
+  const text = url.searchParams.get("text");
+  const brand = url.searchParams.get("brand");
+  console.log(brand);
+  if (!text || !brand) {
     return data(
       {
         success: false,
@@ -21,6 +30,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       },
       { status: 400 }
     );
+  }
 
   const pid = await getProductIDByReceiptText(text, brand);
   if (!pid)
@@ -31,7 +41,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const product = await getProductById(pid.toString());
   if (!product)
     return data(
-      { success: false, message: "Product Not Found" },
+      {
+        success: false,
+        message:
+          "Product Receipt ID found, but its details could not be retrieved",
+      },
       { status: 400 }
     );
   else {
