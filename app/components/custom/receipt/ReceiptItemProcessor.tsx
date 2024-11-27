@@ -86,15 +86,19 @@ const ReceiptItemProcessor = ({
       checkProductReceiptIdentifier(value as string);
     }
   };
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleChange("productImage", file);
+    }
+  };
   const checkProductReceiptIdentifier = async (receiptText: string) => {
     try {
       const response = await fetch(
-        `/api/product-receipt-identifier?text=${encodeURIComponent(
-          receiptText
-        )}`
+        `/draftItem/pri?text=${encodeURIComponent(receiptText)}`
       );
       if (response.ok) {
-        const data = await response.json();
+        const data: { product?: Product } = await response.json();
         if (data.product) {
           setMatchedProduct(data.product);
           setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
@@ -255,9 +259,14 @@ const ReceiptItemProcessor = ({
       case ProcessingStep.PRODUCT_DETAILS:
         return (
           <div className="space-y-4">
-            <h1 className="text-lg text-center font-semibold mb-4">
-              You Found a New Product 🎉
-            </h1>
+            <div className=" text-center  mb-4">
+              <p className="text-lg font-semibold">
+                You Found a New Product 🎉
+              </p>
+              <p className="text-sm text-stone-600">
+                Barcode #: {formData.upc}
+              </p>
+            </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Product Name</Label>
@@ -276,6 +285,16 @@ const ReceiptItemProcessor = ({
                   placeholder="What is the core item? (1-2 words)"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="productImage">Product Image (Optional)</Label>
+              <Input
+                id="productImage"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="cursor-pointer"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

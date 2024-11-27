@@ -55,32 +55,24 @@ export async function getProductByUpc(upc: string) {
   }
 }
 
-export async function getProductByReceiptText(
+export async function getProductIDByReceiptText(
   text: string,
   storeBrand: string
 ) {
-  const cached: typeof products.$inferSelect | undefined =
-    await productInfoCache.get(`pri_${text}_${storeBrand}`);
-
-  if (cached) return cached;
-  else {
-    const result = await db
-      .select()
-      .from(productReceiptIdentifiers)
-      .where(
-        and(
-          eq(productReceiptIdentifiers.receiptIdentifier, text),
-          eq(productReceiptIdentifiers.storeBrandName, storeBrand)
-        )
+  const result = await db
+    .select({ pid: productReceiptIdentifiers.productId })
+    .from(productReceiptIdentifiers)
+    .where(
+      and(
+        eq(productReceiptIdentifiers.receiptIdentifier, text),
+        eq(productReceiptIdentifiers.storeBrandName, storeBrand)
       )
-      .limit(1);
-
-    if (result.length > 0) {
-      await productInfoCache.set(`pri_${text}_${storeBrand}`, result[0]);
-      return result[0];
-    }
-    return null;
+    )
+    .limit(1);
+  if (result.length > 0) {
+    return result[0].pid;
   }
+  return null;
 }
 
 export async function getProductsBySearch(searchTerm: string) {

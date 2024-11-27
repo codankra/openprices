@@ -38,7 +38,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
   const result = await getReceiptDetails(parseInt(params.id!), user.id);
   if (!result) return redirect("/upload-receipt");
   else {
-    return data({ receipt: result.receipt, receiptItems: result.receiptItems });
+    return { receipt: result.receipt, receiptItems: result.receiptItems };
   }
 };
 

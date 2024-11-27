@@ -17,8 +17,6 @@ export async function action({ request }: ActionFunctionArgs) {
   const draftItemId = Number(formData.get("draftItemId"));
   const upc = formData.get("upc")?.toString();
   const editNotes = formData.get("editNotes")?.toString();
-  // get receipt by draftItemId and userId
-  // if null, error out 400
   if (isNaN(draftItemId) || !editNotes || !upc) {
     return data(
       { success: false, message: "We need more details to request this edit." },
