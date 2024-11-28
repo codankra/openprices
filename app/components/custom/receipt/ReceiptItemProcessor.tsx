@@ -15,7 +15,6 @@ import { draftItems, UnitType, products } from "~/db/schema";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PiReceipt } from "react-icons/pi";
 import BarcodeScanner from "../product/CaptureBarcode";
-import Confetti from "react-confetti";
 
 // Types for our component
 type DraftItem = typeof draftItems.$inferSelect;
