@@ -64,9 +64,8 @@ const ReceiptItemProcessor = ({
   const [currentStep, setCurrentStep] = useState(ProcessingStep.INITIAL);
   const [matchedProduct, setMatchedProduct] = useState<Product | null>(null);
   const [mismatchDescription, setMismatchDescription] = useState("");
-
-  const [isCheckingRT, setIsCheckingRT] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isUPChecking, setIsUPChecking] = useState(false);
 
   const [formData, setFormData] = useState<CreateItemData>({
     receiptText: item.receiptText,
@@ -111,7 +110,6 @@ const ReceiptItemProcessor = ({
 
   const handleStartAdd = async () => {
     setIsTransitioning(true);
-    setIsCheckingRT(true);
 
     // kick off the check but don't await it
     const checkPromise = checkProductReceiptIdentifier(formData.receiptText);
@@ -121,13 +119,12 @@ const ReceiptItemProcessor = ({
     } catch (error) {
       console.error("Failed silent product check:", error);
     } finally {
-      setIsCheckingRT(false);
       setIsTransitioning(false);
     }
   };
 
   const handleBarcodeDetected = async (upc: string) => {
-    setIsTransitioning(true);
+    setIsUPChecking(true);
 
     handleChange("upc", upc);
 
@@ -148,7 +145,7 @@ const ReceiptItemProcessor = ({
       console.error("Failed to check product:", error);
       setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
     } finally {
-      setIsTransitioning(false);
+      setIsUPChecking(false);
     }
   };
 
@@ -229,12 +226,12 @@ const ReceiptItemProcessor = ({
                       onClick={onIgnore}
                       className="text-stone-500"
                       type="button"
-                      disabled={isCheckingRT}
+                      disabled={isTransitioning}
                     >
                       <X className="w-5 h-4" />
                       Skip Product
                     </Button>
-                    <Button onClick={handleStartAdd} disabled={isCheckingRT}>
+                    <Button onClick={handleStartAdd} disabled={isTransitioning}>
                       Add
                     </Button>
                   </div>
@@ -245,13 +242,16 @@ const ReceiptItemProcessor = ({
               return (
                 <div>
                   <div className="mb-4">
-                    <BarcodeScanner onBarcodeDetected={handleBarcodeDetected} />
+                    <BarcodeScanner
+                      onBarcodeDetected={handleBarcodeDetected}
+                      shouldDisable={isUPChecking}
+                    />
                   </div>
                   <div className="flex justify-between">
                     <Button
                       variant="outline"
                       onClick={() => setCurrentStep(ProcessingStep.INITIAL)}
-                      disabled={isCheckingRT}
+                      disabled={isTransitioning || isUPChecking}
                     >
                       Back
                     </Button>
@@ -275,7 +275,7 @@ const ReceiptItemProcessor = ({
                         <div>
                           <p>{matchedProduct.name}</p>
                           <p className="text-sm text-stone-600">
-                            UPC: {matchedProduct.upc}
+                            UPC/EAN: {matchedProduct.upc}
                           </p>
                           <p className="text-sm text-stone-600">
                             Quantity Sold: {matchedProduct.unitQty}{" "}

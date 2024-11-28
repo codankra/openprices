@@ -9,16 +9,19 @@ import { Input } from "@/components/ui/input";
 interface BarcodeScannerProps {
   onBarcodeDetected: (code: string) => void;
   initialUPC?: string;
+  shouldDisable?: boolean;
 }
 
 const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
   onBarcodeDetected,
+  shouldDisable,
   initialUPC,
 }) => {
   const [error, setError] = useState<string>("");
   const [showInput, setShowInput] = useState(false);
   const [manualInput, setManualInput] = useState<string>(initialUPC ?? "");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isDisabled = shouldDisable ?? false;
 
   const createHints = () => {
     const hints = new Map<DecodeHintType, any>();
@@ -47,7 +50,6 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
         onBarcodeDetected(result.getText());
       }
     } catch (err) {
-      console.error("Decoding error:", err);
       setError("Unable to detect barcode. Please try again or enter manually.");
     }
   };
@@ -77,7 +79,10 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
           Find the Item's UPC/PLU# Barcode
         </h1>
         <div className="flex flex-col gap-4">
-          <Button onClick={() => fileInputRef.current?.click()}>
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isDisabled}
+          >
             <Camera className="mr-2 h-4 w-4" />
             Take a Barcode Picture
           </Button>
@@ -102,8 +107,13 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
               value={manualInput}
               onChange={(e) => setManualInput(e.target.value)}
               className="flex-1"
+              disabled={isDisabled}
             />
-            <Button onClick={handleManualInput} variant="secondary">
+            <Button
+              onClick={handleManualInput}
+              variant="secondary"
+              disabled={isDisabled}
+            >
               Enter
             </Button>
           </div>
