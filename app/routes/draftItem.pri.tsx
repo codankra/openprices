@@ -36,17 +36,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (!pid)
     return data(
       { success: false, message: "Product Not Found" },
-      { status: 400 }
+      { status: 404 }
     );
   const product = await getProductById(pid.toString());
   if (!product)
     return data(
       {
         success: false,
-        message:
-          "Product Receipt ID found, but its details could not be retrieved",
+        message: "Product Receipt ID found, but its details could not be found",
       },
-      { status: 400 }
+      { status: 404 }
     );
   else {
     return { success: true, message: "Product Found", product };

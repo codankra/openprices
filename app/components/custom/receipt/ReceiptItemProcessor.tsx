@@ -15,6 +15,7 @@ import { draftItems, UnitType, products } from "~/db/schema";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PiReceipt } from "react-icons/pi";
 import BarcodeScanner from "../product/CaptureBarcode";
+import Confetti from "react-confetti";
 
 // Types for our component
 type DraftItem = typeof draftItems.$inferSelect;
@@ -111,13 +112,7 @@ const ReceiptItemProcessor = ({
 
   const handleStartAdd = async () => {
     setIsTransitioning(true);
-
     setIsCheckingRT(true);
-    console.log("Transition start");
-    setTimeout(() => {
-      setIsTransitioning(false);
-      console.log("Transition end");
-    }, 250);
 
     // kick off the check but don't await it
     const checkPromise = checkProductReceiptIdentifier(formData.receiptText);
@@ -128,10 +123,13 @@ const ReceiptItemProcessor = ({
       console.error("Failed silent product check:", error);
     } finally {
       setIsCheckingRT(false);
+      setIsTransitioning(false);
     }
   };
 
   const handleBarcodeDetected = async (upc: string) => {
+    setIsTransitioning(true);
+
     handleChange("upc", upc);
 
     try {
@@ -139,9 +137,9 @@ const ReceiptItemProcessor = ({
         `/draftItem/upc/?upc=${encodeURIComponent(upc)}`
       );
       if (response.ok) {
-        const product = await response.json();
-        if (product) {
-          setMatchedProduct(product);
+        const data: { product?: Product } = await response.json();
+        if (data.product) {
+          setMatchedProduct(data.product);
           setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
         } else {
           setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
@@ -150,6 +148,8 @@ const ReceiptItemProcessor = ({
     } catch (error) {
       console.error("Failed to check product:", error);
       setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
+    } finally {
+      setIsTransitioning(false);
     }
   };
 
@@ -157,13 +157,13 @@ const ReceiptItemProcessor = ({
     setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
     setTimeout(() => {
       onProductMismatch(formData.upc, mismatchDescription);
-    });
+    }, 1000);
   };
   const handleBarcodeMatch = async () => {
     setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
     setTimeout(() => {
       onBarcodeMatch(matchedProduct!.id);
-    });
+    }, 1000);
   };
 
   const renderStepContent = () => {
@@ -262,19 +262,46 @@ const ReceiptItemProcessor = ({
             case ProcessingStep.PRODUCT_CONFIRM:
               return matchedProduct ? (
                 <div className="space-y-4">
-                  <div className="bg-stone-50 p-4 rounded-lg">
-                    <h3 className="font-semibold mb-2">Matched Product:</h3>
-                    <p>{matchedProduct.name}</p>
-                    <p className="text-sm text-stone-600">
-                      UPC: {matchedProduct.upc}
-                    </p>
+                  <div className="bg-stone-50 p-4 rounded-lg flex justify-between">
+                    <div>
+                      <h3 className="font-semibold mb-2">Found Product:</h3>
+                      <div className="flex gap-4">
+                        {matchedProduct.image && (
+                          <img
+                            src={matchedProduct.image}
+                            alt={matchedProduct.name}
+                            className="w-20 h-[4.5rem] object-contain bg-stone-900 rounded"
+                          />
+                        )}
+                        <div>
+                          <p>{matchedProduct.name}</p>
+                          <p className="text-sm text-stone-600">
+                            UPC: {matchedProduct.upc}
+                          </p>
+                          <p className="text-sm text-stone-600">
+                            Quantity Sold: {matchedProduct.unitQty}{" "}
+                            {matchedProduct.unitType}
+                          </p>
+                        </div>
+                      </div>
+                    </div>{" "}
+                    <Button onClick={handleBarcodeMatch} className="self-end">
+                      It's a Match!
+                    </Button>
                   </div>
                   <div className="space-y-2">
-                    <Label>Is this the correct product?</Label>
-                    <div className="flex gap-4">
-                      <Button onClick={handleBarcodeMatch}>
-                        Yes, Confirm Match
-                      </Button>
+                    <Label htmlFor="mismatchDescription">
+                      Is this incorrect? Please describe how:
+                    </Label>
+                    <div className="flex justify-between gap-4">
+                      <Input
+                        id="mismatchDescription"
+                        value={mismatchDescription}
+                        onChange={(e: any) =>
+                          setMismatchDescription(e.target.value)
+                        }
+                        placeholder="Wrong Product Name, Quanitity, Everything?"
+                      />{" "}
                       <Button
                         variant="secondary"
                         onClick={handleProductMismatch}
@@ -282,19 +309,6 @@ const ReceiptItemProcessor = ({
                         Send Feedback
                       </Button>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="mismatchDescription">
-                      Incorrect? Please describe how:
-                    </Label>
-                    <Input
-                      id="mismatchDescription"
-                      value={mismatchDescription}
-                      onChange={(e: any) =>
-                        setMismatchDescription(e.target.value)
-                      }
-                      placeholder="Wrong Product Name, Quanitity, Everything?"
-                    />
                   </div>
                 </div>
               ) : null;
@@ -406,6 +420,14 @@ const ReceiptItemProcessor = ({
                       </p>
                     </div>{" "}
                   </div>
+                </div>
+              );
+            case ProcessingStep.CONTRIBUTOR_THANKS:
+              return (
+                <div className="bg-green-100 transition-opacity ease-out duration-1000 py-20 px-4 text-center rounded">
+                  <h2 className="text-xl font-semibold">
+                    Thank you for Contributing!
+                  </h2>
                 </div>
               );
           }
