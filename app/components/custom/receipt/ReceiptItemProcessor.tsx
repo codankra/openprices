@@ -160,25 +160,42 @@ const ReceiptItemProcessor = ({
       onProductMismatch(formData.upc, mismatchDescription);
     }, 1000);
   };
-  const handleProductMatch = async () => {
+
+  const handleReceiptTextMatch = async (
+    includedQuantity?: number | undefined
+  ) => {
+    setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
+    setTimeout(() => {
+      onReceiptTextMatch(matchedProduct!.id, includedQuantity);
+    }, 1000);
+  };
+
+  const handleBarcodeMatch = async (includedQuantity?: number | undefined) => {
+    setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
+    setTimeout(() => {
+      onBarcodeMatch(matchedProduct!.id, includedQuantity);
+    }, 1000);
+  };
+  const handleFinalizeProductMatch = async (
+    includedQuantity?: number | undefined
+  ) => {
+    if (matchedBy === "PRI") {
+      handleReceiptTextMatch(includedQuantity);
+    } else if (matchedBy === "UPC") {
+      handleBarcodeMatch(includedQuantity);
+    } else {
+      //default to simpler price entry - PRI
+      handleReceiptTextMatch(includedQuantity);
+    }
+  };
+
+  const handleConfirmProductMatch = async () => {
     // if unitpriced, show weight/volume screen
     if (matchedProduct?.unitPricing) {
       setCurrentStep(ProcessingStep.PRODUCT_UNITPRICE);
     } else {
-      setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
+      handleFinalizeProductMatch();
     }
-
-    if (matchedBy === "PRI") {
-    } else if (matchedBy === "UPC") {
-    } else {
-      //default to simpler price entry - PRI
-    }
-  };
-  const handleBarcodeMatch = async () => {
-    setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
-    setTimeout(() => {
-      onBarcodeMatch(matchedProduct!.id);
-    }, 1000);
   };
 
   const renderStepContent = () => {
@@ -303,7 +320,10 @@ const ReceiptItemProcessor = ({
                         </div>
                       </div>
                     </div>{" "}
-                    <Button onClick={handleBarcodeMatch} className="self-end">
+                    <Button
+                      onClick={handleConfirmProductMatch}
+                      className="self-end"
+                    >
                       It's a Match!
                     </Button>
                   </div>
@@ -437,9 +457,57 @@ const ReceiptItemProcessor = ({
                   </div>
                 </div>
               );
+            case ProcessingStep.PRODUCT_UNITPRICE:
+              return (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="unitTypeM">Unit Type</Label>
+                      <Select value={matchedProduct!.unitType!} disabled>
+                        <SelectTrigger id="unitTypeM" disabled>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="unitQty">Quantity Purchased</Label>
+                      <Input
+                        id="unitQtyM"
+                        type="number"
+                        value={formData.unitQty}
+                        onChange={(e) =>
+                          handleChange("unitQty", Number(e.target.value))
+                        }
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setCurrentStep(ProcessingStep.PRODUCT_CONFIRM)
+                      }
+                    >
+                      Back
+                    </Button>
+                    <div className="justify-end flex flex-col items-end space-y-1">
+                      <Button
+                        onClick={() =>
+                          handleFinalizeProductMatch(formData.unitQty)
+                        }
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+
             case ProcessingStep.CONTRIBUTOR_THANKS:
               return (
-                <div className="bg-green-100 transition-opacity ease-out duration-1000 py-20 px-4 text-center rounded">
+                <div className="bg-green-100 transition-opacity ease-out duration-1000 py-20 px-4 text-center rounded opacity-0 animate-[fadeIn_0.5s_ease-out_forwards,fadeOut_0.5s_ease-out_1s_forwards]">
                   <h2 className="text-xl font-semibold">
                     Thank you for Contributing!
                   </h2>
