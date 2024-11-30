@@ -37,9 +37,12 @@ interface ReceiptItemProcessorProps {
   storeBrand: string;
   onSubmit: (formData: CreateItemData) => Promise<void>;
   onIgnore: () => Promise<void>;
-  onBarcodeMatch: (productId: number, quantity?: number) => Promise<void>;
+  onBarcodeMatch: (productId: number, quantityPrice: number) => Promise<void>;
   onProductMismatch: (upc: string, description: string) => Promise<void>;
-  onReceiptTextMatch: (productId: number, quantity?: number) => Promise<void>;
+  onReceiptTextMatch: (
+    productId: number,
+    quantityPrice: number
+  ) => Promise<void>;
 }
 
 // Enum for our different form steps
@@ -161,31 +164,34 @@ const ReceiptItemProcessor = ({
     }, 1000);
   };
 
-  const handleReceiptTextMatch = async (
-    includedQuantity?: number | undefined
-  ) => {
+  const handleReceiptTextMatch = async (price: number) => {
     setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
     setTimeout(() => {
-      onReceiptTextMatch(matchedProduct!.id, includedQuantity);
+      onReceiptTextMatch(matchedProduct!.id, price);
     }, 1000);
   };
 
-  const handleBarcodeMatch = async (includedQuantity?: number | undefined) => {
+  const handleBarcodeMatch = async (price: number) => {
     setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
     setTimeout(() => {
-      onBarcodeMatch(matchedProduct!.id, includedQuantity);
+      onBarcodeMatch(matchedProduct!.id, price);
     }, 1000);
   };
   const handleFinalizeProductMatch = async (
     includedQuantity?: number | undefined
   ) => {
+    let price = formData.pricePerUnit;
+    if (includedQuantity) {
+      price = Number((price / includedQuantity).toFixed(2));
+    }
+
     if (matchedBy === "PRI") {
-      handleReceiptTextMatch(includedQuantity);
+      handleReceiptTextMatch(price);
     } else if (matchedBy === "UPC") {
-      handleBarcodeMatch(includedQuantity);
+      handleBarcodeMatch(price);
     } else {
       //default to simpler price entry - PRI
-      handleReceiptTextMatch(includedQuantity);
+      handleReceiptTextMatch(price);
     }
   };
 
@@ -459,18 +465,27 @@ const ReceiptItemProcessor = ({
               );
             case ProcessingStep.PRODUCT_UNITPRICE:
               return (
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="grid sm:grid-cols-2 gap-4 mb-6">
                     <div className="space-y-2">
                       <Label htmlFor="unitTypeM">Unit Type</Label>
                       <Select value={matchedProduct!.unitType!} disabled>
                         <SelectTrigger id="unitTypeM" disabled>
                           <SelectValue />
-                        </SelectTrigger>
+                        </SelectTrigger>{" "}
+                        <SelectContent>
+                          {Object.entries(UnitType).map(([key, value]) => (
+                            <SelectItem key={value} value={value}>
+                              {`${key[0]}${key
+                                .substring(1)
+                                .toLowerCase()} (${value})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="unitQty">Quantity Purchased</Label>
+                      <Label htmlFor="unitQty">Quantity Purchased:</Label>
                       <Input
                         id="unitQtyM"
                         type="number"
@@ -481,6 +496,13 @@ const ReceiptItemProcessor = ({
                         min="0"
                         step="0.01"
                       />
+                      <p>
+                        Adj. Price: $
+                        {Number(
+                          formData.pricePerUnit / formData.unitQty
+                        ).toFixed(2)}
+                        /{formData.unitType}
+                      </p>
                     </div>
                   </div>
                   <div className="flex justify-between">

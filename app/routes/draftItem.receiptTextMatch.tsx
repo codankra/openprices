@@ -20,12 +20,13 @@ export async function action({ request }: ActionFunctionArgs) {
   const receiptId = Number(formData.get("receiptId"));
   const draftItemId = Number(formData.get("draftItemId"));
   const productId = Number(formData.get("productId"));
-  const price = Number(formData.get("pricePerUnit"));
+  const price = Number(formData.get("price"));
 
   if (
     isNaN(receiptId) ||
     isNaN(draftItemId) ||
     isNaN(productId) ||
+    !price ||
     isNaN(price)
   ) {
     return json(

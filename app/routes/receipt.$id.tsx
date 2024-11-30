@@ -1,5 +1,5 @@
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
-import { data, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
 import { requireAuth } from "../services/auth.server";
@@ -215,18 +215,31 @@ const ReceiptReview = (props: LoaderData) => {
               );
               console.log("Completed the ignore for item ", item.id);
             }}
-            onReceiptTextMatch={async (productId, quantityPrice?) => {
+            onReceiptTextMatch={async (productId, quantityPrice) => {
               // if matched after fixing receipt text:
               // just do priceEntry for productId of the right receipt text
               const formData = new FormData();
               formData.append("productId", productId.toString());
               formData.append("draftItemId", item.id.toString());
               formData.append("receiptId", receipt.id.toString());
-              if (quantityPrice) {
-                formData.append("price", quantityPrice.toString());
+              formData.append("price", quantityPrice.toString());
+              try {
+                const response = await fetch("/draftItem/barcodeMatch", {
+                  method: "POST",
+                  body: formData,
+                });
+                await response.json();
+                updateItemStatus(item.id, item.status, "completed");
+                console.log(
+                  "Completed the creation of priceEntry and link of receipt for item ",
+                  item.id
+                );
+              } catch (error) {
+                console.error("Failed to process receipt item:", error);
+                // TODO: show error toast
               }
             }}
-            onBarcodeMatch={async (productId, quantityPrice?) => {
+            onBarcodeMatch={async (productId, quantityPrice) => {
               // if matched after UPC found:
               // Link future receipt texts with this productId (and do priceEntry)
               const formData = new FormData();
@@ -234,19 +247,16 @@ const ReceiptReview = (props: LoaderData) => {
               formData.append("draftItemId", item.id.toString());
               formData.append("receiptId", receipt.id.toString());
               formData.append("receiptText", item.receiptText);
-              if (quantityPrice)
-                formData.append("price", quantityPrice.toString());
+              formData.append("price", quantityPrice.toString());
 
               // we need to find out if it's weighted (if so, mark it matched otherwise completed && include price entry)
               try {
-                const response = await fetch("/draftItem/link", {
+                const response = await fetch("/draftItem/barcodeMatch", {
                   method: "POST",
                   body: formData,
                 });
-                const data: {
-                  newItemStatus: typeof draftItems.$inferSelect.status;
-                } = await response.json();
-                updateItemStatus(item.id, item.status, data.newItemStatus);
+                await response.json();
+                updateItemStatus(item.id, item.status, "completed");
                 console.log(
                   "Completed the creation of priceEntry and link of receipt for item ",
                   item.id
