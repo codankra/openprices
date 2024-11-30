@@ -226,3 +226,27 @@ export async function verifyDraftItemStatus(
     return false;
   }
 }
+
+export async function addProductReceiptTextIdentifier(
+  pri: typeof productReceiptIdentifiers.$inferInsert
+) {
+  const result = await db
+    .insert(productReceiptIdentifiers)
+    .values({
+      receiptIdentifier: pri.receiptIdentifier,
+      storeBrandName: pri.storeBrandName,
+      productId: pri.productId,
+    })
+    .onConflictDoNothing({
+      target: [
+        productReceiptIdentifiers.receiptIdentifier,
+        productReceiptIdentifiers.storeBrandName,
+      ],
+    })
+    .returning();
+
+  if (result.length > 0) {
+    return result[0];
+  }
+  return null;
+}

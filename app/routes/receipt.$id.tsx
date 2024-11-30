@@ -215,16 +215,29 @@ const ReceiptReview = (props: LoaderData) => {
               );
               console.log("Completed the ignore for item ", item.id);
             }}
-            onBarcodeMatch={async (productId) => {
-              //Link future receipt texts with this productId (and do priceEntry)
+            onReceiptTextMatch={async (productId, quantityPrice?) => {
+              // if matched after fixing receipt text:
+              // just do priceEntry for productId of the right receipt text
               const formData = new FormData();
               formData.append("productId", productId.toString());
               formData.append("draftItemId", item.id.toString());
+              formData.append("receiptId", receipt.id.toString());
+              if (quantityPrice) {
+                formData.append("price", quantityPrice.toString());
+              }
+            }}
+            onBarcodeMatch={async (productId, quantityPrice?) => {
+              // if matched after UPC found:
+              // Link future receipt texts with this productId (and do priceEntry)
+              const formData = new FormData();
+              formData.append("productId", productId.toString());
+              formData.append("draftItemId", item.id.toString());
+              formData.append("receiptId", receipt.id.toString());
               formData.append("receiptText", item.receiptText);
-              formData.append("storeBrandName", receipt.storeBrandName);
+              if (quantityPrice)
+                formData.append("price", quantityPrice.toString());
 
               // we need to find out if it's weighted (if so, mark it matched otherwise completed && include price entry)
-              updateItemStatus(item.id, item.status, "completed");
               try {
                 const response = await fetch("/draftItem/link", {
                   method: "POST",

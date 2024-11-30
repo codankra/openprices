@@ -124,8 +124,8 @@ export const productReceiptIdentifiers = sqliteTable(
   (table) => ({
     productIdIdx: index("product_receipt_id_idx").on(table.productId),
     storeBrandsIdx: index("store_brands_idx").on(table.storeBrandName),
-    productStoreIdx: index("product_store_idx").on(
-      table.productId,
+    productStoreIdx: index("receipt_id_store_idx").on(
+      table.receiptIdentifier,
       table.storeBrandName
     ),
   })
