@@ -31,15 +31,15 @@ interface CreateItemData {
   upc: string;
   productImage?: File;
 }
-
 interface ReceiptItemProcessorProps {
   item: DraftItem;
   imageUrl: string;
   storeBrand: string;
   onSubmit: (formData: CreateItemData) => Promise<void>;
   onIgnore: () => Promise<void>;
-  onBarcodeMatch: (productId: number) => Promise<void>;
+  onBarcodeMatch: (productId: number, quantity?: number) => Promise<void>;
   onProductMismatch: (upc: string, description: string) => Promise<void>;
+  onReceiptTextMatch: (productId: number, quantity?: number) => Promise<void>;
 }
 
 // Enum for our different form steps
@@ -48,6 +48,7 @@ enum ProcessingStep {
   BARCODE = "barcode",
   PRODUCT_CONFIRM = "product_confirm",
   PRODUCT_DETAILS = "product_details",
+  PRODUCT_UNITPRICE = "product_unitprice",
   CONTRIBUTOR_THANKS = "contributor_thanks",
 }
 
@@ -59,6 +60,7 @@ const ReceiptItemProcessor = ({
   onIgnore,
   onBarcodeMatch,
   onProductMismatch,
+  onReceiptTextMatch,
 }: ReceiptItemProcessorProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentStep, setCurrentStep] = useState(ProcessingStep.INITIAL);
@@ -66,6 +68,7 @@ const ReceiptItemProcessor = ({
   const [mismatchDescription, setMismatchDescription] = useState("");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isUPChecking, setIsUPChecking] = useState(false);
+  const [matchedBy, setMatchedBy] = useState("");
 
   const [formData, setFormData] = useState<CreateItemData>({
     receiptText: item.receiptText,
@@ -100,6 +103,7 @@ const ReceiptItemProcessor = ({
         const data: { product?: Product } = await response.json();
         if (data.product) {
           setMatchedProduct(data.product);
+          setMatchedBy("PRI");
           setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
         }
       }
@@ -136,6 +140,7 @@ const ReceiptItemProcessor = ({
         const data: { product?: Product } = await response.json();
         if (data.product) {
           setMatchedProduct(data.product);
+          setMatchedBy("UPC");
           setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
         } else {
           setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
@@ -154,6 +159,20 @@ const ReceiptItemProcessor = ({
     setTimeout(() => {
       onProductMismatch(formData.upc, mismatchDescription);
     }, 1000);
+  };
+  const handleProductMatch = async () => {
+    // if unitpriced, show weight/volume screen
+    if (matchedProduct?.unitPricing) {
+      setCurrentStep(ProcessingStep.PRODUCT_UNITPRICE);
+    } else {
+      setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
+    }
+
+    if (matchedBy === "PRI") {
+    } else if (matchedBy === "UPC") {
+    } else {
+      //default to simpler price entry - PRI
+    }
   };
   const handleBarcodeMatch = async () => {
     setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
@@ -414,10 +433,7 @@ const ReceiptItemProcessor = ({
                       <Button onClick={() => onSubmit(formData)}>
                         Save Product
                       </Button>
-                      <p className="text-sm text-stone-600 font-bold">
-                        (Thank You!){" "}
-                      </p>
-                    </div>{" "}
+                    </div>
                   </div>
                 </div>
               );

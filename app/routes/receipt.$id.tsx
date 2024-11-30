@@ -216,7 +216,32 @@ const ReceiptReview = (props: LoaderData) => {
               console.log("Completed the ignore for item ", item.id);
             }}
             onBarcodeMatch={async (productId) => {
-              //Link future receipt texts with this productId
+              //Link future receipt texts with this productId (and do priceEntry)
+              const formData = new FormData();
+              formData.append("productId", productId.toString());
+              formData.append("draftItemId", item.id.toString());
+              formData.append("receiptText", item.receiptText);
+              formData.append("storeBrandName", receipt.storeBrandName);
+
+              // we need to find out if it's weighted (if so, mark it matched otherwise completed && include price entry)
+              updateItemStatus(item.id, item.status, "completed");
+              try {
+                const response = await fetch("/draftItem/link", {
+                  method: "POST",
+                  body: formData,
+                });
+                const data: {
+                  newItemStatus: typeof draftItems.$inferSelect.status;
+                } = await response.json();
+                updateItemStatus(item.id, item.status, data.newItemStatus);
+                console.log(
+                  "Completed the creation of priceEntry and link of receipt for item ",
+                  item.id
+                );
+              } catch (error) {
+                console.error("Failed to process receipt item:", error);
+                // TODO: show error toast
+              }
             }}
             onProductMismatch={async (upc, description) => {
               // Send an edit request
