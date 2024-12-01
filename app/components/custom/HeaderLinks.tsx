@@ -6,7 +6,7 @@ const HeaderLinks = () => {
     location.pathname === "/upload-receipt" ||
     location.pathname === "/price-entry";
   return (
-    <nav className="text-stone-900 py-4 sm:px-20 flex justify-between items-center">
+    <nav className="text-stone-900 p-4 sm:px-20 flex justify-between items-center">
       <div className="flex items-center space-x-4">
         <NavLink
           to="/"

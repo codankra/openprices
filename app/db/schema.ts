@@ -124,6 +124,10 @@ export const productReceiptIdentifiers = sqliteTable(
   (table) => ({
     productIdIdx: index("product_receipt_id_idx").on(table.productId),
     storeBrandsIdx: index("store_brands_idx").on(table.storeBrandName),
+    productStoreIdx: uniqueIndex("receipt_id_store_idx").on(
+      table.receiptIdentifier,
+      table.storeBrandName
+    ),
   })
 );
 
@@ -173,7 +177,9 @@ export const receipts = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id),
-    storeBrandName: text("store_brand_name").references(() => storeBrands.name),
+    storeBrandName: text("store_brand_name")
+      .references(() => storeBrands.name)
+      .notNull(),
     storeLocation: text("store_location"),
     purchaseDate: text("purchase_date").notNull(),
     totalAmount: real("total_amount"),
@@ -238,5 +244,29 @@ export const draftItems = sqliteTable(
   (table) => ({
     receiptIdIdx: index("draft_items_receipt_id_idx").on(table.receiptId),
     statusIdx: index("draft_items_status_idx").on(table.status),
+  })
+);
+
+export const requestedEdits = sqliteTable(
+  "RequestedEdits",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }).notNull(),
+    productUpc: text("product_upc").notNull(),
+    editType: text("edit_type").notNull(),
+    editNotes: text("edit_notes").notNull(),
+    status: text("status").notNull().default("pending"),
+    reviewedBy: text("reviewed_by").references(() => users.id),
+    reviewNotes: text("review_notes"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    statusIdx: index("idx_requested_edits_status").on(table.status),
+    editTypeIdx: index("idx_requested_edits_type").on(table.editType),
+    productUpcIdx: index("idx_requested_edits_upc").on(table.productUpc),
   })
 );

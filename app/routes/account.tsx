@@ -38,7 +38,7 @@ export const meta: MetaFunction = () => {
 export default function UserAccount() {
   const { user, userContributions } = useLoaderData<LoaderData>();
   return (
-    <div className="font-sans bg-ogprime min-h-screen px-4">
+    <div className="font-sans bg-ogprime min-h-screen">
       <header>
         <HeaderLinks />
       </header>
