@@ -168,14 +168,14 @@ const ReceiptItemProcessor = ({
     setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
     setTimeout(() => {
       onReceiptTextMatch(matchedProduct!.id, price);
-    }, 1000);
+    }, 300);
   };
 
   const handleBarcodeMatch = async (price: number) => {
     setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
     setTimeout(() => {
       onBarcodeMatch(matchedProduct!.id, price);
-    }, 1000);
+    }, 300);
   };
   const handleFinalizeProductMatch = async (
     includedQuantity?: number | undefined
