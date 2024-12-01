@@ -4,7 +4,7 @@ import { Await, Form, useLoaderData } from "@remix-run/react";
 import { auth, requireAuth } from "../services/auth.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import { getUserContributionsById } from "~/services/user.server";
-import { users } from "drizzle/schema";
+import { users } from "~/db/schema";
 import { Suspense } from "react";
 import {
   EmptyState,
