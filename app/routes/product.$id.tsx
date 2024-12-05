@@ -189,7 +189,9 @@ export default function ProductPage() {
                     <div className="text-stone-700">No price entries found</div>
                   )}
                   {resolvedPriceEntries.length > 1 && (
-                    <PriceChart priceEntries={resolvedPriceEntries} />
+                    <div className="bg-gradient-to-br from-stone-100 to-orange-50 rounded-lg shadow-md p-4 mb-4">
+                      <PriceChart priceEntries={resolvedPriceEntries} />
+                    </div>
                   )}
                   {resolvedPriceEntries.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
