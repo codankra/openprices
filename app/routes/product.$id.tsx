@@ -1,7 +1,7 @@
 import { PiCaretDoubleDown, PiCaretDoubleUp } from "react-icons/pi";
 import type { MetaFunction, LoaderFunction } from "@remix-run/node";
 import { redirect, defer } from "@remix-run/node";
-import { Await, Link, useLoaderData } from "@remix-run/react";
+import { Await, Link, useLoaderData, useFetcher } from "@remix-run/react";
 import { Suspense, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
@@ -10,9 +10,13 @@ import {
   CollapsibleContent,
 } from "~/components/ui/collapsible";
 import { getPriceEntriesByProductID } from "~/services/price.server";
-import { getProductAndBrandByID } from "~/services/product.server";
+import {
+  getProductAndBrandByID,
+  requestProductEdit,
+} from "~/services/product.server";
 import PriceChart from "~/components/custom/PriceEntryChart";
 import HeaderLinks from "~/components/custom/HeaderLinks";
+import { requireAuth } from "~/services/auth.server";
 type LoaderData = {
   product: Awaited<ReturnType<typeof getProductAndBrandByID>>;
   priceEntries: Awaited<ReturnType<typeof getPriceEntriesByProductID>>;
@@ -44,9 +48,25 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
   ];
 };
 
+export const action = async ({ request }: { request: Request }) => {
+  await requireAuth(request);
+  const formData = await request.formData();
+  const feedback = formData.get("feedback") as string;
+  const upc = formData.get("upc") as string;
+
+  if (!feedback || !upc) {
+    return { error: "Missing required fields" };
+  }
+
+  await requestProductEdit(upc, feedback, "product-page-feedback");
+  return { success: true };
+};
+
 export default function ProductPage() {
   const { product, priceEntries } = useLoaderData<LoaderData>();
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const fetcher = useFetcher<typeof action>();
   const p = product!.productInfo;
   const priceUnitString = p.unitPricing
     ? `/${p.unitType}`
@@ -103,48 +123,97 @@ export default function ProductPage() {
             </CollapsibleTrigger>
           )}
           <CollapsibleContent className="w-full mx-auto p-6">
-            <div className="w-full md:w-96 mx-auto border border-stone-300 rounded-lg p-4">
-              <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
-                <span className="text-stone-600 ml-1">Category:</span>
-                <span className="text-stone-800 font-medium mr-1">
-                  {product?.productInfo.category || "N/A"}
-                </span>
-              </div>
-              <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
-                <span className="text-stone-600 ml-1">Views:</span>
-                <span className="text-stone-800 font-medium mr-1">{"-"}</span>
-              </div>
-              <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
-                <span className="text-stone-600 ml-1">Price Records:</span>
-                <span className="text-stone-800 font-medium mr-1">
-                  {priceEntries?.length || "-"}
-                </span>
-              </div>
-
-              {product?.brandInfo?.name && (
+            <div className="flex gap-4">
+              <div className="w-full md:w-96 border border-stone-300 rounded-lg p-4">
                 <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
-                  <span className="text-stone-600 self-end ml-1">Brand:</span>
-                  {product?.brandInfo?.image ? (
-                    <img
-                      src={product.brandInfo.image}
-                      alt={product.brandInfo.name}
-                      className="w-24 h-24 object-contain rounded-lg mr-1"
-                    />
-                  ) : (
-                    <span className="text-stone-800 font-medium mr-1">
-                      {product?.brandInfo?.name}
-                    </span>
-                  )}
+                  <span className="text-stone-600 ml-1">Category:</span>
+                  <span className="text-stone-800 font-medium mr-1">
+                    {product?.productInfo.category || "N/A"}
+                  </span>
                 </div>
-              )}
+                <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
+                  <span className="text-stone-600 ml-1">Views:</span>
+                  <span className="text-stone-800 font-medium mr-1">{"-"}</span>
+                </div>
+                <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
+                  <span className="text-stone-600 ml-1">Price Records:</span>
+                  <span className="text-stone-800 font-medium mr-1">
+                    {priceEntries?.length || "-"}
+                  </span>
+                </div>
 
-              <div className="flex justify-between">
-                <span className="text-stone-600 ml-1">Type:</span>
-                <span className="text-stone-800 font-medium mr-1">
-                  {product?.brandInfo?.isStoreOwner
-                    ? "Store Brand"
-                    : "Distributed"}
-                </span>
+                {product?.brandInfo?.name && (
+                  <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
+                    <span className="text-stone-600 self-end ml-1">Brand:</span>
+                    {product?.brandInfo?.image ? (
+                      <img
+                        src={product.brandInfo.image}
+                        alt={product.brandInfo.name}
+                        className="w-24 h-24 object-contain rounded-lg mr-1"
+                      />
+                    ) : (
+                      <span className="text-stone-800 font-medium mr-1">
+                        {product?.brandInfo?.name}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex justify-between">
+                  <span className="text-stone-600 ml-1">Type:</span>
+                  <span className="text-stone-800 font-medium mr-1">
+                    {product?.brandInfo?.isStoreOwner
+                      ? "Store Brand"
+                      : "Distributed"}
+                  </span>
+                </div>
+              </div>
+              <div className="w-full md:w-96 border border-stone-300 rounded-lg p-4 h-fit">
+                <h3 className="text-lg font-semibold text-stone-700 mb-3">
+                  Report an Issue
+                </h3>
+                <fetcher.Form method="post" className="space-y-4">
+                  {!(fetcher.data && "success" in fetcher.data) && (
+                    <>
+                      {" "}
+                      <input
+                        type="hidden"
+                        name="upc"
+                        value={product?.productInfo.upc}
+                      />
+                      <div>
+                        <textarea
+                          name="feedback"
+                          value={feedback}
+                          onChange={(e) => setFeedback(e.target.value)}
+                          className="w-full p-2 border border-stone-300 rounded-md min-h-[100px] text-stone-700"
+                          placeholder="Describe any issues or suggest edits to the product information..."
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        className="w-full bg-ogfore hover:bg-ogfore-hover"
+                        disabled={
+                          !feedback.trim() || fetcher.state === "submitting"
+                        }
+                      >
+                        {fetcher.state === "submitting"
+                          ? "Submitting..."
+                          : "Submit Feedback"}
+                      </Button>
+                    </>
+                  )}
+                  {fetcher.data && "success" in fetcher.data && (
+                    <p className="text-green-600 text-sm text-center">
+                      Thank you for your feedback!
+                    </p>
+                  )}
+                  {fetcher.data && "error" in fetcher.data && (
+                    <p className="text-red-600 text-sm text-center">
+                      {fetcher.data.error}
+                    </p>
+                  )}
+                </fetcher.Form>
               </div>
             </div>
           </CollapsibleContent>
