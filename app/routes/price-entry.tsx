@@ -13,7 +13,7 @@ import type {
   LoaderFunction,
   MetaFunction,
 } from "@remix-run/node";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
@@ -260,22 +260,15 @@ export default function NewPricePoint() {
   const [selectedProduct, setSelectedProduct] = useState<
     typeof products.$inferInsert | null
   >(existingProduct || null);
-
   useEffect(() => {
-    if (existingProduct) {
-      setSelectedProduct(existingProduct);
-    }
-  }, [existingProduct]);
+    // Only set on initial load
+    setSelectedProduct(existingProduct);
+  }, []);
 
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     setSearchTerm("");
-    setSearchParams((prev) => {
-      const newParams = new URLSearchParams(prev);
-      newParams.delete("search");
-      newParams.delete("existingProductId");
-      return newParams;
-    });
-  };
+    setSearchParams(new URLSearchParams(), { replace: true });
+  }, [setSearchTerm, setSearchParams]);
 
   const debouncedSearch = useCallback(
     debounce((term: string) => {
@@ -392,9 +385,12 @@ export default function NewPricePoint() {
 
               <button
                 onClick={() => {
-                  setSelectedProduct(null);
-                  setIsNewProduct(false);
-                  clearSearch();
+                  // Reset all states in a single batch update
+                  React.startTransition(() => {
+                    clearSearch();
+                    setIsNewProduct(false);
+                    setSelectedProduct(null);
+                  });
                 }}
                 type="button"
                 className="absolute top-2 right-2 text-stone-500 hover:text-stone-700"
