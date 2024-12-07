@@ -57,6 +57,7 @@ import { FaCircleInfo } from "react-icons/fa6";
 import { uploadToR2 } from "~/services/r2.server";
 import { addNewPriceEntry } from "~/services/price.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
+import { PiBarcode } from "react-icons/pi";
 
 export const meta: MetaFunction = () => {
   return [
@@ -85,6 +86,7 @@ const formSchema = z
     storeLocation: z.string().optional(),
     // Product Details
     productId: z.string().optional(),
+    upc: z.string().optional(),
     name: z.string().min(1, "Product name is required").optional(),
     unitQty: z.number().positive().optional(),
     unitPricing: z.boolean().optional(),
@@ -98,6 +100,7 @@ const formSchema = z
         return true;
       }
       return (
+        data.upc !== undefined &&
         data.name !== undefined &&
         data.unitPricing !== undefined &&
         data.unitQty !== undefined &&
@@ -195,6 +198,7 @@ export const action: ActionFunction = async ({ request }) => {
     if (!productId) {
       const productDetails = {
         name: validatedData.name!,
+        upc: validatedData.upc!,
         latestPrice: validatedData.price!,
         unitPricing: validatedData.unitPricing!,
         unitQty: validatedData.unitQty!,
@@ -462,6 +466,21 @@ export default function NewPricePoint() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label
+                    htmlFor="upc"
+                    className="text-stone-700 font-semibold flex gap-1"
+                  >
+                    Product UPC Barcode <PiBarcode />
+                  </Label>
+                  <Input
+                    type="text"
+                    id="upc"
+                    name="upc"
+                    required
+                    className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                  />
+                </div>
                 <div>
                   <Label
                     htmlFor="name"

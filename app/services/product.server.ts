@@ -75,7 +75,10 @@ export async function getProductIDByReceiptText(
   return null;
 }
 
-export async function getProductsBySearch(searchTerm: string) {
+export async function getProductsBySearch(
+  searchTerm: string,
+  maxResults: number = 12
+) {
   const cached: (typeof products.$inferSelect)[] | undefined =
     await productSearchCache.get(searchTerm);
   if (cached) return cached;
@@ -84,7 +87,7 @@ export async function getProductsBySearch(searchTerm: string) {
       .select()
       .from(products)
       .where(like(products.name, `%${searchTerm}%`))
-      .limit(10);
+      .limit(maxResults);
     await productSearchCache.set(searchTerm, searchResults);
     return searchResults;
   }
