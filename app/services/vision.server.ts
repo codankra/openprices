@@ -5,6 +5,7 @@ import {
 } from "./receipt.server";
 import { receipts } from "~/db/schema";
 import { parseTraderJoesReceipt } from "~/lib/parsers/tj";
+import { parseHEBReceipt } from "~/lib/parsers/heb";
 
 type ReceiptItem = {
   minX?: number;
@@ -124,7 +125,7 @@ const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
       };
       return receipt;
     } else if (storeName === "HEB") {
-      const heb = parseTraderJoesReceipt(lines, blocks);
+      const heb = parseHEBReceipt(lines, blocks);
       let receipt: ParsedReceipt = {
         storeBrandName: "HEB",
         storeLocation: determineReceiptLocation(
