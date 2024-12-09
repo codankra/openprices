@@ -16,6 +16,7 @@ interface Item {
   price: number;
   unitQuantity: number;
   unitPrice?: number;
+  type?: string; // F, FW, T, HQ, Q
   confidence: number;
 }
 
@@ -25,6 +26,7 @@ interface PartialItem {
   price?: number;
   unitQuantity?: number;
   unitPrice?: number;
+  type?: string;
 }
 
 export function parseHEBReceipt(
@@ -55,8 +57,8 @@ export function parseHEBReceipt(
   while (i < normalizedLines.length) {
     const line = normalizedLines[i];
 
-    // Skip known non-item lines
-    if (shouldSkipLine(line)) {
+    // Skip lines that don't contain useful information
+    if (shouldSkipLine(line, currentItem)) {
       i++;
       continue;
     }
@@ -91,13 +93,14 @@ export function parseHEBReceipt(
       if (remainingContent) {
         // Check if remaining content has a price
         const priceMatch = remainingContent.match(
-          /(\d+\.\d{2})\s*(?:(?:EA|F|HQ|T|Q)\s*)?$/
+          /(.+?)\s+(?:(F|FW|T|HQ|Q)\s+)?(\d+\.\d{2})$/
         );
         if (priceMatch) {
-          currentItem.name = remainingContent
-            .slice(0, remainingContent.indexOf(priceMatch[1]))
-            .trim();
-          currentItem.price = parseFloat(priceMatch[1]);
+          currentItem.name = priceMatch[1].trim();
+          currentItem.price = parseFloat(priceMatch[3]);
+          if (priceMatch[2]) {
+            currentItem.type = priceMatch[2];
+          }
         } else {
           currentItem.name = remainingContent;
         }
@@ -122,13 +125,14 @@ export function parseHEBReceipt(
         if (!shouldSkipLine(nextLine) && !nextLine.match(/^\d+(?:\s|$)/)) {
           // Next line contains item content
           const priceMatch = nextLine.match(
-            /(\d+\.\d{2})\s*(?:(?:EA|F|HQ|T|Q)\s*)?$/
+            /(.+?)\s+(?:(F|FW|T|HQ|Q)\s+)?(\d+\.\d{2})$/
           );
           if (priceMatch) {
-            currentItem.name = nextLine
-              .slice(0, nextLine.indexOf(priceMatch[1]))
-              .trim();
-            currentItem.price = parseFloat(priceMatch[1]);
+            currentItem.name = priceMatch[1].trim();
+            currentItem.price = parseFloat(priceMatch[3]);
+            if (priceMatch[2]) {
+              currentItem.type = priceMatch[2];
+            }
           } else {
             currentItem.name = nextLine.trim();
           }
@@ -136,34 +140,16 @@ export function parseHEBReceipt(
         }
       }
     }
-    // Case 3: Line contains a price for current item
-    else if (
-      currentItem.name &&
-      !currentItem.price &&
-      line.match(/^\d+\.\d{2}\s*(?:(?:EA|F|HQ|T|Q)\s*)?$/)
-    ) {
-      currentItem.price = parseFloat(line);
-    }
-    // Case 4: Line might be continuation of current item
-    else if (currentItem.itemNumber && !currentItem.name) {
-      const priceMatch = line.match(/(\d+\.\d{2})\s*(?:(?:EA|F|HQ|T|Q)\s*)?$/);
-      if (priceMatch) {
-        currentItem.name = line.slice(0, line.indexOf(priceMatch[1])).trim();
-        currentItem.price = parseFloat(priceMatch[1]);
-      } else {
-        currentItem.name = line.trim();
+    // Case 3: Could be a price for current item
+    else {
+      const price = extractPriceFromLine(line);
+      if (price !== null && currentItem.name && !currentItem.price) {
+        currentItem.price = price;
       }
-    }
-
-    if (line.includes("Total Sale")) {
-      receiptData.totalAmount = extractAmount(line);
-    } else if (line.includes("ITEMS PURCHASED:")) {
-      receiptData.totalItemsCount = extractItemCount(line);
     }
 
     i++;
   }
-
   // Add final item if complete
   if (isCompleteItem(currentItem)) {
     items.push(finalizeItem(currentItem));
@@ -198,15 +184,41 @@ export function parseHEBReceipt(
   return receiptData;
 }
 
+function extractPriceFromLine(line: string): number | null {
+  // Generic price patterns we might find in any line
+  const patterns = [
+    // Original price in various formats
+    /(\d+\.\d{2})\s*orig/,
+    // Each price
+    /(\d+\.\d{2})\s*Ea\./,
+    // Standard price possibly followed by type indicator
+    /(\d+\.\d{2})\s*(?:(?:EA|F|HQ|T|Q)\s*)?$/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = line.match(pattern);
+    if (match) {
+      return parseFloat(match[1]);
+    }
+  }
+
+  return null;
+}
+
 function processQuantityOrPrice(line: string, item: PartialItem) {
   const quantityMatch = line.match(/(\d+)\s*Ea\.\s*@\s*([\d.]+)/i);
   if (quantityMatch) {
     item.unitQuantity = parseInt(quantityMatch[1]);
     item.unitPrice = parseFloat(quantityMatch[2]);
   } else {
-    const priceMatch = line.match(/(\d+\.\d{2})/);
-    if (priceMatch && !item.price) {
-      item.price = parseFloat(priceMatch[1]);
+    const price = extractPriceFromLine(line);
+    if (price !== null && !item.price) {
+      item.price = price;
+      // Extract type if present
+      const typeMatch = line.match(/\d+\.\d{2}\s*(F|FW|T|HQ|Q)/);
+      if (typeMatch) {
+        item.type = typeMatch[1];
+      }
     }
   }
 }
@@ -216,20 +228,35 @@ function isCompleteItem(item: PartialItem): boolean {
 }
 
 function finalizeItem(item: PartialItem): Item {
+  // If no price found, set to 0
+  const price = item.price || 0;
+
   return {
     itemNumber: item.itemNumber!,
     name: item.name!,
-    price: item.price!,
+    price: price,
     unitQuantity: item.unitQuantity || 1,
-    unitPrice: item.unitPrice || item.price!,
+    unitPrice: item.unitPrice || price,
+    type: item.type,
     confidence: calculateConfidence(item as Item),
   };
 }
 
-function shouldSkipLine(line: string): boolean {
+function shouldSkipLine(
+  line: string,
+  currentItem: PartialItem | null = null
+): boolean {
+  // If we're looking for a price for current item, check if this line has one
+  if (currentItem && currentItem.name && !currentItem.price) {
+    const price = extractPriceFromLine(line);
+    if (price !== null) {
+      return false; // Don't skip lines that might contain our price
+    }
+  }
+
   const skipPatterns = [
     /^DC\s/,
-    /Special Today-/,
+    /Special Today/,
     /FREE\/COUPON/,
     /Reduced Item/,
     /DIGITAL COUPON/,
@@ -245,7 +272,6 @@ function shouldSkipLine(line: string): boolean {
 
   return skipPatterns.some((pattern) => pattern.test(line));
 }
-
 function calculateConfidence(item: Item): number {
   let confidence = 0.95;
 
