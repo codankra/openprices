@@ -123,6 +123,24 @@ const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
         processingErrors: tj.processingError,
       };
       return receipt;
+    } else if (storeName === "HEB") {
+      const heb = parseTraderJoesReceipt(lines, blocks);
+      let receipt: ParsedReceipt = {
+        storeBrandName: "HEB",
+        storeLocation: determineReceiptLocation(
+          "HEB",
+          heb.storeNumber,
+          heb.storeAddress
+        ),
+        rawOcrText: text,
+        purchaseDate: heb.datePurchased,
+        totalAmount: heb.totalAmount,
+        taxAmount: heb.taxAmount,
+        status: "pending",
+        items: heb.items,
+        processingErrors: heb.processingError,
+      };
+      return receipt;
     } else {
       let msg =
         "Error Determining Store: Could not determine store, or processing receipts from this store is not yet supported.";
