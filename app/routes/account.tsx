@@ -42,7 +42,7 @@ export default function UserAccount() {
       <header>
         <HeaderLinks />
       </header>
-      <div className="space-y-4 max-w-6xl mx-auto ">
+      <div className="space-y-4 max-w-6xl mx-auto p-4">
         <h1 className="text-3xl">Your Account </h1>
 
         <div>

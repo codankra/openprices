@@ -366,7 +366,9 @@ export default function UploadReceipt() {
             <ul className="list-disc list-inside space-y-2 text-stone-600">
               <li>
                 ONLY the following stores are currently supported:{" "}
-                <span className="font-bold text-red-800">Trader Joe's</span>
+                <span className="font-bold text-[#d21242]">Trader Joe's</span>
+                {", "}
+                <span className="font-bold text-[#ee2824]">HEB</span>
               </li>
               <li>Please make sure all items and prices are visible 😊</li>
               <li>Supported formats: JPEG, PNG, GIF, WebP 🖼️</li>

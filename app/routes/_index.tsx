@@ -74,14 +74,14 @@ export default function Index() {
       </header>
 
       <main>
-        <section className="bg-ogprime text-stone-700 py-40">
+        <section className="bg-ogprime text-stone-700 py-14 sm:py-40">
           <div className="container mx-auto px-10">
             <div className="flex flex-col lg:flex-row items-center">
               <div className="w-full lg:w-1/2 text-center lg:text-left mb-8 lg:mb-0">
-                <h2 className="text-4xl md:text-5xl xl:text-5xl font-bold mb-6">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl xl:text-5xl font-bold mb-6">
                   How Have Prices Really Changed?
                 </h2>
-                <p className="text-xl md:text-2xl text-stone-600 mb-8">
+                <p className="text-lg sm:text-xl md:text-2xl text-stone-600 mb-8">
                   See the True Everyday Costs Reported in your Community{" "}
                 </p>
                 <Form

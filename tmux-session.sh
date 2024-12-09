@@ -14,7 +14,7 @@ tmux new-session -d -s $SESSION -n 'nvim'
 tmux send-keys -t $SESSION:0 'nvim .' C-m
 
 tmux new-window -t $SESSION:1 -n 'server'
-tmux send-keys -t $SESSION:1 'npm run dev' C-m
+tmux send-keys -t $SESSION:1 'rm -f dev-server.log && npm run dev 2>&1 | tee dev-server.log' C-m
 
 tmux new-window -t $SESSION:2 -n 'tunnel'
 tmux send-keys -t $SESSION:2 'cloudflared tunnel --config ./cloudflared.yml run openprice-dev' C-m
