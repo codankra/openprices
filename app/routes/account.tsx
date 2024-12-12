@@ -1,10 +1,8 @@
-import type { MetaFunction, LoaderFunction } from "@remix-run/node";
-import { defer, json, redirect } from "@remix-run/node";
+import type { MetaFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { Await, Form, useLoaderData } from "@remix-run/react";
-import { auth, requireAuth } from "../services/auth.server";
+import { requireAuth } from "../services/auth.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import { getUserContributionsById } from "~/services/user.server";
-import { users } from "~/db/schema";
 import { Suspense } from "react";
 import {
   EmptyState,
@@ -14,14 +12,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Receipt, Tag } from "lucide-react";
 
-type LoaderData = {
-  userContributions: Awaited<ReturnType<typeof getUserContributionsById>>;
-  user: typeof users.$inferSelect;
-};
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader = async ({ request }: LoaderFunctionArgs) => {
   const user = await requireAuth(request);
   let userContributionsPromise = getUserContributionsById(user.id);
-  return defer({ user, userContributions: userContributionsPromise });
+  return { user, userContributions: userContributionsPromise };
 };
 
 export const meta: MetaFunction = () => {
@@ -36,7 +30,7 @@ export const meta: MetaFunction = () => {
 };
 
 export default function UserAccount() {
-  const { user, userContributions } = useLoaderData<LoaderData>();
+  const { user, userContributions } = useLoaderData<typeof loader>();
   return (
     <div className="font-sans bg-ogprime min-h-screen">
       <header>

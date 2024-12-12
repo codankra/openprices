@@ -86,7 +86,7 @@ export async function getReceiptsByContributorID(
       .where(
         and(
           eq(receipts.userId, contributorId),
-          gte(receipts.createdAt, cutoffDate)
+          gte(receipts.createdAt, cutoffDate.toISOString())
         )
       );
 

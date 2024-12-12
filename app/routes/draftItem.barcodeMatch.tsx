@@ -1,4 +1,4 @@
-import { json, type ActionFunctionArgs } from "@remix-run/node";
+import { data, type ActionFunctionArgs } from "@remix-run/node";
 import { priceEntries, productReceiptIdentifiers } from "~/db/schema";
 import { auth } from "~/services/auth.server";
 import { addNewPriceEntry } from "~/services/price.server";
@@ -12,7 +12,7 @@ import { getReceiptByID } from "~/services/receipt.server";
 export async function action({ request }: ActionFunctionArgs) {
   const user = await auth.isAuthenticated(request);
   if (!user)
-    return json(
+    return data(
       { success: false, message: "Authentication Failure" },
       { status: 401 }
     );
@@ -32,7 +32,7 @@ export async function action({ request }: ActionFunctionArgs) {
     !price ||
     !itemReceiptText
   ) {
-    return json(
+    return data(
       { success: false, message: "Critical item details are missing." },
       { status: 400 }
     );
@@ -41,7 +41,7 @@ export async function action({ request }: ActionFunctionArgs) {
   // verifies user permission to refer to receipt as well as it's existance
   const receiptInfo = await getReceiptByID(receiptId, user.id);
   if (receiptInfo === null) {
-    return json(
+    return data(
       {
         success: false,
         message: "Unable to find receipt details for your item.",
@@ -54,7 +54,7 @@ export async function action({ request }: ActionFunctionArgs) {
     "pending"
   );
   if (!verifiedItemStatus) {
-    return json(
+    return data(
       {
         success: false,
         message: "Please review the accuracy of the provided details.",
@@ -89,7 +89,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const priceEntry = await addNewPriceEntry(priceEntryDetails);
   if (priceEntry) {
     completeProductDraftItem(draftItemId);
-    return json(
+    return data(
       {
         success: true,
         message: "A new item was created, thank you for contributing!",
@@ -98,7 +98,7 @@ export async function action({ request }: ActionFunctionArgs) {
       { status: 200 }
     );
   }
-  return json(
+  return data(
     {
       success: false,
       message: "Error Adding Price",

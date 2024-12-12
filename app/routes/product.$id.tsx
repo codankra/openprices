@@ -26,27 +26,10 @@ export async function loader({ params }: LoaderFunctionArgs) {
     const product = await productPromise;
     if (!product) return redirect("/productNotFound");
 
-    // Ensure dates are properly serialized
-
-    const sanitizedProduct = {
-      ...product,
-      productInfo: {
-        ...product.productInfo,
-        createdAt: null,
-        updatedAt: null,
-      },
-      brandInfo: product.brandInfo
-        ? {
-            ...product.brandInfo,
-            createdAt: null,
-            updatedAt: null,
-          }
-        : null,
-    };
-    console.log(sanitizedProduct);
+    console.log(product);
 
     return {
-      product: sanitizedProduct,
+      product: product,
       priceEntries: priceEntriesPromise,
     };
   } catch (error) {

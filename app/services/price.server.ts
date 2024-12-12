@@ -94,7 +94,7 @@ export async function getPriceEntriesByContributorID(
           .where(
             and(
               eq(priceEntries.contributorId, id),
-              gte(priceEntries.createdAt, cutoffDate)
+              gte(priceEntries.createdAt, cutoffDate.toISOString())
             )
           )
           .orderBy(desc(priceEntries.createdAt));
@@ -225,7 +225,7 @@ export async function createNewReceiptItemPriceEntry(
       .update(draftItems)
       .set({
         status: "completed",
-        updatedAt: new Date(),
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(draftItems.id, draftItemId));
 
