@@ -1,11 +1,11 @@
-import { data, LoaderFunctionArgs } from "@remix-run/node";
-import { auth } from "~/services/auth.server";
+import { data, LoaderFunctionArgs } from "react-router";
+import { checkAuth } from "~/services/auth.server";
 import { getProductByUpc } from "~/services/product.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Run auth check and param validation in parallel
   const [user, url] = await Promise.all([
-    auth.isAuthenticated(request),
+    checkAuth(request),
     Promise.resolve(new URL(request.url)),
   ]);
 

@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { receipts, priceEntries } from "~/db/schema";
-import { Link, useNavigate } from "@remix-run/react";
+import { Link, useNavigate } from "react-router";
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-US", {

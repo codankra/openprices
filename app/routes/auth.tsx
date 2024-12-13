@@ -1,5 +1,5 @@
 // app/routes/auth.tsx
-import { redirect, type ActionFunctionArgs } from "@remix-run/node";
+import { redirect, type ActionFunctionArgs } from "react-router";
 import { auth } from "~/services/auth.server";
 
 export let loader = () => redirect("/login");

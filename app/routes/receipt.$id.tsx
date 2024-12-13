@@ -1,6 +1,6 @@
-import type { MetaFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { Link, useLoaderData } from "@remix-run/react";
+import type { MetaFunction, LoaderFunctionArgs } from "react-router";
+import { redirect } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { useState } from "react";
 import { requireAuth } from "../services/auth.server";
 import {
@@ -33,10 +33,10 @@ type ReceiptData = {
 };
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const user = await requireAuth(request);
+  const user = await requireAuth(request, `/receipt/${params.id}`);
   // else return receipt. but first check if user is owner of the receipt. otherwise redirect to receipt upload page
   const result = await getReceiptDetails(parseInt(params.id!), user.id);
-  if (!result) return redirect("/upload-receipt");
+  if (!result) throw redirect("/upload-receipt");
   else {
     return { receipt: result.receipt, receiptItems: result.receiptItems };
   }

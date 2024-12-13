@@ -1,9 +1,9 @@
-import type { LoaderFunction } from "@remix-run/node";
-import { auth } from "~/services/auth.server";
+import type { LoaderFunction } from "react-router";
+import { checkAuth } from "~/services/auth.server";
 import { getJobMetadata, jobEventEmitter } from "~/services/job.server";
 
 export const loader: LoaderFunction = async ({ request, params }) => {
-  const user = await auth.isAuthenticated(request);
+  const user = await checkAuth(request);
   if (!user) throw new Response("Unauthorized", { status: 401 });
 
   const { jobId } = params;

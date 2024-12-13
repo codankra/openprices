@@ -1,4 +1,4 @@
-import { createRoutesFromFolders } from "@remix-run/v1-route-convention";
+import { createRoutesFromFolders } from "@react-router/v1-route-convention";
 
 /** @type {import('@remix-run/dev').AppConfig} */
 export const future = {

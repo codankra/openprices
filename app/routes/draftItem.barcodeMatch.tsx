@@ -1,6 +1,6 @@
-import { data, type ActionFunctionArgs } from "@remix-run/node";
+import { data, type ActionFunctionArgs } from "react-router";
 import { priceEntries, productReceiptIdentifiers } from "~/db/schema";
-import { auth } from "~/services/auth.server";
+import { checkAuth } from "~/services/auth.server";
 import { addNewPriceEntry } from "~/services/price.server";
 import {
   addProductReceiptTextIdentifier,
@@ -10,7 +10,7 @@ import {
 import { getReceiptByID } from "~/services/receipt.server";
 
 export async function action({ request }: ActionFunctionArgs) {
-  const user = await auth.isAuthenticated(request);
+  const user = await checkAuth(request);
   if (!user)
     return data(
       { success: false, message: "Authentication Failure" },

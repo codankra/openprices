@@ -1,9 +1,9 @@
-import { data, type ActionFunctionArgs } from "@remix-run/node";
-import { auth } from "~/services/auth.server";
+import { data, type ActionFunctionArgs } from "react-router";
+import { checkAuth } from "~/services/auth.server";
 import { ignoreProductDraftItem } from "~/services/product.server";
 
 export async function action({ request }: ActionFunctionArgs) {
-  const user = await auth.isAuthenticated(request);
+  const user = await checkAuth(request);
   if (!user) return data({ success: false }, { status: 401 });
 
   const formData = await request.formData();

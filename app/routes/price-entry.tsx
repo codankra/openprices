@@ -6,13 +6,13 @@ import {
   useSearchParams,
   Link,
   Await,
-} from "@remix-run/react";
-import { data, redirect } from "@remix-run/node";
+} from "react-router";
+import { data, redirect } from "react-router";
 import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
   MetaFunction,
-} from "@remix-run/node";
+} from "react-router";
 import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { products, UnitType } from "~/db/schema";
-import { auth, requireAuth } from "~/services/auth.server";
+import { requireAuth } from "~/services/auth.server";
 import { z } from "zod";
 import {
   getAllProductBrands,
@@ -109,7 +109,7 @@ const formSchema = z
   );
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const user = await requireAuth(request);
+  const user = await requireAuth(request, "/price-entry");
   const url = new URL(request.url);
 
   const searchTerm = url.searchParams.get("search") || "";
@@ -134,10 +134,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const user = await auth.isAuthenticated(request);
-  if (!user) {
-    return redirect("/login");
-  }
+  const user = await requireAuth(request, "/price-entry");
 
   const formData = await request.formData();
   const rawFormData = Object.fromEntries(formData);

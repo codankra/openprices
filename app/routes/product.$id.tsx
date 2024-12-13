@@ -1,7 +1,7 @@
 import { PiCaretDoubleDown, PiCaretDoubleUp } from "react-icons/pi";
-import type { MetaFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { Await, Link, useLoaderData, useFetcher } from "@remix-run/react";
+import type { MetaFunction, LoaderFunctionArgs } from "react-router";
+import { redirect } from "react-router";
+import { Await, Link, useLoaderData, useFetcher } from "react-router";
 import { Suspense, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {

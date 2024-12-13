@@ -2,11 +2,11 @@ import type {
   MetaFunction,
   LoaderFunctionArgs,
   ActionFunctionArgs,
-} from "@remix-run/node";
-import { data, redirect } from "@remix-run/node";
-import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
+} from "react-router";
+import { data } from "react-router";
+import { Form, Link, useActionData, useNavigation } from "react-router";
 import { useState, useRef, useEffect } from "react";
-import { auth, requireAuth } from "../services/auth.server";
+import { requireAuth } from "../services/auth.server";
 import {
   Upload,
   X,
@@ -52,13 +52,12 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await requireAuth(request);
+  await requireAuth(request, "/upload-receipt");
   return null;
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const user = await auth.isAuthenticated(request);
-  if (!user) return redirect("/login");
+  const user = await requireAuth(request, "/upload-receipt");
   const formData = await request.formData();
   const receipt = formData.get("receipt");
 

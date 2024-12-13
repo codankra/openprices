@@ -1,5 +1,5 @@
-import type { MetaFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { Await, Form, useLoaderData } from "@remix-run/react";
+import type { MetaFunction, LoaderFunctionArgs } from "react-router";
+import { Await, Form, useLoaderData } from "react-router";
 import { requireAuth } from "../services/auth.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import { getUserContributionsById } from "~/services/user.server";

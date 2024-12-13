@@ -1,4 +1,4 @@
-import { type LoaderFunctionArgs } from "@remix-run/node";
+import { redirect, type LoaderFunctionArgs } from "react-router";
 import { auth, sessionStorage } from "~/services/auth.server";
 
 export let loader = async ({ request }: LoaderFunctionArgs) => {
@@ -16,12 +16,21 @@ export let loader = async ({ request }: LoaderFunctionArgs) => {
   const redirectTo = session.get("redirectTo") || "/account";
   console.log(redirectTo);
 
-  // Clear the redirectTo from session
-  session.unset("redirectTo");
-
-  const provider = url.searchParams.get("provider") as string;
-  return await auth.authenticate(provider, request, {
-    successRedirect: redirectTo,
-    failureRedirect: "/login?error=auth_failed",
-  });
+  try {
+    const provider = url.searchParams.get("provider") as string;
+    let user = await auth.authenticate(provider, request);
+    session.set("user", user);
+    return redirect(redirectTo ?? "/account", {
+      headers: { "Set-Cookie": await sessionStorage.commitSession(session) },
+    });
+  } catch (error) {
+    console.error("Error Authenticating: ");
+    console.error(error);
+    throw redirect("/login?error=auth_failed", {
+      headers: { "Set-Cookie": await sessionStorage.commitSession(session) },
+    });
+  } finally {
+    // Clear the redirectTo from session
+    session.unset("redirectTo");
+  }
 };

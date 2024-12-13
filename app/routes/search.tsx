@@ -1,5 +1,5 @@
-import type { MetaFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
+import type { MetaFunction, LoaderFunctionArgs } from "react-router";
+import { Link, useLoaderData, useSearchParams } from "react-router";
 import { useCallback, useState } from "react";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import ProductDetailsCard from "~/components/custom/ProductDetailsCard";

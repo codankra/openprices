@@ -1,5 +1,5 @@
-import { data, type ActionFunctionArgs } from "@remix-run/node";
-import { auth } from "~/services/auth.server";
+import { data, type ActionFunctionArgs } from "react-router";
+import { checkAuth } from "~/services/auth.server";
 import { createNewReceiptItemPriceEntry } from "~/services/price.server";
 import { verifyDraftItemStatus } from "~/services/product.server";
 import { uploadToR2 } from "~/services/r2.server";
@@ -29,7 +29,7 @@ const uploadFiles = async (files: File[], path: string) => {
 };
 
 export async function action({ request }: ActionFunctionArgs) {
-  const user = await auth.isAuthenticated(request);
+  const user = await checkAuth(request);
   if (!user)
     return data(
       { success: false, message: "Authentication Failure" },
