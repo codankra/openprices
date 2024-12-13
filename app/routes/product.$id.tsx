@@ -264,22 +264,28 @@ export default function ProductPage() {
                   )}
                   {resolvedPriceEntries.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {resolvedPriceEntries.map((entry) => (
-                        <div
-                          key={entry.id}
-                          className="bg-white rounded-lg shadow-md p-4"
-                        >
-                          <p className="text-xl font-bold mb-2 text-stone-900">
-                            ${entry.price.toFixed(2)}
-                          </p>
-                          <p className="text-stone-600">
-                            Date: {new Date(entry.date).toLocaleDateString()}
-                          </p>
-                          <p className="text-stone-600">
-                            Store: {entry.storeLocation}
-                          </p>
-                        </div>
-                      ))}
+                      {resolvedPriceEntries
+                        .sort(
+                          (a, b) =>
+                            new Date(a.date).getTime() -
+                            new Date(b.date).getTime()
+                        )
+                        .map((entry) => (
+                          <div
+                            key={entry.id}
+                            className="bg-white rounded-lg shadow-md p-4"
+                          >
+                            <p className="text-xl font-bold mb-2 text-stone-900">
+                              ${entry.price.toFixed(2)}
+                            </p>
+                            <p className="text-stone-600">
+                              Date: {new Date(entry.date).toLocaleDateString()}
+                            </p>
+                            <p className="text-stone-600">
+                              Store: {entry.storeLocation}
+                            </p>
+                          </div>
+                        ))}
                     </div>
                   )}
                 </>

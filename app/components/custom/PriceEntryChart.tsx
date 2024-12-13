@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  Line,
+  Area,
 } from "recharts";
 
 interface PriceEntry {
@@ -32,23 +32,11 @@ const PriceChart: React.FC<PriceChartProps> = ({ priceEntries }) => {
     }));
   }, [priceEntries]);
 
-  const lineBestFit = useMemo(() => {
-    const n = chartData.length;
-    const sumX = chartData.reduce((sum, point) => sum + point.x, 0);
-    const sumY = chartData.reduce((sum, point) => sum + point.y, 0);
-    const sumXY = chartData.reduce((sum, point) => sum + point.x * point.y, 0);
-    const sumXX = chartData.reduce((sum, point) => sum + point.x * point.x, 0);
-
-    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-
-    const minX = Math.min(...chartData.map((point) => point.x));
-    const maxX = Math.max(...chartData.map((point) => point.x));
-
-    return [
-      { x: minX, y: slope * minX + intercept },
-      { x: maxX, y: slope * maxX + intercept },
-    ];
+  const lineData = useMemo(() => {
+    return chartData.map((point) => ({
+      x: point.x,
+      y: point.y,
+    }));
   }, [chartData]);
 
   return (
@@ -112,10 +100,10 @@ const PriceChart: React.FC<PriceChartProps> = ({ priceEntries }) => {
           wrapperStyle={{ outline: "none" }}
         />
         <Legend />
-        <Line
+        <Area
           name="Price Trend"
-          data={lineBestFit}
-          type="linear"
+          data={lineData}
+          type="monotone"
           dataKey="y"
           stroke="#f97316" // Tailwind orange-500
           strokeWidth={2}
@@ -123,6 +111,8 @@ const PriceChart: React.FC<PriceChartProps> = ({ priceEntries }) => {
           connectNulls
           activeDot={false}
           style={{ pointerEvents: "none" }}
+          fill="#fed7aa" // Tailwind orange-200
+          fillOpacity={0.3}
         />
         <Scatter
           name="Price Entries"
