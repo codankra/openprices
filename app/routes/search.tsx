@@ -1,12 +1,11 @@
-import type { MetaFunction, LoaderFunction } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
+import type { MetaFunction, LoaderFunctionArgs } from "react-router";
+import { Link, useLoaderData, useSearchParams } from "react-router";
 import { useCallback, useState } from "react";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import ProductDetailsCard from "~/components/custom/ProductDetailsCard";
 import { Input } from "~/components/ui/input";
 import { products } from "~/db/schema";
-import { ProductPreview, products as trendingProducts } from "~/lib/data";
+import { products as trendingProducts } from "~/lib/data";
 import { debounce } from "~/lib/utils";
 import { getProductsBySearch } from "~/services/product.server";
 
@@ -19,11 +18,8 @@ export const meta: MetaFunction = () => {
     },
   ];
 };
-type LoaderData = {
-  trendingProducts: ProductPreview[];
-  searchResults: (typeof products.$inferSelect)[];
-};
-export const loader: LoaderFunction = async ({ request }) => {
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
 
   const searchTerm = url.searchParams.get("q") || "";
@@ -31,11 +27,11 @@ export const loader: LoaderFunction = async ({ request }) => {
   if (searchTerm.length > 1) {
     searchResults = await getProductsBySearch(searchTerm);
   }
-  return json<LoaderData>({ trendingProducts, searchResults });
+  return { trendingProducts, searchResults };
 };
 
 export default function ProductSearch() {
-  const { trendingProducts, searchResults } = useLoaderData<LoaderData>();
+  const { trendingProducts, searchResults } = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") ?? "");
   const debouncedSearch = useCallback(

@@ -34,10 +34,10 @@ export const users = sqliteTable(
     name: text("name"),
     githubId: text("github_id").unique(),
     googleId: text("google_id").unique(),
-    createdAt: integer("created_at", { mode: "timestamp" })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
     defaultLocation: text("default_location"),
@@ -56,10 +56,10 @@ export const productBrands = sqliteTable("ProductBrands", {
   headquarters: text("headquarters"),
   website: text("website"),
   image: text("image"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -69,10 +69,10 @@ export const storeBrands = sqliteTable("StoreBrands", {
   headquarters: text("headquarters"),
   website: text("website"),
   image: text("image"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -94,10 +94,10 @@ export const priceEntries = sqliteTable(
       .default("manual"),
     receiptId: integer("receipt_id").references(() => receipts.id),
     verified: integer("verified", { mode: "boolean" }).default(false),
-    createdAt: integer("created_at", { mode: "timestamp" })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -150,10 +150,10 @@ export const products = sqliteTable(
     ),
     contributedBy: text("contributed_by").references(() => users.id),
     active: integer("is_active", { mode: "boolean" }).notNull().default(true),
-    createdAt: integer("created_at", { mode: "timestamp" })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -195,10 +195,10 @@ export const receipts = sqliteTable(
     processedMatchedItems: integer("processed_matched_items"),
     processedUnmatchedTxt: integer("processed_unmatched_txt"),
     processingErrors: text("processing_errors"),
-    createdAt: integer("created_at", { mode: "timestamp" })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -234,10 +234,10 @@ export const draftItems = sqliteTable(
       .default("pending"),
     confidence: real("confidence"), // OCR confidence score
     notes: text("notes"), // For user annotations
-    createdAt: integer("created_at", { mode: "timestamp" })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
@@ -257,10 +257,10 @@ export const requestedEdits = sqliteTable(
     status: text("status").notNull().default("pending"),
     reviewedBy: text("reviewed_by").references(() => users.id),
     reviewNotes: text("review_notes"),
-    createdAt: integer("created_at", { mode: "timestamp" })
+    createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: integer("updated_at", { mode: "timestamp" })
+    updatedAt: text("updated_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },

@@ -6,3 +6,4 @@ node_modules
 /drizzle
 .env
 *.log
+.react-router/

@@ -1,5 +1,5 @@
-import type { LoaderFunction } from "@remix-run/node";
-import { Link, useLoaderData } from "@remix-run/react";
+import type { LoaderFunction } from "react-router";
+import { useLoaderData } from "react-router";
 import Custom404 from "~/components/custom/Custom404"; // Adjust the import path as needed
 import HeaderLinks from "~/components/custom/HeaderLinks";
 

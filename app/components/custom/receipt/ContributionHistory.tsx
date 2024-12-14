@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { receipts, priceEntries } from "~/db/schema";
-import { Link } from "@remix-run/react";
+import { Link, useNavigate } from "react-router";
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-US", {
@@ -87,9 +87,22 @@ export const PriceEntryItem = ({
   entry,
 }: {
   entry: typeof priceEntries.$inferInsert;
-}) => (
-  <Link to={`/product/${entry.productId}`}>
-    <Card className="mb-4 hover:shadow-md hover:bg-stone-50 transition-all">
+}) => {
+  const navigate = useNavigate();
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on a proof link
+    if ((e.target as HTMLElement).closest("a")) {
+      return;
+    }
+    navigate(`/product/${entry.productId}`);
+  };
+
+  return (
+    <Card
+      className="mb-4 hover:shadow-md hover:bg-stone-50 transition-all cursor-pointer"
+      onClick={handleCardClick}
+    >
       <CardContent className="p-6">
         <div className="flex justify-between items-start">
           <div className="space-y-2">
@@ -122,7 +135,7 @@ export const PriceEntryItem = ({
         </div>
         {entry.proof && (
           <div className="mt-4 text-sm text-stone-500">
-            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex gap-2">
               {entry.proof.split(",").map((proofUrl, index) => (
                 <a
                   key={index}
@@ -144,5 +157,5 @@ export const PriceEntryItem = ({
         )}
       </CardContent>
     </Card>
-  </Link>
-);
+  );
+};

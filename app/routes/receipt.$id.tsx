@@ -1,6 +1,6 @@
-import type { MetaFunction, LoaderFunction } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { Link, useLoaderData } from "@remix-run/react";
+import type { MetaFunction, LoaderFunctionArgs } from "react-router";
+import { redirect } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { useState } from "react";
 import { requireAuth } from "../services/auth.server";
 import {
@@ -27,23 +27,23 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-type LoaderData = {
+type ReceiptData = {
   receipt: typeof receipts.$inferSelect;
   receiptItems: (typeof draftItems.$inferSelect)[];
 };
 
-export const loader: LoaderFunction = async ({ request, params }) => {
-  const user = await requireAuth(request);
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+  const user = await requireAuth(request, `/receipt/${params.id}`);
   // else return receipt. but first check if user is owner of the receipt. otherwise redirect to receipt upload page
   const result = await getReceiptDetails(parseInt(params.id!), user.id);
-  if (!result) return redirect("/upload-receipt");
+  if (!result) throw redirect("/upload-receipt");
   else {
     return { receipt: result.receipt, receiptItems: result.receiptItems };
   }
 };
 
 export default function ReceiptPage() {
-  const { receipt, receiptItems } = useLoaderData<LoaderData>();
+  const { receipt, receiptItems } = useLoaderData<typeof loader>();
 
   return (
     <div className="font-sans bg-ogprime min-h-screen">
@@ -76,7 +76,7 @@ export default function ReceiptPage() {
   );
 }
 
-const ReceiptReview = (props: LoaderData) => {
+const ReceiptReview = (props: ReceiptData) => {
   const { receipt, receiptItems } = props;
   const [itemsByStatus, setItemsByStatus] = useState(() => {
     const groups = {

@@ -22,7 +22,18 @@ export async function getProductById(id: string) {
   if (cached) return cached;
   else {
     const result = await db
-      .select()
+      .select({
+        id: products.id,
+        name: products.name,
+        category: products.category,
+        latestPrice: products.latestPrice,
+        unitPricing: products.unitPricing,
+        unitQty: products.unitQty,
+        unitType: products.unitType,
+        productBrandName: products.productBrandName,
+        upc: products.upc,
+        image: products.image,
+      })
       .from(products)
       .where(eq(products.id, parseInt(id)))
       .limit(1);
@@ -42,7 +53,18 @@ export async function getProductByUpc(upc: string) {
   if (cached) return cached;
   else {
     const result = await db
-      .select()
+      .select({
+        id: products.id,
+        name: products.name,
+        category: products.category,
+        latestPrice: products.latestPrice,
+        unitPricing: products.unitPricing,
+        unitQty: products.unitQty,
+        unitType: products.unitType,
+        productBrandName: products.productBrandName,
+        upc: products.upc,
+        image: products.image,
+      })
       .from(products)
       .where(eq(products.upc, upc))
       .limit(1);
@@ -99,7 +121,14 @@ export async function getProductBrandInfo(brandName: string) {
   if (cached) return cached;
   else {
     const result = await db
-      .select()
+      .select({
+        name: productBrands.name,
+        website: productBrands.website,
+        image: productBrands.image,
+        description: productBrands.description,
+        headquarters: productBrands.headquarters,
+        isStoreOwner: productBrands.isStoreOwner,
+      })
       .from(productBrands)
       .where(eq(productBrands.name, brandName))
       .limit(1);
@@ -195,7 +224,7 @@ export async function requestProductEdit(
 export async function ignoreProductDraftItem(id: number) {
   return db
     .update(draftItems)
-    .set({ status: "ignored", updatedAt: new Date() })
+    .set({ status: "ignored", updatedAt: new Date().toISOString() })
     .where(and(eq(draftItems.id, id), eq(draftItems.status, "pending")))
     .catch((error) => {
       console.error(`Failed to ignore draft item ${id}:`, error);
@@ -205,7 +234,7 @@ export async function ignoreProductDraftItem(id: number) {
 export async function completeProductDraftItem(id: number) {
   return db
     .update(draftItems)
-    .set({ status: "completed", updatedAt: new Date() })
+    .set({ status: "completed", updatedAt: new Date().toISOString() })
     .where(eq(draftItems.id, id))
     .catch((error) => {
       console.error(`Failed to ignore draft item ${id}:`, error);

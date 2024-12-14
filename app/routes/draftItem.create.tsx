@@ -1,5 +1,5 @@
-import { json, type ActionFunctionArgs } from "@remix-run/node";
-import { auth } from "~/services/auth.server";
+import { data, type ActionFunctionArgs } from "react-router";
+import { checkAuth } from "~/services/auth.server";
 import { createNewReceiptItemPriceEntry } from "~/services/price.server";
 import { verifyDraftItemStatus } from "~/services/product.server";
 import { uploadToR2 } from "~/services/r2.server";
@@ -29,9 +29,9 @@ const uploadFiles = async (files: File[], path: string) => {
 };
 
 export async function action({ request }: ActionFunctionArgs) {
-  const user = await auth.isAuthenticated(request);
+  const user = await checkAuth(request);
   if (!user)
-    return json(
+    return data(
       { success: false, message: "Authentication Failure" },
       { status: 401 }
     );
@@ -42,14 +42,14 @@ export async function action({ request }: ActionFunctionArgs) {
   // get receipt by draftItemId and userId
   // if null, error out 400
   if (isNaN(receiptId) || isNaN(draftItemId)) {
-    return json(
+    return data(
       { success: false, message: "Critical item details are missing." },
       { status: 400 }
     );
   }
   const receiptInfo = await getReceiptByID(receiptId, user.id);
   if (receiptInfo === null) {
-    return json(
+    return data(
       {
         success: false,
         message: "Unable to find receipt details for your item.",
@@ -62,7 +62,7 @@ export async function action({ request }: ActionFunctionArgs) {
     "pending"
   );
   if (!verifiedItemStatus) {
-    return json(
+    return data(
       {
         success: false,
         message: "Please review the accuracy of the provided details.",
@@ -86,7 +86,7 @@ export async function action({ request }: ActionFunctionArgs) {
     draftItemId
   );
 
-  return json(
+  return data(
     {
       success: true,
       message: "A new item was created, thank you for contributing!",

@@ -6,13 +6,13 @@ import {
   useSearchParams,
   Link,
   Await,
-} from "@remix-run/react";
-import { defer, json, redirect } from "@remix-run/node";
+} from "react-router";
+import { data, redirect } from "react-router";
 import type {
-  ActionFunction,
-  LoaderFunction,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
   MetaFunction,
-} from "@remix-run/node";
+} from "react-router";
 import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
@@ -27,9 +27,8 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { products, UnitType } from "~/db/schema";
-import { auth, requireAuth } from "~/services/auth.server";
+import { requireAuth } from "~/services/auth.server";
 import { z } from "zod";
-import { AuthUser } from "~/services/user.server";
 import {
   getAllProductBrands,
   getProductsBySearch,
@@ -67,13 +66,6 @@ export const meta: MetaFunction = () => {
       content: "Contribute a new price history entry on Open Price Data",
     },
   ];
-};
-
-type LoaderData = {
-  searchResults0: (typeof products.$inferInsert)[];
-  existingProduct0: typeof products.$inferInsert | null;
-  user: AuthUser;
-  productBrandsListPromise: Awaited<ReturnType<typeof getAllProductBrands>>;
 };
 
 const formSchema = z
@@ -116,8 +108,8 @@ const formSchema = z
     }
   );
 
-export const loader: LoaderFunction = async ({ request }) => {
-  const user = await requireAuth(request);
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const user = await requireAuth(request, "/price-entry");
   const url = new URL(request.url);
 
   const searchTerm = url.searchParams.get("search") || "";
@@ -133,19 +125,16 @@ export const loader: LoaderFunction = async ({ request }) => {
   }
 
   const productBrandsListPromise = getAllProductBrands();
-  return defer({
-    searchResults0: searchResults,
-    existingProduct0: existingProduct,
+  return {
+    searchResults,
+    existingProduct,
     user,
     productBrandsListPromise,
-  });
+  };
 };
 
-export const action: ActionFunction = async ({ request }) => {
-  const user = await auth.isAuthenticated(request);
-  if (!user) {
-    return redirect("/login");
-  }
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const user = await requireAuth(request, "/price-entry");
 
   const formData = await request.formData();
   const rawFormData = Object.fromEntries(formData);
@@ -226,30 +215,20 @@ export const action: ActionFunction = async ({ request }) => {
     return redirect(`/product/${productId}`);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return json({ errors: error.errors }, { status: 400 });
+      return data({ errors: error.errors }, { status: 400 });
     }
-    return json({ otherErrors: [error.message] }, { status: 400 });
+    return data({ otherErrors: [error.message] }, { status: 400 });
   }
-};
-
-type ActionData = {
-  errors?: z.ZodIssue[];
-  otherErrors?: string[];
 };
 
 export default function NewPricePoint() {
   const {
-    searchResults0,
-    existingProduct0,
+    searchResults,
+    existingProduct,
     productBrandsListPromise: productBrandsList,
-  } = useLoaderData<LoaderData>();
-  const searchResults: (typeof products.$inferInsert)[] = JSON.parse(
-    JSON.stringify(searchResults0)
-  );
-  const existingProduct: typeof products.$inferInsert | null = existingProduct0
-    ? JSON.parse(JSON.stringify(existingProduct0))
-    : null;
-  const actionData = useActionData<ActionData>();
+  } = useLoaderData<typeof loader>();
+
+  const actionData = useActionData<typeof action>();
   const [_searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
@@ -733,8 +712,7 @@ export default function NewPricePoint() {
             </div>
           </div>
         </Form>
-
-        {actionData?.errors && (
+        {actionData && "errors" in actionData && (
           <div className="mt-4 text-red-500">
             <ul>
               {actionData.errors.map((error) => (
@@ -745,7 +723,8 @@ export default function NewPricePoint() {
             </ul>
           </div>
         )}
-        {actionData?.otherErrors && (
+
+        {actionData && "otherErrors" in actionData && (
           <div className="mt-4 text-red-500">
             <h3 className="font-semibold">Other Errors:</h3>
             <ul>

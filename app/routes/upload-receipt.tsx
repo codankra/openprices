@@ -1,12 +1,12 @@
 import type {
   MetaFunction,
-  LoaderFunction,
-  ActionFunction,
-} from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
-import { Form, Link, useActionData, useNavigation } from "@remix-run/react";
+  LoaderFunctionArgs,
+  ActionFunctionArgs,
+} from "react-router";
+import { data } from "react-router";
+import { Form, Link, useActionData, useNavigation } from "react-router";
 import { useState, useRef, useEffect } from "react";
-import { auth, requireAuth } from "../services/auth.server";
+import { requireAuth } from "../services/auth.server";
 import {
   Upload,
   X,
@@ -51,40 +51,41 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader: LoaderFunction = async ({ request }) => {
-  await requireAuth(request);
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  await requireAuth(request, "/upload-receipt");
   return null;
 };
 
-export const action: ActionFunction = async ({ request }) => {
-  const user = await auth.isAuthenticated(request);
-  if (!user) return redirect("/login");
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const user = await requireAuth(request, "/upload-receipt");
   const formData = await request.formData();
   const receipt = formData.get("receipt");
 
   if (!(receipt instanceof File)) {
-    return json({ error: "No valid file uploaded", status: 400 });
+    return data({ error: "No valid file uploaded" }, { status: 400 });
   }
 
   if (receipt.size > 3 * 1024 * 1024) {
-    return json({ error: "File size exceeds 3MB limit", status: 400 });
+    return data({ error: "File size exceeds 3MB limit" }, { status: 400 });
   }
 
   const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
   if (!allowedTypes.includes(receipt.type)) {
-    return json({
-      error: "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed",
-      status: 400,
-    });
+    return data(
+      {
+        error: "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed",
+      },
+      { status: 400 }
+    );
   }
 
   const jobId = Date.now().toString();
   // Start processing in the background
   processReceiptInBackground(jobId, receipt, user.id).catch((e) => {
     console.error(e);
-    return json({ error: "Failed to process receipt", status: 500 });
+    return data({ error: "Failed to process receipt" }, { status: 500 });
   });
-  return json({ jobId });
+  return { jobId };
 };
 
 export default function UploadReceipt() {
@@ -108,7 +109,7 @@ export default function UploadReceipt() {
 
   const actionData = useActionData<typeof action>();
   useEffect(() => {
-    if (actionData?.jobId) {
+    if (actionData && "jobId" in actionData) {
       const eventSource = new EventSource(`/sse/${actionData.jobId}`);
       eventSource.onmessage = (event) => {
         try {

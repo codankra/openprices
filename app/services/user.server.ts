@@ -13,6 +13,7 @@ export async function findOrCreateUser(profile: {
   name?: string | null;
   provider: "github" | "google";
   providerId: string;
+  defaultLocation?: string;
 }): Promise<AuthUser> {
   const existingUser = await db
     .select()
@@ -54,6 +55,7 @@ export async function findOrCreateUser(profile: {
       name: profile.name || null,
       githubId: profile.provider === "github" ? profile.providerId : null,
       googleId: profile.provider === "google" ? profile.providerId : null,
+      defaultLocation: profile.defaultLocation || null,
     })
     .returning();
 

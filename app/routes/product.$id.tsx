@@ -1,7 +1,7 @@
 import { PiCaretDoubleDown, PiCaretDoubleUp } from "react-icons/pi";
-import type { MetaFunction, LoaderFunction } from "@remix-run/node";
-import { redirect, defer } from "@remix-run/node";
-import { Await, Link, useLoaderData, useFetcher } from "@remix-run/react";
+import type { MetaFunction, LoaderFunctionArgs } from "react-router";
+import { redirect } from "react-router";
+import { Await, Link, useLoaderData, useFetcher } from "react-router";
 import { Suspense, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
@@ -17,12 +17,8 @@ import {
 import PriceChart from "~/components/custom/PriceEntryChart";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import { requireAuth } from "~/services/auth.server";
-type LoaderData = {
-  product: Awaited<ReturnType<typeof getProductAndBrandByID>>;
-  priceEntries: Awaited<ReturnType<typeof getPriceEntriesByProductID>>;
-};
 
-export const loader: LoaderFunction = async ({ params }) => {
+export async function loader({ params }: LoaderFunctionArgs) {
   try {
     const productPromise = getProductAndBrandByID(params.id!);
     const priceEntriesPromise = getPriceEntriesByProductID(params.id!);
@@ -30,18 +26,20 @@ export const loader: LoaderFunction = async ({ params }) => {
     const product = await productPromise;
     if (!product) return redirect("/productNotFound");
 
-    return defer({
-      product,
+    console.log(product);
+
+    return {
+      product: product,
       priceEntries: priceEntriesPromise,
-    });
+    };
   } catch (error) {
     console.error("Error in loader:", error);
     throw new Response("Error loading data", { status: 500 });
   }
-};
+}
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
-  const productName = data.product.productInfo.name;
+  const productName = data?.product.productInfo.name;
   return [
     { title: `${productName} - Open Price History` },
     { name: "description", content: "Open Price History of Your Product" },
@@ -63,7 +61,8 @@ export const action = async ({ request }: { request: Request }) => {
 };
 
 export default function ProductPage() {
-  const { product, priceEntries } = useLoaderData<LoaderData>();
+  const { product, priceEntries } = useLoaderData<typeof loader>();
+
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [feedback, setFeedback] = useState("");
   const fetcher = useFetcher<typeof action>();
@@ -138,7 +137,13 @@ export default function ProductPage() {
                 <div className="flex justify-between border-b border-dashed border-stone-300 pb-2 mb-2">
                   <span className="text-stone-600 ml-1">Price Records:</span>
                   <span className="text-stone-800 font-medium mr-1">
-                    {priceEntries?.length || "-"}
+                    <Suspense fallback="-">
+                      <Await resolve={priceEntries} errorElement="-">
+                        {(resolvedPriceEntries) =>
+                          resolvedPriceEntries.length || "-"
+                        }
+                      </Await>
+                    </Suspense>
                   </span>
                 </div>
 

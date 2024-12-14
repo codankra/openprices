@@ -4,8 +4,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
-import { useLoaderData, Form } from "@remix-run/react";
+import { type MetaFunction } from "react-router";
+import { useLoaderData, Form } from "react-router";
 import { useState } from "react";
 import { FaSearch } from "react-icons/fa";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
@@ -13,20 +13,7 @@ import { AnimatedText } from "~/components/custom/animations";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import ProductDetailsCard from "~/components/custom/ProductDetailsCard";
 import { ChartConfig, ChartContainer } from "~/components/ui/chart";
-import {
-  FAQ,
-  faqs,
-  ProductPreview,
-  products,
-  samplePriceData,
-  type PriceSample,
-} from "~/lib/data";
-
-type LoaderData = {
-  products: ProductPreview[];
-  faqs: FAQ[];
-  samplePriceData: PriceSample[];
-};
+import { faqs, products, samplePriceData } from "~/lib/data";
 
 const chartConfig = {
   price: {
@@ -59,12 +46,12 @@ export const meta: MetaFunction = () => {
     },
   ];
 };
-export const loader: LoaderFunction = async () => {
-  return json<LoaderData>({ products, faqs, samplePriceData });
+export const loader = async () => {
+  return { products, faqs, samplePriceData };
 };
 
 export default function Index() {
-  const { products, faqs, samplePriceData } = useLoaderData<LoaderData>();
+  const { products, faqs, samplePriceData } = useLoaderData<typeof loader>();
   const [searchTerm, setSearchTerm] = useState("");
 
   return (
