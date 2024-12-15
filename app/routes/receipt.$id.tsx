@@ -169,8 +169,6 @@ const ReceiptReview = (props: ReceiptData) => {
             imageUrl={receipt.imageUrl}
             storeBrand={receipt.storeBrandName}
             onSubmit={async (createItemData) => {
-              console.log("Firing submit event");
-              console.log(createItemData);
               const { productImage, ...itemData } = createItemData;
               const formData = new FormData();
 
@@ -192,17 +190,12 @@ const ReceiptReview = (props: ReceiptData) => {
                   body: formData,
                 });
                 updateItemStatus(item.id, item.status, "completed");
-                console.log(
-                  "Completed the creation of priceEntry, product, and RTI for item ",
-                  item.id
-                );
               } catch (error) {
                 console.error("Failed to process receipt item:", error);
                 // TODO: show error toast
               }
             }}
             onIgnore={async () => {
-              console.log("Starting the ignore");
               updateItemStatus(item.id, item.status, "ignored");
 
               const formData = new FormData();
@@ -213,7 +206,6 @@ const ReceiptReview = (props: ReceiptData) => {
               }).catch((error) =>
                 console.error("Failed to send ignore request:", error)
               );
-              console.log("Completed the ignore for item ", item.id);
             }}
             onReceiptTextMatch={async (productId, quantityPrice) => {
               // if matched after fixing receipt text:
@@ -230,10 +222,6 @@ const ReceiptReview = (props: ReceiptData) => {
                 });
                 await response.json();
                 updateItemStatus(item.id, item.status, "completed");
-                console.log(
-                  "Completed the creation of priceEntry and link of receipt for item ",
-                  item.id
-                );
               } catch (error) {
                 console.error("Failed to process receipt item:", error);
                 // TODO: show error toast
@@ -257,10 +245,6 @@ const ReceiptReview = (props: ReceiptData) => {
                 });
                 await response.json();
                 updateItemStatus(item.id, item.status, "completed");
-                console.log(
-                  "Completed the creation of priceEntry and link of receipt for item ",
-                  item.id
-                );
               } catch (error) {
                 console.error("Failed to process receipt item:", error);
                 // TODO: show error toast

@@ -282,10 +282,11 @@ export async function processReceiptItems(
               });
               results.matchedUnitPriced++;
             } else {
+              if (!item.unitPrice) item.unitPrice = item.price;
               // Regular product - add price entry
               priceEntriesToInsert.push({
                 productId: productId,
-                price: item.price,
+                price: item.unitPrice ?? item.price,
                 date: receiptInfo.purchaseDate,
                 storeLocation: receiptInfo.storeLocation,
                 contributorId: receiptInfo.userId,

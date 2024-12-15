@@ -13,9 +13,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
   ]);
 
   if (!user) {
-    return data(
-      { success: false, message: "You must log in to use this API" },
-      { status: 401 }
+    return Response.json(
+      data(
+        { success: false, message: "You must log in to use this API" },
+        { status: 401 }
+      )
     );
   }
 
@@ -23,31 +25,39 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const brand = url.searchParams.get("brand");
   console.log(brand);
   if (!text || !brand) {
-    return data(
-      {
-        success: false,
-        message: "We need more details to search for a product.",
-      },
-      { status: 400 }
+    return Response.json(
+      data(
+        {
+          success: false,
+          message: "We need more details to search for a product.",
+        },
+        { status: 400 }
+      )
     );
   }
 
   const pid = await getProductIDByReceiptText(text, brand);
   if (!pid)
-    return data(
-      { success: false, message: "Product Not Found" },
-      { status: 404 }
+    return Response.json(
+      data({ success: false, message: "Product Not Found" }, { status: 404 })
     );
   const product = await getProductById(pid.toString());
   if (!product)
-    return data(
-      {
-        success: false,
-        message: "Product Receipt ID found, but its details could not be found",
-      },
-      { status: 404 }
+    return Response.json(
+      data(
+        {
+          success: false,
+          message:
+            "Product Receipt ID found, but its details could not be found",
+        },
+        { status: 404 }
+      )
     );
   else {
-    return { success: true, message: "Product Found", product };
+    return Response.json({
+      success: true,
+      message: "Product Found",
+      product,
+    });
   }
 }

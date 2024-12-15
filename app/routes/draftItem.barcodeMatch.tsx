@@ -12,9 +12,11 @@ import { getReceiptByID } from "~/services/receipt.server";
 export async function action({ request }: ActionFunctionArgs) {
   const user = await checkAuth(request);
   if (!user)
-    return data(
-      { success: false, message: "Authentication Failure" },
-      { status: 401 }
+    return Response.json(
+      data(
+        { success: false, message: "Authentication Failure" },
+        { status: 401 }
+      )
     );
 
   const formData = await request.formData();
@@ -32,21 +34,25 @@ export async function action({ request }: ActionFunctionArgs) {
     !price ||
     !itemReceiptText
   ) {
-    return data(
-      { success: false, message: "Critical item details are missing." },
-      { status: 400 }
+    return Response.json(
+      data(
+        { success: false, message: "Critical item details are missing." },
+        { status: 400 }
+      )
     );
   }
 
   // verifies user permission to refer to receipt as well as it's existance
   const receiptInfo = await getReceiptByID(receiptId, user.id);
   if (receiptInfo === null) {
-    return data(
-      {
-        success: false,
-        message: "Unable to find receipt details for your item.",
-      },
-      { status: 404 }
+    return Response.json(
+      data(
+        {
+          success: false,
+          message: "Unable to find receipt details for your item.",
+        },
+        { status: 404 }
+      )
     );
   }
   const verifiedItemStatus = await verifyDraftItemStatus(
@@ -54,12 +60,14 @@ export async function action({ request }: ActionFunctionArgs) {
     "pending"
   );
   if (!verifiedItemStatus) {
-    return data(
-      {
-        success: false,
-        message: "Please review the accuracy of the provided details.",
-      },
-      { status: 400 }
+    return Response.json(
+      data(
+        {
+          success: false,
+          message: "Please review the accuracy of the provided details.",
+        },
+        { status: 400 }
+      )
     );
   }
 
@@ -89,21 +97,25 @@ export async function action({ request }: ActionFunctionArgs) {
   const priceEntry = await addNewPriceEntry(priceEntryDetails);
   if (priceEntry) {
     completeProductDraftItem(draftItemId);
-    return data(
-      {
-        success: true,
-        message: "A new item was created, thank you for contributing!",
-        result: { priceEntry },
-      },
-      { status: 200 }
+    return Response.json(
+      data(
+        {
+          success: true,
+          message: "A new item was created, thank you for contributing!",
+          result: { priceEntry },
+        },
+        { status: 200 }
+      )
     );
   }
-  return data(
-    {
-      success: false,
-      message: "Error Adding Price",
-      result: { priceEntry },
-    },
-    { status: 500 }
+  return Response.json(
+    data(
+      {
+        success: false,
+        message: "Error Adding Price",
+        result: { priceEntry },
+      },
+      { status: 500 }
+    )
   );
 }

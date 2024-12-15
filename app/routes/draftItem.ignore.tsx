@@ -4,13 +4,13 @@ import { ignoreProductDraftItem } from "~/services/product.server";
 
 export async function action({ request }: ActionFunctionArgs) {
   const user = await checkAuth(request);
-  if (!user) return data({ success: false }, { status: 401 });
+  if (!user) return Response.json(data({ success: false }, { status: 401 }));
 
   const formData = await request.formData();
   const id = Number(formData.get("id"));
 
   if (isNaN(id)) {
-    return data({ success: false }, { status: 400 });
+    return Response.json(data({ success: false }, { status: 400 }));
   }
 
   // Fire and forget the DB operation
@@ -19,5 +19,5 @@ export async function action({ request }: ActionFunctionArgs) {
   );
 
   // Return immediately
-  return data({ success: true }, { status: 202 }); // 202 Accepted (Started Processing)
+  return Response.json(data({ success: true }, { status: 202 })); // 202 Accepted (Started Processing)
 }
