@@ -53,6 +53,7 @@ enum ProcessingStep {
   PRODUCT_DETAILS = "product_details",
   PRODUCT_UNITPRICE = "product_unitprice",
   CONTRIBUTOR_THANKS = "contributor_thanks",
+  IGNORE_THANKS = "ignore_thanks",
 }
 
 const ReceiptItemProcessor = ({
@@ -265,7 +266,12 @@ const ReceiptItemProcessor = ({
                     {" "}
                     <Button
                       variant="ghost"
-                      onClick={onIgnore}
+                      onClick={() => {
+                        setCurrentStep(ProcessingStep.IGNORE_THANKS);
+                        setTimeout(() => {
+                          onIgnore();
+                        }, 300);
+                      }}
                       className="text-stone-500"
                       type="button"
                       disabled={isTransitioning}
@@ -456,7 +462,14 @@ const ReceiptItemProcessor = ({
                       Back
                     </Button>
                     <div className="justify-end flex flex-col items-end space-y-1">
-                      <Button onClick={() => onSubmit(formData)}>
+                      <Button
+                        onClick={async () => {
+                          setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
+                          setTimeout(async () => {
+                            await onSubmit(formData);
+                          }, 1000);
+                        }}
+                      >
                         Save Product
                       </Button>
                     </div>
@@ -533,6 +546,13 @@ const ReceiptItemProcessor = ({
                   <h2 className="text-xl font-semibold">
                     Thank you for Contributing!
                   </h2>
+                </div>
+              );
+
+            case ProcessingStep.IGNORE_THANKS:
+              return (
+                <div className="bg-stone-100 transition-opacity ease-out duration-1000 py-20 px-4 text-center rounded opacity-0 animate-[fadeIn_0.5s_ease-out_forwards,fadeOut_0.5s_ease-out_1s_forwards]">
+                  <h2 className="text-xl font-semibold">✔️ Item Skipped</h2>
                 </div>
               );
           }
