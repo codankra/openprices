@@ -16,6 +16,7 @@ import { getReceiptDetails } from "~/services/receipt.server";
 import { draftItems, receipts } from "~/db/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import ReceiptItemProcessor from "~/components/custom/receipt/ReceiptItemProcessor";
+import { CompletedItemsList } from "~/components/custom/receipt/CompletedItemsList";
 
 export const meta: MetaFunction = () => {
   return [
@@ -160,122 +161,128 @@ const ReceiptReview = (props: ReceiptData) => {
     <div className="max-w-3xl mx-auto space-y-6 p-4">
       <ReceiptSummary />
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Receipt Items</h2>
-        {itemsByStatus.pending.map((item) => (
-          <ReceiptItemProcessor
-            item={item}
-            key={item.id}
-            imageUrl={receipt.imageUrl}
-            storeBrand={receipt.storeBrandName}
-            onSubmit={async (createItemData) => {
-              const { productImage, ...itemData } = createItemData;
-              const formData = new FormData();
+      <div className="space-y-8">
+        {itemsByStatus.pending.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Pending Items</h2>
+            {itemsByStatus.pending.map((item) => (
+              <ReceiptItemProcessor
+                item={item}
+                key={item.id}
+                imageUrl={receipt.imageUrl}
+                storeBrand={receipt.storeBrandName}
+                onSubmit={async (createItemData) => {
+                  const { productImage, ...itemData } = createItemData;
+                  const formData = new FormData();
 
-              // Add the item data as a single JSON string
-              formData.append("itemData", JSON.stringify(itemData));
+                  // Add the item data as a single JSON string
+                  formData.append("itemData", JSON.stringify(itemData));
 
-              // Add image if it exists
-              if (productImage) {
-                formData.append("productImage", productImage);
-              }
+                  // Add image if it exists
+                  if (productImage) {
+                    formData.append("productImage", productImage);
+                  }
 
-              // Add essential IDs separately for easier server-side processing
-              formData.append("receiptId", receipt.id.toString());
-              formData.append("draftItemId", item.id.toString());
+                  // Add essential IDs separately for easier server-side processing
+                  formData.append("receiptId", receipt.id.toString());
+                  formData.append("draftItemId", item.id.toString());
 
-              try {
-                await fetch("/draftItem/create", {
-                  method: "POST",
-                  body: formData,
-                });
-                updateItemStatus(item.id, item.status, "completed");
-              } catch (error) {
-                console.error("Failed to process receipt item:", error);
-                // TODO: show error toast
-              }
-            }}
-            onIgnore={async () => {
-              updateItemStatus(item.id, item.status, "ignored");
+                  try {
+                    await fetch("/draftItem/create", {
+                      method: "POST",
+                      body: formData,
+                    });
+                    updateItemStatus(item.id, item.status, "completed");
+                  } catch (error) {
+                    console.error("Failed to process receipt item:", error);
+                    // TODO: show error toast
+                  }
+                }}
+                onIgnore={async () => {
+                  updateItemStatus(item.id, item.status, "ignored");
 
-              const formData = new FormData();
-              formData.append("id", item.id.toString());
-              await fetch(`/draftItem/ignore`, {
-                method: "POST",
-                body: formData,
-              }).catch((error) =>
-                console.error("Failed to send ignore request:", error)
-              );
-            }}
-            onReceiptTextMatch={async (productId, quantityPrice) => {
-              // if matched after fixing receipt text:
-              // just do priceEntry for productId of the right receipt text
-              const formData = new FormData();
-              formData.append("productId", productId.toString());
-              formData.append("draftItemId", item.id.toString());
-              formData.append("receiptId", receipt.id.toString());
-              formData.append("price", quantityPrice.toString());
-              try {
-                const response = await fetch("/draftItem/barcodeMatch", {
-                  method: "POST",
-                  body: formData,
-                });
-                await response.json();
-                updateItemStatus(item.id, item.status, "completed");
-              } catch (error) {
-                console.error("Failed to process receipt item:", error);
-                // TODO: show error toast
-              }
-            }}
-            onBarcodeMatch={async (productId, quantityPrice) => {
-              // if matched after UPC found:
-              // Link future receipt texts with this productId (and do priceEntry)
-              const formData = new FormData();
-              formData.append("productId", productId.toString());
-              formData.append("draftItemId", item.id.toString());
-              formData.append("receiptId", receipt.id.toString());
-              formData.append("receiptText", item.receiptText);
-              formData.append("price", quantityPrice.toString());
+                  const formData = new FormData();
+                  formData.append("id", item.id.toString());
+                  await fetch(`/draftItem/ignore`, {
+                    method: "POST",
+                    body: formData,
+                  }).catch((error) =>
+                    console.error("Failed to send ignore request:", error)
+                  );
+                }}
+                onReceiptTextMatch={async (productId, quantityPrice) => {
+                  // if matched after fixing receipt text:
+                  // just do priceEntry for productId of the right receipt text
+                  const formData = new FormData();
+                  formData.append("productId", productId.toString());
+                  formData.append("draftItemId", item.id.toString());
+                  formData.append("receiptId", receipt.id.toString());
+                  formData.append("price", quantityPrice.toString());
+                  try {
+                    const response = await fetch("/draftItem/barcodeMatch", {
+                      method: "POST",
+                      body: formData,
+                    });
+                    await response.json();
+                    updateItemStatus(item.id, item.status, "completed");
+                  } catch (error) {
+                    console.error("Failed to process receipt item:", error);
+                    // TODO: show error toast
+                  }
+                }}
+                onBarcodeMatch={async (productId, quantityPrice) => {
+                  // if matched after UPC found:
+                  // Link future receipt texts with this productId (and do priceEntry)
+                  const formData = new FormData();
+                  formData.append("productId", productId.toString());
+                  formData.append("draftItemId", item.id.toString());
+                  formData.append("receiptId", receipt.id.toString());
+                  formData.append("receiptText", item.receiptText);
+                  formData.append("price", quantityPrice.toString());
 
-              // we need to find out if it's weighted (if so, mark it matched otherwise completed && include price entry)
-              try {
-                const response = await fetch("/draftItem/barcodeMatch", {
-                  method: "POST",
-                  body: formData,
-                });
-                await response.json();
-                updateItemStatus(item.id, item.status, "completed");
-              } catch (error) {
-                console.error("Failed to process receipt item:", error);
-                // TODO: show error toast
-              }
-            }}
-            onProductMismatch={async (upc, description) => {
-              // Send an edit request
-              const formData = new FormData();
+                  // we need to find out if it's weighted (if so, mark it matched otherwise completed && include price entry)
+                  try {
+                    const response = await fetch("/draftItem/barcodeMatch", {
+                      method: "POST",
+                      body: formData,
+                    });
+                    await response.json();
+                    updateItemStatus(item.id, item.status, "completed");
+                  } catch (error) {
+                    console.error("Failed to process receipt item:", error);
+                    // TODO: show error toast
+                  }
+                }}
+                onProductMismatch={async (upc, description) => {
+                  // Send an edit request
+                  const formData = new FormData();
 
-              formData.append("upc", upc);
+                  formData.append("upc", upc);
 
-              const editNotes = `receipt id: ${receipt.id}; draftItemId: ${item.id}; user description: ${description}`;
-              formData.append("editNotes", editNotes);
-              formData.append("draftItemId", item.id.toString());
+                  const editNotes = `receipt id: ${receipt.id}; draftItemId: ${item.id}; user description: ${description}`;
+                  formData.append("editNotes", editNotes);
+                  formData.append("draftItemId", item.id.toString());
 
-              try {
-                await fetch("/draftItem/editRequest", {
-                  method: "POST",
-                  body: formData,
-                });
-                updateItemStatus(item.id, item.status, "completed");
-              } catch (error) {
-                console.error(
-                  "Failed to submit edit request for review: ",
-                  error
-                );
-                // TODO: show error toast
-              }
-            }}
-          />
-        ))}
+                  try {
+                    await fetch("/draftItem/editRequest", {
+                      method: "POST",
+                      body: formData,
+                    });
+                    updateItemStatus(item.id, item.status, "completed");
+                  } catch (error) {
+                    console.error(
+                      "Failed to submit edit request for review: ",
+                      error
+                    );
+                    // TODO: show error toast
+                  }
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        <CompletedItemsList items={itemsByStatus.completed} />
       </div>
     </div>
   );
