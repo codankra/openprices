@@ -9,10 +9,8 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await checkAuth(request);
   if (!user)
     return Response.json(
-      data(
-        { success: false, message: "Authentication Failure" },
-        { status: 401 }
-      )
+      data({ success: false, message: "Authentication Failure" }),
+      { status: 401 }
     );
 
   const formData = await request.formData();
@@ -21,13 +19,11 @@ export async function action({ request }: ActionFunctionArgs) {
   const editNotes = formData.get("editNotes")?.toString();
   if (isNaN(draftItemId) || !editNotes || !upc) {
     return Response.json(
-      data(
-        {
-          success: false,
-          message: "We need more details to request this edit.",
-        },
-        { status: 400 }
-      )
+      data({
+        success: false,
+        message: "We need more details to request this edit.",
+      }),
+      { status: 400 }
     );
   }
 
@@ -39,14 +35,12 @@ export async function action({ request }: ActionFunctionArgs) {
   completeProductDraftItem(draftItemId);
 
   return Response.json(
-    data(
-      {
-        success: true,
-        message:
-          "Your edit is noted and will be reviewed, thank you for contributing!",
-        result: { ...createdEditRequest },
-      },
-      { status: 200 }
-    )
+    data({
+      success: true,
+      message:
+        "Your edit is noted and will be reviewed, thank you for contributing!",
+      result: { ...createdEditRequest },
+    }),
+    { status: 200 }
   );
 }

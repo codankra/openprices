@@ -219,10 +219,13 @@ const ReceiptReview = (props: ReceiptData) => {
                   formData.append("receiptId", receipt.id.toString());
                   formData.append("price", quantityPrice.toString());
                   try {
-                    const response = await fetch("/draftItem/barcodeMatch", {
-                      method: "POST",
-                      body: formData,
-                    });
+                    const response = await fetch(
+                      "/draftItem/receiptTextMatch",
+                      {
+                        method: "POST",
+                        body: formData,
+                      }
+                    );
                     await response.json();
                     updateItemStatus(item.id, item.status, "completed");
                   } catch (error) {

@@ -14,10 +14,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   if (!user) {
     return Response.json(
-      data(
-        { success: false, message: "You must log in to use this API" },
-        { status: 401 }
-      )
+      data({ success: false, message: "You must log in to use this API" }),
+      { status: 401 }
     );
   }
 
@@ -26,13 +24,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
   console.log(brand);
   if (!text || !brand) {
     return Response.json(
-      data(
-        {
-          success: false,
-          message: "We need more details to search for a product.",
-        },
-        { status: 400 }
-      )
+      data({
+        success: false,
+        message: "We need more details to search for a product.",
+      }),
+      { status: 400 }
     );
   }
 
@@ -44,14 +40,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const product = await getProductById(pid.toString());
   if (!product)
     return Response.json(
-      data(
-        {
-          success: false,
-          message:
-            "Product Receipt ID found, but its details could not be found",
-        },
-        { status: 404 }
-      )
+      data({
+        success: false,
+        message: "Product Receipt ID found, but its details could not be found",
+      }),
+      { status: 404 }
     );
   else {
     return Response.json({

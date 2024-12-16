@@ -12,10 +12,8 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await checkAuth(request);
   if (!user)
     return Response.json(
-      data(
-        { success: false, message: "Authentication Failure" },
-        { status: 401 }
-      )
+      data({ success: false, message: "Authentication Failure" }),
+      { status: 401 }
     );
 
   const formData = await request.formData();
@@ -32,10 +30,8 @@ export async function action({ request }: ActionFunctionArgs) {
     isNaN(price)
   ) {
     return Response.json(
-      data(
-        { success: false, message: "Critical item details are missing." },
-        { status: 400 }
-      )
+      data({ success: false, message: "Critical item details are missing." }),
+      { status: 400 }
     );
   }
 
@@ -43,13 +39,11 @@ export async function action({ request }: ActionFunctionArgs) {
   const receiptInfo = await getReceiptByID(receiptId, user.id);
   if (receiptInfo === null) {
     return Response.json(
-      data(
-        {
-          success: false,
-          message: "Unable to find receipt details for your item.",
-        },
-        { status: 404 }
-      )
+      data({
+        success: false,
+        message: "Unable to find receipt details for your item.",
+      }),
+      { status: 404 }
     );
   }
   const verifiedItemStatus = await verifyDraftItemStatus(
@@ -58,13 +52,11 @@ export async function action({ request }: ActionFunctionArgs) {
   );
   if (!verifiedItemStatus) {
     return Response.json(
-      data(
-        {
-          success: false,
-          message: "Please review the accuracy of the provided details.",
-        },
-        { status: 400 }
-      )
+      data({
+        success: false,
+        message: "Please review the accuracy of the provided details.",
+      }),
+      { status: 400 }
     );
   }
 
@@ -83,24 +75,20 @@ export async function action({ request }: ActionFunctionArgs) {
   if (priceEntry) {
     completeProductDraftItem(draftItemId);
     return Response.json(
-      data(
-        {
-          success: true,
-          message: "A new item was created, thank you for contributing!",
-          result: { priceEntry },
-        },
-        { status: 200 }
-      )
+      data({
+        success: true,
+        message: "A new item was created, thank you for contributing!",
+        result: { priceEntry },
+      }),
+      { status: 200 }
     );
   }
   return Response.json(
-    data(
-      {
-        success: false,
-        message: "Error Adding Price",
-        result: { priceEntry },
-      },
-      { status: 500 }
-    )
+    data({
+      success: false,
+      message: "Error Adding Price",
+      result: { priceEntry },
+    }),
+    { status: 500 }
   );
 }

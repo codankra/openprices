@@ -11,34 +11,28 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   if (!user) {
     return Response.json(
-      data(
-        { success: false, message: "You must log in to use this API" },
-        { status: 401 }
-      )
+      data({ success: false, message: "You must log in to use this API" }),
+      { status: 401 }
     );
   }
   const upc = url.searchParams.get("upc");
   if (!upc) {
     return Response.json(
-      data(
-        {
-          success: false,
-          message: "We need more details to search for a product.",
-        },
-        { status: 400 }
-      )
+      data({
+        success: false,
+        message: "We need more details to search for a product.",
+      }),
+      { status: 400 }
     );
   }
   const product = await getProductByUpc(upc);
   if (!product)
     return Response.json(
-      data(
-        {
-          success: false,
-          message: "Product Not Found",
-        },
-        { status: 404 }
-      )
+      data({
+        success: false,
+        message: "Product Not Found",
+      }),
+      { status: 404 }
     );
   else {
     return Response.json({ success: true, message: "Product Found", product });
