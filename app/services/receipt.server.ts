@@ -268,6 +268,7 @@ export async function processReceiptItems(
               // Product is unit priced - add to draft items as matched
               draftItemsToInsert.push({
                 receiptId: receipt.id,
+                productId: productId,
                 receiptText: item.receiptText,
                 price: item.price,
                 unitQuantity: item.unitQuantity,
@@ -297,6 +298,7 @@ export async function processReceiptItems(
               // Also add completed draft item
               draftItemsToInsert.push({
                 receiptId: receipt.id,
+                productId: productId,
                 receiptText: item.receiptText,
                 price: item.price,
                 unitQuantity: item.unitQuantity,

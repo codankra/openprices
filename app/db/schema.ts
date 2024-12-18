@@ -219,6 +219,7 @@ export const draftItems = sqliteTable(
     receiptId: integer("receipt_id")
       .notNull()
       .references(() => receipts.id),
+    productId: integer("product_id").references(() => products.id), //if matched
     receiptText: text("receipt_text").notNull(), // Original text from receipt
     price: real("price").notNull(),
     unitQuantity: real("unit_quantity"),

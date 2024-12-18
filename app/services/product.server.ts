@@ -231,10 +231,17 @@ export async function ignoreProductDraftItem(id: number) {
     });
 }
 
-export async function completeProductDraftItem(id: number) {
+export async function completeProductDraftItem(
+  id: number,
+  productId: number | null
+) {
   return db
     .update(draftItems)
-    .set({ status: "completed", updatedAt: new Date().toISOString() })
+    .set({
+      status: "completed",
+      updatedAt: new Date().toISOString(),
+      productId: productId,
+    })
     .where(eq(draftItems.id, id))
     .catch((error) => {
       console.error(`Failed to ignore draft item ${id}:`, error);

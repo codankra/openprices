@@ -24,7 +24,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
     const priceEntriesPromise = getPriceEntriesByProductID(params.id!);
 
     const product = await productPromise;
-    if (!product) return redirect("/productNotFound");
+    if (!product) throw redirect("/productNotFound");
 
     console.log(product);
 
@@ -33,6 +33,9 @@ export async function loader({ params }: LoaderFunctionArgs) {
       priceEntries: priceEntriesPromise,
     };
   } catch (error) {
+    if (error instanceof Response && error.status === 302) {
+      throw error;
+    }
     console.error("Error in loader:", error);
     throw new Response("Error loading data", { status: 500 });
   }

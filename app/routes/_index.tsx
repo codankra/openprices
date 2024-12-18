@@ -62,9 +62,9 @@ export default function Index() {
 
       <main>
         <section className="bg-ogprime text-stone-700 py-14 sm:py-40">
-          <div className="container mx-auto px-10">
+          <div className="container mx-auto">
             <div className="flex flex-col lg:flex-row items-center">
-              <div className="w-full lg:w-1/2 text-center lg:text-left mb-8 lg:mb-0">
+              <div className="w-full lg:w-1/2 text-center lg:text-left mb-8 lg:mb-0 px-10">
                 <h2 className="text-3xl sm:text-4xl md:text-5xl xl:text-5xl font-bold mb-6">
                   How Have Prices Really Changed?
                 </h2>
@@ -95,7 +95,7 @@ export default function Index() {
                 </Form>
               </div>
               <div className="w-full lg:w-1/2">
-                <div className="mr-8 lg:mr-1">
+                <div className="sm:mr-8 mr-10 lg:mr-1 px-4 sm:px-10">
                   <ChartContainer
                     config={chartConfig}
                     className="min-h-[200px] w-full"
@@ -119,7 +119,7 @@ export default function Index() {
                     </AreaChart>
                   </ChartContainer>
                 </div>
-                <p className="text-center text-ogfore text-xs ml-4 lg:ml-16">
+                <p className="text-center text-ogfore text-xs sm:ml-4 lg:ml-16 w-5/6 sm:w-full mx-auto">
                   <AnimatedText
                     hold={1500}
                     transition={500}

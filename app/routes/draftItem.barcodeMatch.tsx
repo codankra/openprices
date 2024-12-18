@@ -90,7 +90,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const priceEntry = await addNewPriceEntry(priceEntryDetails);
   if (priceEntry) {
-    completeProductDraftItem(draftItemId);
+    completeProductDraftItem(draftItemId, productId);
     return Response.json(
       data({
         success: true,
