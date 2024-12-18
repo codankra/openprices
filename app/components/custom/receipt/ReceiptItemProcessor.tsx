@@ -125,7 +125,7 @@ const ReceiptItemProcessor = ({
     try {
       await checkPromise;
     } catch (error) {
-      console.error("Failed silent product check:", error);
+      console.error("Failed silent check of product receipt text:", error);
     } finally {
       setIsTransitioning(false);
     }
@@ -149,6 +149,11 @@ const ReceiptItemProcessor = ({
         } else {
           setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
         }
+      } else if (response.status == 404) {
+        setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
+      } else {
+        console.log("Request for UPC returned status ", response.status);
+        setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
       }
     } catch (error) {
       console.error("Failed to check product:", error);

@@ -29,10 +29,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (!product)
     return Response.json(
       data({
-        success: false,
-        message: "Product Not Found",
+        success: true,
+        message: "Product Not Found - No Content",
+        code: 204,
       }),
-      { status: 404 }
+      { status: 200 }
     );
   else {
     return Response.json({ success: true, message: "Product Found", product });

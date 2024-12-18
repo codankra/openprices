@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PiReceipt } from "react-icons/pi";
 import { draftItems } from "~/db/schema";
+import { Link } from "react-router";
 
 interface CompletedItemsListProps {
   items: (typeof draftItems.$inferSelect)[];
@@ -39,23 +40,54 @@ export const CompletedItemsList = ({ items }: CompletedItemsListProps) => {
         <div className="space-y-2">
           {items.map((item) => (
             <Card key={item.id} className="bg-green-50/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center">
-                    <PiReceipt className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div className="flex-grow min-w-0">
-                    <p className="font-medium truncate">{item.receiptText}</p>
-                    <div className="flex items-center gap-2 text-sm text-stone-600">
-                      <span>${item.price.toFixed(2)}</span>
-                      {item.unitPrice && (
-                        <span className="text-stone-400">
-                          (${item.unitPrice.toFixed(2)} × {item.unitQuantity})
-                        </span>
-                      )}
+              <CardContent
+                className={`p-4 ${
+                  item.productId ? "hover:bg-green-100/50 cursor-pointer" : ""
+                }`}
+              >
+                {item.productId ? (
+                  <Link to={`/product/${item.productId}`} className="block">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center">
+                        <PiReceipt className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <p className="font-medium truncate">
+                          {item.receiptText}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-stone-600">
+                          <span>${item.price.toFixed(2)}</span>
+                          {item.unitPrice && (
+                            <span className="text-stone-400">
+                              (${item.unitPrice.toFixed(2)} ×{" "}
+                              {item.unitQuantity})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-sm text-stone-500">
+                        View Product Page
+                      </div>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center">
+                      <PiReceipt className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <p className="font-medium truncate">{item.receiptText}</p>
+                      <div className="flex items-center gap-2 text-sm text-stone-600">
+                        <span>${item.price.toFixed(2)}</span>
+                        {item.unitPrice && (
+                          <span className="text-stone-400">
+                            (${item.unitPrice.toFixed(2)} × {item.unitQuantity})
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           ))}

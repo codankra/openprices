@@ -225,11 +225,12 @@ export async function createNewReceiptItemPriceEntry(
       .update(draftItems)
       .set({
         status: "completed",
+        productId: newProduct.id,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(draftItems.id, draftItemId));
 
-    // Clear cache for this product's price entries
+    // Initialize cache for this product's price entries
     await priceEntriesCache.set(`product-${newProduct.id}`, [newPriceEntry]);
 
     return {
