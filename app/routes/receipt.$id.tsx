@@ -17,6 +17,7 @@ import { draftItems, receipts } from "~/db/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import ReceiptItemProcessor from "~/components/custom/receipt/ReceiptItemProcessor";
 import { CompletedItemsList } from "~/components/custom/receipt/CompletedItemsList";
+import { IgnoredItemsList } from "~/components/custom/receipt/IgnoredItemsList";
 
 export const meta: MetaFunction = () => {
   return [
@@ -146,11 +147,20 @@ const ReceiptReview = (props: ReceiptData) => {
         </div>
         {receipt.imageUrl && (
           <div className="mt-4">
-            <img
-              src={receipt.imageUrl}
-              alt="Receipt"
-              className="max-w-full h-auto rounded-lg"
-            />
+            <div
+              className="max-h-[200px] overflow-y-auto cursor-zoom-in hover:shadow-lg transition-shadow duration-300 relative"
+              onClick={() => window.open(receipt.imageUrl, "_blank")}
+            >
+              <div className=" right-2 top-0 bg-black/50 text-white px-2 py-1  text-sm z-10 sticky">
+                Scroll to view more
+              </div>
+              <img
+                src={receipt.imageUrl}
+                alt="Receipt"
+                className="max-w-full h-auto object-contain"
+                style={{ marginTop: "-28px" }}
+              />
+            </div>
           </div>
         )}
       </CardContent>
@@ -286,6 +296,7 @@ const ReceiptReview = (props: ReceiptData) => {
         )}
 
         <CompletedItemsList items={itemsByStatus.completed} />
+        <IgnoredItemsList items={itemsByStatus.ignored} />
       </div>
     </div>
   );
