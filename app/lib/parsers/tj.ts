@@ -102,6 +102,19 @@ function parseItem(
   if (index + 1 >= ocrLines.length) return null;
 
   const itemName = ocrLines[index];
+
+  // Skip if item name is just a price
+  if (itemName.match(/^\$\d+\.\d{2}$/)) return null;
+
+  // Skip if item name is just a number
+  if (itemName.match(/^\d+$/)) return null;
+
+  // Skip if item name contains three asterisks
+  if (itemName.includes("***")) return null;
+
+  // Skip if item name contains "Gift Card" (case insensitive)
+  if (itemName.toLowerCase().includes("gift card")) return null;
+
   const priceMatch = ocrLines[index + 1].match(/\$(\d+\.\d{2})/);
 
   if (!priceMatch) return null;
