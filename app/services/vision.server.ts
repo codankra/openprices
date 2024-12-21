@@ -21,8 +21,6 @@ const SUPPORTED_MIME_TYPES = new Set([
   "image/jpg",
   "image/png",
   "image/webp",
-  "image/heic",
-  "image/heif",
 ]);
 
 type ReceiptItem = {
@@ -43,9 +41,6 @@ type ParsedReceipt = Omit<
 > & {
   items: ReceiptItem[];
 };
-
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID; // Make sure to add this to your .env file
-const LOCATION = "us-central1"; // or your preferred location
 
 type BoundingBox = {
   minX: number;
@@ -122,7 +117,7 @@ const createVisionClient = () => {
 };
 
 async function extractProductInfo(
-  imageBase64: string,
+  imageData: string,
   mimeType: string
 ): Promise<ProductInfo> {
   if (!SUPPORTED_MIME_TYPES.has(mimeType)) {
@@ -133,19 +128,40 @@ async function extractProductInfo(
     );
   }
 
+  const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID;
+  const LOCATION = "us-central1";
+  let credentials;
+  try {
+    credentials = JSON.parse(
+      Buffer.from(
+        process.env.GOOGLE_CLOUD_CREDENTIALS || "",
+        "base64"
+      ).toString()
+    );
+    console.log("Credential keys present:", Object.keys(credentials));
+    console.log("Client email:", credentials.client_email); // Important to verify
+    console.log("Project ID from credentials:", credentials.project_id); // Should match GOOGLE_CLOUD_PROJECT_ID
+  } catch (error) {
+    console.error("Failed to parse credentials:", error);
+    throw new Error("Invalid credentials format");
+  }
+
   const vertex = new VertexAI({
     project: PROJECT_ID,
     location: LOCATION,
+    googleAuthOptions: {
+      credentials,
+      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+    },
   });
 
   const model = vertex.getGenerativeModel({
-    model: "gemini-1.5-flash-vision-002",
+    model: "gemini-1.5-flash",
   });
 
   const availableUnitTypeValues = Object.values(UnitType)
     .map((v) => `"${v}"`)
     .join(", ");
-  console.log("Available Unit Types: ", availableUnitTypeValues);
 
   const prompt = `Analyze this product image and return ONLY a JSON object with no additional text or explanation. Format:
 
@@ -167,8 +183,8 @@ async function extractProductInfo(
           parts: [
             {
               inlineData: {
-                mimeType: "image/jpeg",
-                data: imageBase64.split(",")[1], // Remove data:image/jpeg;base64, prefix if present
+                mimeType,
+                data: imageData, // Remove data:image/jpeg;base64, prefix if present
               },
             },
             { text: prompt },
@@ -177,7 +193,6 @@ async function extractProductInfo(
       ],
       generationConfig: {
         temperature: 0.15, // Lower temperature for more consistent formatting
-        candidateCount: 1,
       },
     });
 
