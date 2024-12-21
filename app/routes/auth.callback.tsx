@@ -11,10 +11,7 @@ export let loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
 
   // Get the redirectTo from session or use default
-  console.log(session.data);
-  console.log(session.get("redirectTo"));
   const redirectTo = session.get("redirectTo") || "/account";
-  console.log(redirectTo);
 
   try {
     const provider = url.searchParams.get("provider") as string;

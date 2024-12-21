@@ -7,6 +7,7 @@ import {
 import { receipts, UnitType } from "~/db/schema";
 import { parseTraderJoesReceipt } from "~/lib/parsers/tj";
 import { parseHEBReceipt } from "~/lib/parsers/heb";
+import { rateLimiter } from "./rateLimiter.service";
 
 interface ProductInfo {
   productName: string;
@@ -115,55 +116,50 @@ const createVisionClient = () => {
   // When running on Google Cloud Platform, this will use ADC automatically
   return new ImageAnnotatorClient();
 };
+const rateLimitedExtractProductInfo = rateLimiter.wrapWithRateLimit(
+  "vertex-ai",
+  async (imageData: string, mimeType: string): Promise<ProductInfo> => {
+    if (!SUPPORTED_MIME_TYPES.has(mimeType)) {
+      throw new Error(
+        `Unsupported image format: ${mimeType}. Supported formats are: ${Array.from(
+          SUPPORTED_MIME_TYPES
+        ).join(", ")}`
+      );
+    }
 
-async function extractProductInfo(
-  imageData: string,
-  mimeType: string
-): Promise<ProductInfo> {
-  if (!SUPPORTED_MIME_TYPES.has(mimeType)) {
-    throw new Error(
-      `Unsupported image format: ${mimeType}. Supported formats are: ${Array.from(
-        SUPPORTED_MIME_TYPES
-      ).join(", ")}`
-    );
-  }
+    const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const LOCATION = "us-central1";
+    let credentials;
+    try {
+      credentials = JSON.parse(
+        Buffer.from(
+          process.env.GOOGLE_CLOUD_CREDENTIALS || "",
+          "base64"
+        ).toString()
+      );
+    } catch (error) {
+      console.error("Failed to parse credentials:", error);
+      throw new Error("Invalid credentials format");
+    }
 
-  const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID;
-  const LOCATION = "us-central1";
-  let credentials;
-  try {
-    credentials = JSON.parse(
-      Buffer.from(
-        process.env.GOOGLE_CLOUD_CREDENTIALS || "",
-        "base64"
-      ).toString()
-    );
-    console.log("Credential keys present:", Object.keys(credentials));
-    console.log("Client email:", credentials.client_email); // Important to verify
-    console.log("Project ID from credentials:", credentials.project_id); // Should match GOOGLE_CLOUD_PROJECT_ID
-  } catch (error) {
-    console.error("Failed to parse credentials:", error);
-    throw new Error("Invalid credentials format");
-  }
+    const vertex = new VertexAI({
+      project: PROJECT_ID,
+      location: LOCATION,
+      googleAuthOptions: {
+        credentials,
+        scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+      },
+    });
 
-  const vertex = new VertexAI({
-    project: PROJECT_ID,
-    location: LOCATION,
-    googleAuthOptions: {
-      credentials,
-      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-    },
-  });
+    const model = vertex.getGenerativeModel({
+      model: "gemini-1.5-flash",
+    });
 
-  const model = vertex.getGenerativeModel({
-    model: "gemini-1.5-flash",
-  });
+    const availableUnitTypeValues = Object.values(UnitType)
+      .map((v) => `"${v}"`)
+      .join(", ");
 
-  const availableUnitTypeValues = Object.values(UnitType)
-    .map((v) => `"${v}"`)
-    .join(", ");
-
-  const prompt = `Analyze this product image and return ONLY a JSON object with no additional text or explanation. Format:
+    const prompt = `Analyze this product image and return ONLY a JSON object with no additional text or explanation. Format:
 
 {
   "productName": string, // Full product name excluding brand (e.g., "Organic Half & Half" not "Trader Joe's Organic Half & Half")
@@ -175,45 +171,46 @@ async function extractProductInfo(
 }
 `;
 
-  try {
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              inlineData: {
-                mimeType,
-                data: imageData, // Remove data:image/jpeg;base64, prefix if present
+    try {
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                inlineData: {
+                  mimeType,
+                  data: imageData, // Remove data:image/jpeg;base64, prefix if present
+                },
               },
-            },
-            { text: prompt },
-          ],
+              { text: prompt },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.15, // Lower temperature for more consistent formatting
         },
-      ],
-      generationConfig: {
-        temperature: 0.15, // Lower temperature for more consistent formatting
-      },
-    });
+      });
 
-    const response = result.response;
-    const textResponse = response.candidates?.[0].content.parts[0].text;
+      const response = result.response;
+      const textResponse = response.candidates?.[0].content.parts[0].text;
 
-    // Validate that response is pure JSON
-    if (
-      !textResponse ||
-      !textResponse.trim().startsWith("{") ||
-      !textResponse.trim().endsWith("}")
-    ) {
-      throw new Error("Invalid response format");
+      // Validate that response is pure JSON
+      if (
+        !textResponse ||
+        !textResponse.trim().startsWith("{") ||
+        !textResponse.trim().endsWith("}")
+      ) {
+        throw new Error("Invalid response format");
+      }
+
+      return JSON.parse(textResponse) as ProductInfo;
+    } catch (error) {
+      console.error("Error processing image:", error);
+      throw new Error("Failed to process product image");
     }
-
-    return JSON.parse(textResponse) as ProductInfo;
-  } catch (error) {
-    console.error("Error processing image:", error);
-    throw new Error("Failed to process product image");
   }
-}
+);
 
 const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
   const lines = text.split("\n").map((line) => line.trim());
@@ -291,4 +288,8 @@ const detectReceiptText = async (
     throw error;
   }
 };
-export { detectReceiptText, extractProductInfo, findItemBounds };
+export {
+  detectReceiptText,
+  rateLimitedExtractProductInfo as extractProductInfo,
+  findItemBounds,
+};

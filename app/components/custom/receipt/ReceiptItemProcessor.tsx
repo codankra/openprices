@@ -416,11 +416,15 @@ const ReceiptItemProcessor = ({
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Label htmlFor="productImage">Product Image</Label>
+                      <Label htmlFor="productImage">
+                        {isProcessingImage
+                          ? "Scanning Image..."
+                          : "Product Image"}
+                      </Label>
                       <Sparkles
                         className={`w-4 h-4 transition-colors ${
                           isProcessingImage
-                            ? "text-purple-600 animate-pulse"
+                            ? "text-purple-600 animate-[pulse_1s_ease-in-out_infinite]"
                             : "text-stone-400"
                         }`}
                       />
