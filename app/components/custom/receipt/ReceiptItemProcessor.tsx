@@ -80,7 +80,7 @@ const ReceiptItemProcessor = ({
     category: "",
     upc: "",
     unitQty: item.unitQuantity || 1,
-    unitType: UnitType.PIECE,
+    unitType: UnitType.COUNT,
     pricePerUnit: item.unitPrice || item.price,
     unitPricing: false,
   });
@@ -90,10 +90,41 @@ const ReceiptItemProcessor = ({
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    try {
       handleChange("productImage", file);
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch("/vision/parseProductImage", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to process image");
+      }
+
+      const data = await response.json();
+
+      if (data.productInfo) {
+        // Auto-fill the form with the extracted information
+        setFormData((prev) => ({
+          ...prev,
+          name: data.productInfo.productName,
+          category: data.productInfo.category,
+          unitQty: data.productInfo.unitQuantity,
+          unitType: data.productInfo.unitType,
+          unitPricing: data.productInfo.isUnitPriced,
+        }));
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      // Handle error (you might want to add error state to your component)
     }
   };
   const checkProductReceiptIdentifier = async (receiptText: string) => {
@@ -379,6 +410,16 @@ const ReceiptItemProcessor = ({
                       Barcode #: {formData.upc}
                     </p>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="productImage">Product Image</Label>
+                    <Input
+                      id="productImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="cursor-pointer"
+                    />
+                  </div>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Product Name</Label>
@@ -400,18 +441,7 @@ const ReceiptItemProcessor = ({
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="productImage">
-                      Product Image (Optional)
-                    </Label>
-                    <Input
-                      id="productImage"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="cursor-pointer"
-                    />
-                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="unitType">Unit Type</Label>

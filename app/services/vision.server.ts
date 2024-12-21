@@ -1,11 +1,29 @@
 import { ImageAnnotatorClient } from "@google-cloud/vision";
+import { VertexAI } from "@google-cloud/vertexai";
 import {
   determineReceiptBrand,
   determineReceiptLocation,
 } from "./receipt.server";
-import { receipts } from "~/db/schema";
+import { receipts, UnitType } from "~/db/schema";
 import { parseTraderJoesReceipt } from "~/lib/parsers/tj";
 import { parseHEBReceipt } from "~/lib/parsers/heb";
+
+interface ProductInfo {
+  productName: string;
+  productBrandName: string;
+  category: string;
+  unitType: string;
+  unitQuantity: number;
+}
+// Supported MIME types for Gemini Vision
+const SUPPORTED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+]);
 
 type ReceiptItem = {
   minX?: number;
@@ -26,15 +44,17 @@ type ParsedReceipt = Omit<
   items: ReceiptItem[];
 };
 
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID; // Make sure to add this to your .env file
+const LOCATION = "us-central1"; // or your preferred location
+
 type BoundingBox = {
   minX: number;
   minY: number;
   maxX: number;
   maxY: number;
 };
-
 // Note: textAnnotations[0] contains the full text, individual words start at index 1
-export const findItemBounds = (
+const findItemBounds = (
   annotations: any[],
   itemText: string[]
 ): BoundingBox => {
@@ -100,6 +120,85 @@ const createVisionClient = () => {
   // When running on Google Cloud Platform, this will use ADC automatically
   return new ImageAnnotatorClient();
 };
+
+async function extractProductInfo(
+  imageBase64: string,
+  mimeType: string
+): Promise<ProductInfo> {
+  if (!SUPPORTED_MIME_TYPES.has(mimeType)) {
+    throw new Error(
+      `Unsupported image format: ${mimeType}. Supported formats are: ${Array.from(
+        SUPPORTED_MIME_TYPES
+      ).join(", ")}`
+    );
+  }
+
+  const vertex = new VertexAI({
+    project: PROJECT_ID,
+    location: LOCATION,
+  });
+
+  const model = vertex.getGenerativeModel({
+    model: "gemini-1.5-flash-vision-002",
+  });
+
+  const availableUnitTypeValues = Object.values(UnitType)
+    .map((v) => `"${v}"`)
+    .join(", ");
+  console.log("Available Unit Types: ", availableUnitTypeValues);
+
+  const prompt = `Analyze this product image and return ONLY a JSON object with no additional text or explanation. Format:
+
+{
+  "productName": string, // Full product name excluding brand (e.g., "Organic Half & Half" not "Trader Joe's Organic Half & Half")
+  "productBrandName": string, // Brand name only (e.g., "Trader Joe's")
+  "category": string, // Specific product described in 1-3 words (e.g., "Black Beans", "Mango", "Half & Half")
+  "unitType": string, // Must be one of: [${availableUnitTypeValues}].
+  "unitQuantity": number, // One numerical quantity only, no units (e.g., 11.5 for 11.5oz)
+  "isUnitPriced": boolean // true if product is specifically priced by custom weight/volume (like deli items), false for all standard packaged items.
+}
+`;
+
+  try {
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: imageBase64.split(",")[1], // Remove data:image/jpeg;base64, prefix if present
+              },
+            },
+            { text: prompt },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.15, // Lower temperature for more consistent formatting
+        candidateCount: 1,
+      },
+    });
+
+    const response = result.response;
+    const textResponse = response.candidates?.[0].content.parts[0].text;
+
+    // Validate that response is pure JSON
+    if (
+      !textResponse ||
+      !textResponse.trim().startsWith("{") ||
+      !textResponse.trim().endsWith("}")
+    ) {
+      throw new Error("Invalid response format");
+    }
+
+    return JSON.parse(textResponse) as ProductInfo;
+  } catch (error) {
+    console.error("Error processing image:", error);
+    throw new Error("Failed to process product image");
+  }
+}
 
 const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
   const lines = text.split("\n").map((line) => line.trim());
@@ -177,4 +276,4 @@ const detectReceiptText = async (
     throw error;
   }
 };
-export { detectReceiptText };
+export { detectReceiptText, extractProductInfo, findItemBounds };
