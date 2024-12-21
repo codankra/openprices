@@ -11,18 +11,16 @@ import { sql } from "drizzle-orm";
 // Define the UnitType enum
 export enum UnitType {
   COUNT = "ct",
-  // Metric units
   GRAM = "g",
   KILOGRAM = "kg",
   MILLILITER = "ml",
   LITER = "l",
-  // Imperial units
   OUNCE = "oz",
   POUND = "lb",
   FLUID_OUNCE = "fl oz",
+  PINT = "pt",
+  QUART = "qt",
   GALLON = "gal",
-  // Additional units
-  PIECE = "piece",
   PACKAGE = "pkg",
 }
 

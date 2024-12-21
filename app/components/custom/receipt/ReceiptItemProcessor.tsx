@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Plus, ChevronUp } from "lucide-react";
+import { X, Plus, ChevronUp, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,13 +74,14 @@ const ReceiptItemProcessor = ({
   const [isUPChecking, setIsUPChecking] = useState(false);
   const [matchedBy, setMatchedBy] = useState("");
 
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [formData, setFormData] = useState<CreateItemData>({
     receiptText: item.receiptText,
     name: "",
     category: "",
     upc: "",
     unitQty: item.unitQuantity || 1,
-    unitType: UnitType.PIECE,
+    unitType: UnitType.COUNT,
     pricePerUnit: item.unitPrice || item.price,
     unitPricing: false,
   });
@@ -90,10 +91,44 @@ const ReceiptItemProcessor = ({
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    setIsProcessingImage(true);
+    try {
       handleChange("productImage", file);
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch("/vision/parseProductImage", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to process image");
+      }
+
+      const data = await response.json();
+
+      if (data.productInfo) {
+        // Auto-fill the form with the extracted information
+        setFormData((prev) => ({
+          ...prev,
+          name: data.productInfo.productName,
+          category: data.productInfo.category,
+          unitQty: data.productInfo.unitQuantity,
+          unitType: data.productInfo.unitType,
+          unitPricing: data.productInfo.isUnitPriced,
+        }));
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      // Handle error (you might want to add error state to your component)
+    } finally {
+      setIsProcessingImage(false);
     }
   };
   const checkProductReceiptIdentifier = async (receiptText: string) => {
@@ -379,6 +414,44 @@ const ReceiptItemProcessor = ({
                       Barcode #: {formData.upc}
                     </p>
                   </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="productImage">
+                        {isProcessingImage
+                          ? "Scanning Image..."
+                          : "Product Image"}
+                      </Label>
+                      <Sparkles
+                        className={`w-4 h-4 transition-colors ${
+                          isProcessingImage
+                            ? "text-purple-600 animate-[pulse_1s_ease-in-out_infinite]"
+                            : "text-stone-400"
+                        }`}
+                      />
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="productImage"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
+                      />
+                      <div className="border-2 border-dashed border-stone-300 rounded-lg p-4 text-center hover:border-stone-400 transition-colors">
+                        {formData.productImage ? (
+                          <img
+                            src={URL.createObjectURL(formData.productImage)}
+                            alt="Product preview"
+                            className="max-h-24 mx-auto"
+                          />
+                        ) : (
+                          <div className="text-stone-500">
+                            <p className="text-sm">Click or drag image here</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Product Name</Label>
@@ -386,6 +459,7 @@ const ReceiptItemProcessor = ({
                         id="name"
                         value={formData.name}
                         onChange={(e) => handleChange("name", e.target.value)}
+                        disabled={isProcessingImage}
                       />
                     </div>
                     <div className="space-y-2">
@@ -397,21 +471,11 @@ const ReceiptItemProcessor = ({
                           handleChange("category", e.target.value)
                         }
                         placeholder="What is the core item? (1-2 words)"
+                        disabled={isProcessingImage}
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="productImage">
-                      Product Image (Optional)
-                    </Label>
-                    <Input
-                      id="productImage"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="cursor-pointer"
-                    />
-                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="unitType">Unit Type</Label>
@@ -420,6 +484,7 @@ const ReceiptItemProcessor = ({
                         onValueChange={(value) =>
                           handleChange("unitType", value as UnitType)
                         }
+                        disabled={isProcessingImage}
                       >
                         <SelectTrigger id="unitType">
                           <SelectValue />
@@ -446,6 +511,7 @@ const ReceiptItemProcessor = ({
                         }
                         min="0"
                         step="0.01"
+                        disabled={isProcessingImage}
                       />
                     </div>
                   </div>
@@ -456,6 +522,7 @@ const ReceiptItemProcessor = ({
                       onCheckedChange={(checked) =>
                         handleChange("unitPricing", checked as boolean)
                       }
+                      disabled={isProcessingImage}
                     />
                     <Label htmlFor="unitPricing">Priced by Weight/Volume</Label>
                   </div>
@@ -468,6 +535,7 @@ const ReceiptItemProcessor = ({
                     </Button>
                     <div className="justify-end flex flex-col items-end space-y-1">
                       <Button
+                        disabled={isProcessingImage}
                         onClick={async () => {
                           setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
                           setTimeout(async () => {
