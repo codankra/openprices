@@ -87,7 +87,7 @@ export default function Index() {
                   />
                   <button
                     type="submit"
-                    className="shadow bg-ogfore text-stone-700 px-4 py-2 rounded-r-md hover:bg-ogfore-hover focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    className="shadow bg-ogfore text-stone-700 px-4 py-2 rounded-r-md hover:bg-ogfore-hover focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-colors"
                     aria-label="Search"
                   >
                     <FaSearch className="w-5 h-5" />
