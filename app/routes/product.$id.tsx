@@ -26,8 +26,6 @@ export async function loader({ params }: LoaderFunctionArgs) {
     const product = await productPromise;
     if (!product) throw redirect("/productNotFound");
 
-    console.log(product);
-
     return {
       product: product,
       priceEntries: priceEntriesPromise,

@@ -21,7 +21,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const text = url.searchParams.get("text");
   const brand = url.searchParams.get("brand");
-  console.log(brand);
   if (!text || !brand) {
     return Response.json(
       data({
