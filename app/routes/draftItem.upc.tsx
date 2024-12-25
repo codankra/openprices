@@ -1,6 +1,6 @@
 import { data, LoaderFunctionArgs } from "react-router";
 import { checkAuth } from "~/services/auth.server";
-import { getProductByUpc } from "~/services/product.server";
+import { getProductsByUpc } from "~/services/product.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // Run auth check and param validation in parallel
@@ -20,22 +20,27 @@ export async function loader({ request }: LoaderFunctionArgs) {
     return Response.json(
       data({
         success: false,
-        message: "We need more details to search for a product.",
+        message: "We need more details to search for a product upc.",
       }),
       { status: 400 }
     );
   }
-  const product = await getProductByUpc(upc);
-  if (!product)
+  const products = await getProductsByUpc(upc); // This should now return an array
+  if (!products || products.length === 0) {
     return Response.json(
       data({
         success: true,
-        message: "Product Not Found - No Content",
+        message: "No Products Found - No Content",
         code: 204,
       }),
       { status: 200 }
     );
-  else {
-    return Response.json({ success: true, message: "Product Found", product });
   }
+
+  return Response.json({
+    success: true,
+    message:
+      products.length === 1 ? "Product Found" : "Multiple Products Found",
+    products,
+  });
 }

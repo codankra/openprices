@@ -15,10 +15,25 @@ import { draftItems, UnitType, products } from "~/db/schema";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PiReceipt } from "react-icons/pi";
 import BarcodeScanner from "../product/CaptureBarcode";
+import ProductSelectionCarousel from "../product/ProductSelectionCarousel";
 
 // Types for our component
 type DraftItem = typeof draftItems.$inferSelect;
 type Product = typeof products.$inferSelect;
+type ProductMatchState =
+  | {
+      type: "SINGLE";
+      product: Product;
+      matchSource: "RECEIPT_TEXT" | "UPC_SINGLE";
+    }
+  | {
+      type: "MULTIPLE";
+      products: Product[];
+      selectedIndex: number;
+    }
+  | {
+      type: "NONE";
+    };
 
 interface CreateItemData {
   receiptText: string;
@@ -68,7 +83,9 @@ const ReceiptItemProcessor = ({
 }: ReceiptItemProcessorProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentStep, setCurrentStep] = useState(ProcessingStep.INITIAL);
-  const [matchedProduct, setMatchedProduct] = useState<Product | null>(null);
+  const [productMatch, setProductMatch] = useState<ProductMatchState>({
+    type: "NONE",
+  });
   const [mismatchDescription, setMismatchDescription] = useState("");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isUPChecking, setIsUPChecking] = useState(false);
@@ -141,8 +158,11 @@ const ReceiptItemProcessor = ({
       if (response.ok) {
         const data: { product?: Product } = await response.json();
         if (data.product) {
-          setMatchedProduct(data.product);
-          setMatchedBy("PRI");
+          setProductMatch({
+            type: "SINGLE",
+            product: data.product,
+            matchSource: "RECEIPT_TEXT",
+          });
           setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
         }
       }
@@ -150,7 +170,6 @@ const ReceiptItemProcessor = ({
       console.error("Failed to check product receipt identifier:", error);
     }
   };
-
   const handleStartAdd = async () => {
     setIsTransitioning(true);
 
@@ -168,7 +187,6 @@ const ReceiptItemProcessor = ({
 
   const handleBarcodeDetected = async (upc: string) => {
     setIsUPChecking(true);
-
     handleChange("upc", upc);
 
     try {
@@ -176,16 +194,27 @@ const ReceiptItemProcessor = ({
         `/draftItem/upc/?upc=${encodeURIComponent(upc)}`
       );
       if (response.ok) {
-        const data: { product?: Product } = await response.json();
-        if (data.product) {
-          setMatchedProduct(data.product);
-          setMatchedBy("UPC");
+        const data: { products?: Product[] } = await response.json();
+        if (data.products?.length === 1) {
+          // Single product case
+          setProductMatch({
+            type: "SINGLE",
+            product: data.products[0],
+            matchSource: "UPC_SINGLE",
+          });
+          setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
+        } else if (data.products && data.products.length > 1) {
+          // Multiple products case
+          setProductMatch({
+            type: "MULTIPLE",
+            products: data.products,
+            selectedIndex: 0,
+          });
           setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
         } else {
+          setProductMatch({ type: "NONE" });
           setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
         }
-      } else if (response.status == 404) {
-        setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
       } else {
         console.log("Request for UPC returned status ", response.status);
         setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
@@ -208,14 +237,14 @@ const ReceiptItemProcessor = ({
   const handleReceiptTextMatch = async (price: number) => {
     setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
     setTimeout(() => {
-      onReceiptTextMatch(matchedProduct!.id, price);
+      onReceiptTextMatch(getCurrentProduct()!.id, price);
     }, 300);
   };
 
   const handleBarcodeMatch = async (price: number) => {
     setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
     setTimeout(() => {
-      onBarcodeMatch(matchedProduct!.id, price);
+      onBarcodeMatch(getCurrentProduct()!.id, price);
     }, 300);
   };
   const handleFinalizeProductMatch = async (
@@ -238,11 +267,53 @@ const ReceiptItemProcessor = ({
 
   const handleConfirmProductMatch = async () => {
     // if unitpriced, show weight/volume screen
-    if (matchedProduct?.unitPricing) {
+    if (getCurrentProduct()?.unitPricing) {
       setCurrentStep(ProcessingStep.PRODUCT_UNITPRICE);
     } else {
       handleFinalizeProductMatch();
     }
+  };
+  // Helper function to get current product regardless of state type
+  const getCurrentProduct = (): Product | null => {
+    switch (productMatch.type) {
+      case "SINGLE":
+        return productMatch.product;
+      case "MULTIPLE":
+        return productMatch.products[productMatch.selectedIndex];
+      case "NONE":
+        return null;
+    }
+  };
+
+  // Update navigation for multiple products case
+  const navigateProducts = (direction: "next" | "previous") => {
+    if (productMatch.type !== "MULTIPLE") return;
+
+    const newIndex =
+      direction === "next"
+        ? (productMatch.selectedIndex + 1) % productMatch.products.length
+        : (productMatch.selectedIndex - 1 + productMatch.products.length) %
+          productMatch.products.length;
+
+    setProductMatch({
+      ...productMatch,
+      selectedIndex: newIndex,
+    });
+  };
+
+  // Handle product selection from multiple
+  const handleProductSelection = (product: Product) => {
+    setProductMatch({
+      type: "SINGLE",
+      product,
+      matchSource: "UPC_SINGLE",
+    });
+    handleConfirmProductMatch();
+  };
+
+  // Reset product match state when needed
+  const resetProductMatch = () => {
+    setProductMatch({ type: "NONE" });
   };
 
   const renderStepContent = () => {
@@ -347,62 +418,97 @@ const ReceiptItemProcessor = ({
                 </div>
               );
             case ProcessingStep.PRODUCT_CONFIRM:
-              return matchedProduct ? (
-                <div className="space-y-4">
-                  <div className="bg-stone-50 p-4 rounded-lg flex justify-between">
-                    <div>
-                      <h3 className="font-semibold mb-2">Found Product:</h3>
-                      <div className="flex gap-4">
-                        {matchedProduct.image && (
-                          <img
-                            src={matchedProduct.image}
-                            alt={matchedProduct.name}
-                            className="w-20 h-[4.5rem] object-contain bg-stone-900 rounded"
-                          />
-                        )}
+              switch (productMatch.type) {
+                case "SINGLE":
+                  return (
+                    <div className="space-y-4">
+                      <div className="bg-stone-50 p-4 rounded-lg flex justify-between">
                         <div>
-                          <p>{matchedProduct.name}</p>
-                          <p className="text-sm text-stone-600">
-                            UPC/EAN: {matchedProduct.upc}
-                          </p>
-                          <p className="text-sm text-stone-600">
-                            Quantity Sold: {matchedProduct.unitQty}{" "}
-                            {matchedProduct.unitType}
-                          </p>
+                          <h3 className="font-semibold mb-2">
+                            {productMatch.matchSource === "RECEIPT_TEXT"
+                              ? "Found Product from Receipt:"
+                              : "Found Product from UPC:"}
+                          </h3>
+                          <div className="flex gap-4">
+                            {productMatch.product.image && (
+                              <img
+                                src={productMatch.product.image}
+                                alt={productMatch.product.name}
+                                className="w-20 h-[4.5rem] object-contain bg-stone-900 rounded"
+                              />
+                            )}
+                            <div>
+                              <p>{productMatch.product.name}</p>
+                              <p className="text-sm text-stone-600">
+                                UPC/EAN: {productMatch.product.upc}
+                              </p>
+                              <p className="text-sm text-stone-600">
+                                Quantity: {productMatch.product.unitQty}{" "}
+                                {productMatch.product.unitType}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={handleConfirmProductMatch}
+                          className="self-end"
+                        >
+                          It's a Match!
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="mismatchDescription">
+                          Is this incorrect? Please describe how:
+                        </Label>
+                        <div className="flex justify-between gap-4">
+                          <Input
+                            id="mismatchDescription"
+                            value={mismatchDescription}
+                            onChange={(e) =>
+                              setMismatchDescription(e.target.value)
+                            }
+                            placeholder="Wrong Product Name, Quantity, Everything?"
+                          />
+                          <Button
+                            variant="secondary"
+                            onClick={handleProductMismatch}
+                          >
+                            Send Feedback
+                          </Button>
                         </div>
                       </div>
-                    </div>{" "}
-                    <Button
-                      onClick={handleConfirmProductMatch}
-                      className="self-end"
-                    >
-                      It's a Match!
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="mismatchDescription">
-                      Is this incorrect? Please describe how:
-                    </Label>
-                    <div className="flex justify-between gap-4">
-                      <Input
-                        id="mismatchDescription"
-                        value={mismatchDescription}
-                        onChange={(e: any) =>
-                          setMismatchDescription(e.target.value)
-                        }
-                        placeholder="Wrong Product Name, Quanitity, Everything?"
-                      />{" "}
-                      <Button
-                        variant="secondary"
-                        onClick={handleProductMismatch}
-                      >
-                        Send Feedback
-                      </Button>
                     </div>
-                  </div>
-                </div>
-              ) : null;
+                  );
 
+                case "MULTIPLE":
+                  return (
+                    <ProductSelectionCarousel
+                      products={productMatch.products}
+                      onProductSelect={handleProductSelection}
+                      onMismatchReport={(productId, description) => {
+                        const selectedProduct = productMatch.products.find(
+                          (p) => p.id === productId
+                        );
+                        if (selectedProduct) {
+                          setProductMatch({
+                            type: "SINGLE",
+                            product: selectedProduct,
+                            matchSource: "UPC_SINGLE",
+                          });
+                          setMismatchDescription(description);
+                          handleProductMismatch();
+                        }
+                      }}
+                      onAddNew={() => {
+                        resetProductMatch();
+                        setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
+                      }}
+                    />
+                  );
+
+                case "NONE":
+                  return null;
+              }
             case ProcessingStep.PRODUCT_DETAILS:
               return (
                 <div className="space-y-4">
@@ -555,7 +661,7 @@ const ReceiptItemProcessor = ({
                   <div className="grid sm:grid-cols-2 gap-4 mb-6">
                     <div className="space-y-2">
                       <Label htmlFor="unitTypeM">Unit Type</Label>
-                      <Select value={matchedProduct!.unitType!} disabled>
+                      <Select value={getCurrentProduct()!.unitType!} disabled>
                         <SelectTrigger id="unitTypeM" disabled>
                           <SelectValue />
                         </SelectTrigger>{" "}

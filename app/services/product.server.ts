@@ -6,7 +6,7 @@ import {
   requestedEdits,
 } from "~/db/schema";
 import { db } from "~/db/index";
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, like, desc } from "drizzle-orm";
 import {
   productInfoCache,
   productSearchCache,
@@ -46,35 +46,38 @@ export async function getProductById(id: string) {
   }
 }
 
-export async function getProductByUpc(upc: string) {
-  const cached: typeof products.$inferSelect | undefined =
-    await productInfoCache.get(`upc-${upc}`);
+export async function getProductsByUpc(upc: string) {
+  const cacheKey = `upc-${upc}`;
+  const cached: (typeof products.$inferSelect)[] | undefined =
+    await productInfoCache.get(cacheKey);
 
   if (cached) return cached;
-  else {
-    const result = await db
-      .select({
-        id: products.id,
-        name: products.name,
-        category: products.category,
-        latestPrice: products.latestPrice,
-        unitPricing: products.unitPricing,
-        unitQty: products.unitQty,
-        unitType: products.unitType,
-        productBrandName: products.productBrandName,
-        upc: products.upc,
-        image: products.image,
-      })
-      .from(products)
-      .where(eq(products.upc, upc))
-      .limit(1);
 
-    if (result.length > 0) {
-      await productInfoCache.set(`upc-${upc}`, result[0]);
-      return result[0];
-    }
-    return null;
+  const result = await db
+    .select({
+      id: products.id,
+      name: products.name,
+      category: products.category,
+      latestPrice: products.latestPrice,
+      unitPricing: products.unitPricing,
+      unitQty: products.unitQty,
+      unitType: products.unitType,
+      productBrandName: products.productBrandName,
+      upc: products.upc,
+      image: products.image,
+      createdAt: products.createdAt,
+    })
+    .from(products)
+    .where(eq(products.upc, upc))
+    .orderBy(desc(products.createdAt)) // Most recently created first
+    .limit(10); // Reasonable limit for UI display
+
+  if (result.length > 0) {
+    await productInfoCache.set(cacheKey, result);
+    return result;
   }
+
+  return null;
 }
 
 export async function getProductIDByReceiptText(
