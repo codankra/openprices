@@ -255,9 +255,15 @@ const ReceiptItemProcessor = ({
       price = Number((price / includedQuantity).toFixed(2));
     }
 
-    if (matchedBy === "PRI") {
+    if (
+      productMatch.type === "SINGLE" &&
+      productMatch.matchSource === "RECEIPT_TEXT"
+    ) {
       handleReceiptTextMatch(price);
-    } else if (matchedBy === "UPC") {
+    } else if (
+      productMatch.type === "SINGLE" &&
+      productMatch.matchSource === "UPC_SINGLE"
+    ) {
       handleBarcodeMatch(price);
     } else {
       //default to simpler price entry - PRI
