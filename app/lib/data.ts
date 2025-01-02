@@ -254,6 +254,14 @@ export const samplePriceData: PriceSample[] = [
     month: "Nov 2024",
     price: 609.34,
   },
+  {
+    month: "Dec 2024",
+    price: 622.995,
+  },
+  {
+    month: "Jan 2025",
+    price: 604.46,
+  },
 ];
 
 export const products: ProductPreview[] = [
