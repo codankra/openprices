@@ -1,3 +1,5 @@
+import Queue from "../structs/queue";
+
 interface ReceiptData {
   storeName: string;
   storeAddress: string;
@@ -16,18 +18,268 @@ interface Item {
   price: number;
   unitQuantity: number;
   unitPrice?: number;
-  type?: string; // F, FW, T, HQ, Q
-  confidence: number;
+  type?: string;
+  confidence?: number;
 }
 
-interface PartialItem {
-  itemNumber?: number;
-  name?: string;
-  price?: number;
+interface ParsedItem {
+  itemNumber: number;
+  name: string;
+  type?: string;
   unitQuantity?: number;
   unitPrice?: number;
-  type?: string;
 }
+
+interface ParserState {
+  itemQueue: Queue<ParsedItem>;
+  priceQueue: Queue<number>;
+  currentItem: Partial<ParsedItem> | null;
+  expectedNextItemNumber: number;
+  debug?: boolean;
+}
+
+const ITEM_TYPES = ["F", "FW", "T", "HQ", "Q", "TF"];
+
+const isPrice = (line: string): boolean => {
+  return /^-?\d+\.\d{2}(\s+Ea\.?|\s+H|\s+HQ)?$/.test(line.trim());
+};
+
+const isItemStart = (line: string): boolean => {
+  const trimmed = line.trim();
+  // Check if line starts with the expected item number
+  // OR if it's a continuation line (starts with uppercase letters) when we have a pending item
+  return /^\d+\s+\d*\s*[A-Z]/.test(trimmed) || /^[A-Z]/.test(trimmed);
+};
+
+const isStandaloneNumber = (line: string): boolean => {
+  return /^[1-9][0-9]?$/.test(line.trim());
+};
+
+const parseItemNumber = (line: string): number => {
+  // Handle standalone number case
+  if (isStandaloneNumber(line)) {
+    return parseInt(line.trim());
+  }
+  // Handle inline number case (number followed by description)
+  const match = line.match(/^(\d+)\s+/);
+  return match ? parseInt(match[1]) : 0;
+};
+
+const parsePrice = (line: string): number => {
+  const match = line.match(/-?(\d+\.\d{2})/);
+  return match ? parseFloat(match[1]) : 0;
+};
+
+const parseUnitPricing = (
+  line: string
+): { unitQuantity: number; unitPrice: number } | null => {
+  // Match patterns like "2 Ea. @ 1/1.62" or "3 Ea. @1/ 1.00"
+  const match = line.trim().match(/(\d+)\s*Ea\.\s*@\s*\d+\s*\/\s*(\d+\.?\d*)/i);
+
+  if (match) {
+    return {
+      unitQuantity: parseInt(match[1]),
+      unitPrice: parseFloat(match[2]),
+    };
+  }
+
+  return null;
+};
+
+const isUnitPricingLine = (line: string): boolean => {
+  return /\d+\s*Ea\.\s*@.*\/.*\d/.test(line.trim());
+};
+
+const parseType = (line: string): string | undefined => {
+  const trimmed = line.trim();
+  if (ITEM_TYPES.includes(trimmed)) {
+    return trimmed;
+  }
+  for (const type of ITEM_TYPES) {
+    if (trimmed.endsWith(` ${type}`)) {
+      return type;
+    }
+  }
+  return undefined;
+};
+
+const shouldStopProcessing = (line: string): boolean => {
+  const trimmed = line.trim();
+  return (
+    trimmed.includes("*****") ||
+    trimmed.includes("ITEMS PURCHASED") ||
+    /\*{5,}/.test(trimmed)
+  );
+};
+
+const shouldSkipLine = (line: string): boolean => {
+  const trimmed = line.trim();
+  const skipPatterns = [
+    /^DC\s/,
+    /Special Today/,
+    /FREE\/COUPON/,
+    /Reduced Item/,
+    /DIGITAL COUPON/,
+    /FSA Subtotal/,
+    /YOU SAVED/,
+    /OUR BRAND SAVINGS/,
+    /DEBIT/,
+    /^\s*$/,
+    /^Total Sale$/,
+    /^ITEMS PURCHASED:/,
+    /^[*]+$/,
+  ];
+  return skipPatterns.some((pattern) => pattern.test(trimmed));
+};
+
+interface CleanedItemResult {
+  name: string;
+  type?: string;
+  price?: number;
+}
+
+const cleanItemName = (name: string): CleanedItemResult => {
+  let cleanedName = name;
+  let detectedType: string | undefined;
+  let detectedPrice: number | undefined;
+  // Extract price at end if it exists
+  const priceMatch = cleanedName.match(/\s+(\d+\.\d{2})\s*$/);
+  if (priceMatch) {
+    detectedPrice = parseFloat(priceMatch[1]);
+    cleanedName = cleanedName.replace(/\s+\d+\.\d{2}\s*$/, "");
+  }
+
+  detectedType = parseType(cleanedName);
+  if (detectedType) {
+    const lastSpaceIndex = cleanedName.lastIndexOf(" ");
+    cleanedName =
+      lastSpaceIndex !== -1
+        ? cleanedName.substring(0, lastSpaceIndex)
+        : cleanedName;
+  }
+
+  return {
+    name: cleanedName.trim(),
+    type: detectedType,
+    price: detectedPrice,
+  };
+};
+
+const processLine = (state: ParserState, line: string): boolean => {
+  if (state.debug) {
+    console.log("\nProcessing line:", line);
+    console.log("Expected next item number:", state.expectedNextItemNumber);
+  }
+
+  // Skip processing termination lines
+  if (shouldStopProcessing(line)) return false;
+  if (shouldSkipLine(line)) return true;
+
+  // Handle standalone number
+  if (isStandaloneNumber(line)) {
+    const number = parseInt(line);
+    // Accept any valid item number
+    if (state.currentItem?.itemNumber && state.currentItem?.name) {
+      state.itemQueue.enqueue(state.currentItem as ParsedItem);
+    }
+    state.currentItem = { itemNumber: number, name: "" };
+    state.expectedNextItemNumber = number + 1;
+    return true;
+  }
+  if (isUnitPricingLine(line) && state.currentItem) {
+    const unitInfo = parseUnitPricing(line);
+    if (unitInfo) {
+      state.currentItem.unitQuantity = unitInfo.unitQuantity;
+      state.currentItem.unitPrice = unitInfo.unitPrice;
+    }
+    return true;
+  }
+
+  // Handle price
+  if (isPrice(line)) {
+    const price = parsePrice(line);
+    if (price !== 0) state.priceQueue.enqueue(price);
+    return true;
+  }
+
+  // Handle new item or item continuation
+  if (isItemStart(line)) {
+    const itemNumber = parseItemNumber(line);
+    const startsWithNumber = /^\d+/.test(line);
+    if (!startsWithNumber && state.currentItem?.itemNumber) {
+      // This is a continuation of a standalone number
+      const cleaned = cleanItemName(line);
+
+      if (!state.currentItem.name) state.currentItem.name = cleaned.name;
+      if (!state.currentItem.type) state.currentItem.type = cleaned.type;
+      if (cleaned.price) state.priceQueue.enqueue(cleaned.price);
+    } else if (itemNumber > 0) {
+      // Accept any valid item number
+      // New item
+      if (state.currentItem?.itemNumber && state.currentItem?.name) {
+        state.itemQueue.enqueue(state.currentItem as ParsedItem);
+      }
+
+      const cleaned = cleanItemName(line.replace(/^\d+\s+/, ""));
+      state.currentItem = {
+        itemNumber: itemNumber,
+        name: cleaned.name,
+        type: cleaned.type,
+      };
+      if (cleaned.price) state.priceQueue.enqueue(cleaned.price);
+      state.expectedNextItemNumber++;
+    }
+    return true;
+  }
+
+  return true;
+};
+
+const parseReceiptItems = (lines: string[], debug: boolean = false): Item[] => {
+  const state: ParserState = {
+    itemQueue: new Queue<ParsedItem>(100),
+    priceQueue: new Queue<number>(100),
+    currentItem: null,
+    expectedNextItemNumber: 1,
+    debug,
+  };
+
+  // Process all lines
+  for (const line of lines) {
+    const shouldContinue = processLine(state, line);
+    if (!shouldContinue) break;
+  }
+
+  // Handle last item
+  if (state.currentItem?.itemNumber && state.currentItem?.name) {
+    state.itemQueue.enqueue(state.currentItem as ParsedItem);
+    if (debug) console.log("Enqueued final item:", state.currentItem);
+  }
+
+  // Combine items and prices
+  const items: Item[] = [];
+  while (!state.itemQueue.isEmpty() && !state.priceQueue.isEmpty()) {
+    const item = state.itemQueue.dequeue();
+    const price = state.priceQueue.dequeue();
+
+    const result: Item = {
+      itemNumber: item.itemNumber,
+      name: item.name,
+      price:
+        item.unitQuantity && item.unitPrice
+          ? item.unitQuantity * item.unitPrice
+          : price,
+      unitQuantity: item.unitQuantity || 1,
+      unitPrice: item.unitPrice,
+      type: item.type,
+    };
+    result.confidence = calculateConfidence(result);
+    items.push(result);
+    if (debug) console.log("Created result item:", result);
+  }
+
+  return items;
+};
 
 export function parseHEBReceipt(
   ocrLines: string[],
@@ -36,8 +288,8 @@ export function parseHEBReceipt(
   const receiptData: ReceiptData = {
     storeName: "H-E-B",
     storeAddress: "",
-    storeNumber: extractStoreNumber(ocrLines[0]),
-    datePurchased: "",
+    storeNumber: "",
+    datePurchased: new Date().toISOString(),
     taxAmount: 0,
     totalAmount: 0,
     items: [],
@@ -50,111 +302,7 @@ export function parseHEBReceipt(
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 
-  const items: Item[] = [];
-  let currentItem: PartialItem = {};
-  let i = 1; // Start after store number line
-
-  while (i < normalizedLines.length) {
-    const line = normalizedLines[i];
-
-    // Skip lines that don't contain useful information
-    if (shouldSkipLine(line, currentItem)) {
-      i++;
-      continue;
-    }
-
-    // Case 1: Line starts with a number that could be an item number
-    const itemNumberMatch = line.match(/^(\d+)(?:\s|$)/);
-    if (itemNumberMatch) {
-      const possibleItemNumber = parseInt(itemNumberMatch[1]);
-
-      // Check if this is actually a price or quantity line
-      if (line.includes("Ea.") || line.match(/^\d+\.\d{2}$/)) {
-        // This is a price or quantity line, not an item number
-        if (currentItem.name) {
-          // Process price or quantity for current item
-          processQuantityOrPrice(line, currentItem);
-        }
-        i++;
-        continue;
-      }
-
-      // If we have a complete item, add it before starting new one
-      if (isCompleteItem(currentItem)) {
-        items.push(finalizeItem(currentItem));
-        currentItem = {};
-      }
-
-      // Start new item
-      currentItem.itemNumber = possibleItemNumber;
-
-      // Get rest of line after item number
-      const remainingContent = line.slice(itemNumberMatch[0].length).trim();
-      if (remainingContent) {
-        // Check if remaining content has a price
-        const priceMatch = remainingContent.match(
-          /(.+?)\s+(?:(F|FW|T|HQ|Q)\s+)?(\d+\.\d{2})$/
-        );
-        if (priceMatch) {
-          currentItem.name = priceMatch[1].trim();
-          currentItem.price = parseFloat(priceMatch[3]);
-          if (priceMatch[2]) {
-            currentItem.type = priceMatch[2];
-          }
-        } else {
-          currentItem.name = remainingContent;
-        }
-      }
-    }
-    // Case 2: Line is just a number (next item number)
-    else if (line.match(/^\d+$/)) {
-      const nextItemNumber = parseInt(line);
-
-      // If we have a complete item, add it
-      if (isCompleteItem(currentItem)) {
-        items.push(finalizeItem(currentItem));
-        currentItem = {};
-      }
-
-      // Start new item with just the number
-      currentItem = { itemNumber: nextItemNumber };
-
-      // Look ahead to next line for item content
-      if (i + 1 < normalizedLines.length) {
-        const nextLine = normalizedLines[i + 1];
-        if (!shouldSkipLine(nextLine) && !nextLine.match(/^\d+(?:\s|$)/)) {
-          // Next line contains item content
-          const priceMatch = nextLine.match(
-            /(.+?)\s+(?:(F|FW|T|HQ|Q)\s+)?(\d+\.\d{2})$/
-          );
-          if (priceMatch) {
-            currentItem.name = priceMatch[1].trim();
-            currentItem.price = parseFloat(priceMatch[3]);
-            if (priceMatch[2]) {
-              currentItem.type = priceMatch[2];
-            }
-          } else {
-            currentItem.name = nextLine.trim();
-          }
-          i++; // Skip next line since we've processed it
-        }
-      }
-    }
-    // Case 3: Could be a price for current item
-    else {
-      const price = extractPriceFromLine(line);
-      if (price !== null && currentItem.name && !currentItem.price) {
-        currentItem.price = price;
-      }
-    }
-
-    i++;
-  }
-  // Add final item if complete
-  if (isCompleteItem(currentItem)) {
-    items.push(finalizeItem(currentItem));
-  }
-
+  const items: Item[] = parseReceiptItems(normalizedLines);
   // Sort items by item number and validate no duplicates
   items.sort((a, b) => a.itemNumber - b.itemNumber);
   const itemNumbers = new Set<number>();
@@ -184,94 +332,6 @@ export function parseHEBReceipt(
   return receiptData;
 }
 
-function extractPriceFromLine(line: string): number | null {
-  // Generic price patterns we might find in any line
-  const patterns = [
-    // Original price in various formats
-    /(\d+\.\d{2})\s*orig/,
-    // Each price
-    /(\d+\.\d{2})\s*Ea\./,
-    // Standard price possibly followed by type indicator
-    /(\d+\.\d{2})\s*(?:(?:EA|F|HQ|T|Q)\s*)?$/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = line.match(pattern);
-    if (match) {
-      return parseFloat(match[1]);
-    }
-  }
-
-  return null;
-}
-
-function processQuantityOrPrice(line: string, item: PartialItem) {
-  const quantityMatch = line.match(/(\d+)\s*Ea\.\s*@\s*([\d.]+)/i);
-  if (quantityMatch) {
-    item.unitQuantity = parseInt(quantityMatch[1]);
-    item.unitPrice = parseFloat(quantityMatch[2]);
-  } else {
-    const price = extractPriceFromLine(line);
-    if (price !== null && !item.price) {
-      item.price = price;
-      // Extract type if present
-      const typeMatch = line.match(/\d+\.\d{2}\s*(F|FW|T|HQ|Q)/);
-      if (typeMatch) {
-        item.type = typeMatch[1];
-      }
-    }
-  }
-}
-
-function isCompleteItem(item: PartialItem): boolean {
-  return !!(item.itemNumber && item.name && item.price);
-}
-
-function finalizeItem(item: PartialItem): Item {
-  // If no price found, set to 0
-  const price = item.price || 0;
-
-  return {
-    itemNumber: item.itemNumber!,
-    name: item.name!,
-    price: price,
-    unitQuantity: item.unitQuantity || 1,
-    unitPrice: item.unitPrice || price,
-    type: item.type,
-    confidence: calculateConfidence(item as Item),
-  };
-}
-
-function shouldSkipLine(
-  line: string,
-  currentItem: PartialItem | null = null
-): boolean {
-  // If we're looking for a price for current item, check if this line has one
-  if (currentItem && currentItem.name && !currentItem.price) {
-    const price = extractPriceFromLine(line);
-    if (price !== null) {
-      return false; // Don't skip lines that might contain our price
-    }
-  }
-
-  const skipPatterns = [
-    /^DC\s/,
-    /Special Today/,
-    /FREE\/COUPON/,
-    /Reduced Item/,
-    /DIGITAL COUPON/,
-    /FSA Subtotal/,
-    /YOU SAVED/,
-    /OUR BRAND SAVINGS/,
-    /DEBIT/,
-    /^\s*$/,
-    /^Total Sale$/,
-    /^ITEMS PURCHASED:/,
-    /^[*]+$/,
-  ];
-
-  return skipPatterns.some((pattern) => pattern.test(line));
-}
 function calculateConfidence(item: Item): number {
   let confidence = 0.95;
 
@@ -293,19 +353,4 @@ function calculateConfidence(item: Item): number {
   }
 
   return Number(confidence.toFixed(2));
-}
-
-function extractAmount(line: string): number {
-  const match = line.match(/(\d+\.\d{2})/);
-  return match ? parseFloat(match[1]) : 0;
-}
-
-function extractItemCount(line: string): number {
-  const match = line.match(/ITEMS PURCHASED:\s*(\d+)/);
-  return match ? parseInt(match[1]) : 0;
-}
-
-function extractStoreNumber(line: string): string {
-  const match = line.match(/(\d{4}\s?\d{4}\s?\d{4}\s?\d{4}\s?\d{3})/);
-  return match ? match[1].replace(/\s/g, "") : "";
 }
