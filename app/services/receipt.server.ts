@@ -8,6 +8,7 @@ import {
 } from "~/db/schema";
 import { eq, and, inArray, gte } from "drizzle-orm";
 import { damerauLevenshtein } from "~/lib/utils";
+import type { ReceiptItem } from "~/lib/types";
 import { createR2URL, deleteFromR2, uploadToR2 } from "./r2.server";
 import { detectReceiptText } from "./vision.server";
 import { createJob, removeJob, emitJobUpdate } from "~/services/job.server";
@@ -142,7 +143,7 @@ interface ProcessedResults {
 }
 
 export async function processReceiptItems(
-  items: (typeof draftItems.$inferInsert)[],
+  items: ReceiptItem[],
   receiptInfo: typeof receipts.$inferInsert
 ): Promise<ProcessedResults> {
   console.log("Starting processReceiptItems");
@@ -251,6 +252,7 @@ export async function processReceiptItems(
                 maxY: item.maxY,
                 minX: item.minX,
                 minY: item.minY,
+                isVisible: item.shouldDraftItem,
               });
               results.unmatched++;
               continue;
@@ -280,6 +282,7 @@ export async function processReceiptItems(
                 maxY: item.maxY,
                 minX: item.minX,
                 minY: item.minY,
+                isVisible: true,
               });
               results.matchedUnitPriced++;
             } else {
@@ -432,17 +435,13 @@ export async function processReceiptInBackground(
     });
     statusList.push({ message: "Finalizing Results", status: "not-started" });
     updateStatus(3, "in-progress");
-    const receiptItems = parsedReceipt.items.map((item) => ({
-      receiptId: 0,
-      ...item,
-      receiptText: item.name,
-    }));
+
+    const receiptItems = parsedReceipt.items;
     const receiptInfo: typeof receipts.$inferInsert = {
       imageUrl: receiptURL,
       userId,
       ...parsedReceipt,
     };
-
     const receiptProcessingResponse = await processReceiptItems(
       receiptItems,
       receiptInfo
@@ -454,6 +453,7 @@ export async function processReceiptInBackground(
     );
 
     updateStatus(4, "in-progress");
+
     const summary =
       `Created ${receiptProcessingResponse.priceEntriesCreated} price entries, ` +
       `matched ${receiptProcessingResponse.matchedUnitPriced} unit-priced items, ` +

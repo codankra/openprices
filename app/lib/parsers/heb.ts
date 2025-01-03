@@ -20,6 +20,7 @@ interface Item {
   unitPrice?: number;
   type?: string;
   confidence?: number;
+  shouldDraftItem?: boolean;
 }
 
 interface ParsedItem {
@@ -38,10 +39,10 @@ interface ParserState {
   debug?: boolean;
 }
 
-const ITEM_TYPES = ["F", "FW", "T", "HQ", "Q", "TF"];
+const ITEM_TYPES = ["F", "FW", "W", "T", "HQ", "Q", "H", "TF"];
 
 const isPrice = (line: string): boolean => {
-  return /^-?\d+\.\d{2}(\s+Ea\.?|\s+H|\s+HQ)?$/.test(line.trim());
+  return /^-?\d+\.\d{2}(\s+H|\s+HQ|\s+Q)?$/.test(line.trim());
 };
 
 const isItemStart = (line: string): boolean => {
@@ -165,6 +166,37 @@ const cleanItemName = (name: string): CleanedItemResult => {
   };
 };
 
+function calculateConfidence(item: Item): number {
+  let confidence = 0.95;
+
+  if (item.price === 0 || item.price > 100) {
+    confidence *= 0.7;
+  }
+
+  if (item.name.length < 3 || item.name.length > 50) {
+    confidence *= 0.8;
+  }
+
+  if (item.unitPrice && item.unitQuantity) {
+    const expectedPrice = Number(
+      (item.unitPrice * item.unitQuantity).toFixed(2)
+    );
+    if (Math.abs(expectedPrice - item.price) > 0.01) {
+      confidence *= 0.7;
+    }
+  }
+
+  return Number(confidence.toFixed(2));
+}
+
+function getItemCount(lines: string[]): number {
+  const itemLine = lines.find((line) => line.startsWith("ITEMS PURCHASED:"));
+  if (!itemLine) return 0;
+
+  const match = itemLine.match(/ITEMS PURCHASED: (\d+)/);
+  return match ? parseInt(match[1]) : 0;
+}
+
 const processLine = (state: ParserState, line: string): boolean => {
   if (state.debug) {
     console.log("\nProcessing line:", line);
@@ -198,7 +230,7 @@ const processLine = (state: ParserState, line: string): boolean => {
   // Handle price
   if (isPrice(line)) {
     const price = parsePrice(line);
-    if (price !== 0) state.priceQueue.enqueue(price);
+    state.priceQueue.enqueue(price);
     return true;
   }
 
@@ -273,6 +305,7 @@ const parseReceiptItems = (lines: string[], debug: boolean = false): Item[] => {
       unitPrice: item.unitPrice,
       type: item.type,
     };
+    result.shouldDraftItem == (!!result.price && !isPrice(result.name));
     result.confidence = calculateConfidence(result);
     items.push(result);
     if (debug) console.log("Created result item:", result);
@@ -285,6 +318,11 @@ export function parseHEBReceipt(
   ocrLines: string[],
   blocks: any[]
 ): ReceiptData {
+  // Normalize lines by removing empty lines and trimming whitespace
+  const normalizedLines = ocrLines
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
   const receiptData: ReceiptData = {
     storeName: "H-E-B",
     storeAddress: "",
@@ -293,64 +331,27 @@ export function parseHEBReceipt(
     taxAmount: 0,
     totalAmount: 0,
     items: [],
-    totalItemsCount: 0,
+    totalItemsCount: getItemCount(normalizedLines),
     processingError: null,
   };
 
-  // Normalize lines by removing empty lines and trimming whitespace
-  const normalizedLines = ocrLines
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  const items: Item[] = parseReceiptItems(normalizedLines);
-  // Sort items by item number and validate no duplicates
-  items.sort((a, b) => a.itemNumber - b.itemNumber);
-  const itemNumbers = new Set<number>();
-  const uniqueItems: Item[] = [];
-
-  for (const item of items) {
-    console.log(item);
-    if (!itemNumbers.has(item.itemNumber)) {
-      itemNumbers.add(item.itemNumber);
-      uniqueItems.push(item);
-    } else {
-      receiptData.processingError = `Warning: Duplicate item number ${item.itemNumber} found`;
-    }
-  }
-
-  receiptData.items = uniqueItems;
+  receiptData.items = parseReceiptItems(normalizedLines);
 
   // Validate item count
-  const parsedItemCount = uniqueItems.length;
-  if (parsedItemCount !== receiptData.totalItemsCount) {
-    const error = `Parsed item count (${parsedItemCount}) does not match receipt total (${receiptData.totalItemsCount})`;
+  const totalQuantity = receiptData.items.reduce(
+    (sum, item) => sum + item.unitQuantity,
+    0
+  );
+
+  if (
+    receiptData.totalItemsCount &&
+    totalQuantity !== receiptData.totalItemsCount
+  ) {
+    const error = `Parsed item count (${totalQuantity}) does not match receipt total (${receiptData.totalItemsCount})`;
     receiptData.processingError = receiptData.processingError
       ? `${receiptData.processingError}; ${error}`
       : error;
   }
 
   return receiptData;
-}
-
-function calculateConfidence(item: Item): number {
-  let confidence = 0.95;
-
-  if (item.price === 0 || item.price > 100) {
-    confidence *= 0.7;
-  }
-
-  if (item.name.length < 3 || item.name.length > 50) {
-    confidence *= 0.8;
-  }
-
-  if (item.unitPrice && item.unitQuantity) {
-    const expectedPrice = Number(
-      (item.unitPrice * item.unitQuantity).toFixed(2)
-    );
-    if (Math.abs(expectedPrice - item.price) > 0.01) {
-      confidence *= 0.7;
-    }
-  }
-
-  return Number(confidence.toFixed(2));
 }

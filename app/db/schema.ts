@@ -231,6 +231,9 @@ export const draftItems = sqliteTable(
     })
       .notNull()
       .default("pending"),
+    isVisible: integer("is_visible", { mode: "boolean" })
+      .notNull()
+      .default(true),
     confidence: real("confidence"), // OCR confidence score
     notes: text("notes"), // For user annotations
     createdAt: text("created_at")

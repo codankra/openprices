@@ -18,6 +18,7 @@ interface Item {
   unitQuantity: number;
   unitPrice?: number;
   confidence: number;
+  shouldDraftItem?: boolean;
 }
 
 export function parseTraderJoesReceipt(
@@ -161,6 +162,7 @@ function parseItem(
   if (item.price === 0 || item.unitQuantity === 0) {
     item.confidence *= 0.5;
   }
+  item.shouldDraftItem == !item.name.match(/^\$\d+\.\d{2}$/);
 
   return item;
 }

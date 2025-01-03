@@ -5,6 +5,7 @@ import {
   determineReceiptLocation,
 } from "./receipt.server";
 import { receipts, UnitType } from "~/db/schema";
+import type { ReceiptItem } from "~/lib/types";
 import { parseTraderJoesReceipt } from "~/lib/parsers/tj";
 import { parseHEBReceipt } from "~/lib/parsers/heb";
 import { rateLimiter } from "./rateLimiter.service";
@@ -23,18 +24,6 @@ const SUPPORTED_MIME_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
-
-type ReceiptItem = {
-  minX?: number;
-  minY?: number;
-  maxX?: number;
-  maxY?: number;
-  name: string;
-  price: number;
-  unitQuantity: number;
-  unitPrice?: number;
-  confidence: number;
-};
 
 type ParsedReceipt = Omit<
   typeof receipts.$inferInsert,
@@ -231,7 +220,7 @@ const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
         totalAmount: tj.totalAmount,
         taxAmount: tj.taxAmount,
         status: "pending",
-        items: tj.items,
+        items: tj.items.map((item) => ({ ...item, receiptText: item.name })),
         processingErrors: tj.processingError,
       };
       return receipt;
@@ -249,7 +238,7 @@ const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
         totalAmount: heb.totalAmount,
         taxAmount: heb.taxAmount,
         status: "pending",
-        items: heb.items,
+        items: heb.items.map((item) => ({ ...item, receiptText: item.name })),
         processingErrors: heb.processingError,
       };
       return receipt;
