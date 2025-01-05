@@ -39,17 +39,22 @@ interface ParserState {
   debug?: boolean;
 }
 
-const ITEM_TYPES = ["F", "FW", "W", "T", "HQ", "Q", "H", "TF"];
+const ITEM_TYPES = ["T", "TF", "TFW", "FW", "F", "W"];
+const PRICE_TYPES = ["H", "Q", "HQ"];
 
 const isPrice = (line: string): boolean => {
-  return /^-?\d+\.\d{2}(\s+H|\s+HQ|\s+Q)?$/.test(line.trim());
+  const itemTypesPattern = ITEM_TYPES.map((type) => `${type}\\s+`).join("|");
+  const priceTypesPattern = PRICE_TYPES.map((type) => `\\s+${type}`).join("|");
+  const regex = new RegExp(
+    `^(${itemTypesPattern})?-?\\d+\\.\\d{2}(${priceTypesPattern})?$`
+  );
+  return regex.test(line.trim());
 };
 
-const isItemStart = (line: string): boolean => {
+const isItemDescriptionLine = (line: string): boolean => {
   const trimmed = line.trim();
-  // Check if line starts with the expected item number
-  // OR if it's a continuation line (starts with uppercase letters) when we have a pending item
-  return /^\d+\s+\d*\s*[A-Z]/.test(trimmed) || /^[A-Z]/.test(trimmed);
+  // If a line has capital alphabetic letters at any point, it may contain an item description
+  return /[A-Z]/.test(trimmed);
 };
 
 const isStandaloneNumber = (line: string): boolean => {
@@ -68,7 +73,12 @@ const parseItemNumber = (line: string): number => {
 
 const parsePrice = (line: string): number => {
   const match = line.match(/-?(\d+\.\d{2})/);
-  return match ? parseFloat(match[1]) : 0;
+  const price = match ? parseFloat(match[1]) : 0;
+  const isNegative = line.trim().startsWith("-");
+
+  match && console.log("detected price: ", isNegative ? -price : price);
+
+  return isNegative ? -price : price;
 };
 
 const parseUnitPricing = (
@@ -144,12 +154,13 @@ const cleanItemName = (name: string): CleanedItemResult => {
   let detectedType: string | undefined;
   let detectedPrice: number | undefined;
   // Extract price at end if it exists
-  const priceMatch = cleanedName.match(/\s+(\d+\.\d{2})\s*$/);
-  if (priceMatch) {
-    detectedPrice = parseFloat(priceMatch[1]);
-    cleanedName = cleanedName.replace(/\s+\d+\.\d{2}\s*$/, "");
+  const parts = cleanedName.trim().split(" ");
+  const lastPart = parts[parts.length - 1];
+  if (isPrice(lastPart)) {
+    detectedPrice = parsePrice(lastPart);
+    cleanedName = parts.slice(0, -1).join(" ");
   }
-
+  // Extract type at (new) end if it exists
   detectedType = parseType(cleanedName);
   if (detectedType) {
     const lastSpaceIndex = cleanedName.lastIndexOf(" ");
@@ -234,8 +245,8 @@ const processLine = (state: ParserState, line: string): boolean => {
     return true;
   }
 
-  // Handle new item or item continuation
-  if (isItemStart(line)) {
+  // If not a price, then we act as if it describes an item
+  else if (isItemDescriptionLine(line)) {
     const itemNumber = parseItemNumber(line);
     const startsWithNumber = /^\d+/.test(line);
     if (!startsWithNumber && state.currentItem?.itemNumber) {
@@ -246,8 +257,7 @@ const processLine = (state: ParserState, line: string): boolean => {
       if (!state.currentItem.type) state.currentItem.type = cleaned.type;
       if (cleaned.price) state.priceQueue.enqueue(cleaned.price);
     } else if (itemNumber > 0) {
-      // Accept any valid item number
-      // New item
+      // New item - Accept any valid item number
       if (state.currentItem?.itemNumber && state.currentItem?.name) {
         state.itemQueue.enqueue(state.currentItem as ParsedItem);
       }
@@ -305,7 +315,7 @@ const parseReceiptItems = (lines: string[], debug: boolean = false): Item[] => {
       unitPrice: item.unitPrice,
       type: item.type,
     };
-    result.shouldDraftItem == (!!result.price && !isPrice(result.name));
+    result.shouldDraftItem = result.price >= 0.01 && !isPrice(result.name);
     result.confidence = calculateConfidence(result);
     items.push(result);
     if (debug) console.log("Created result item:", result);
