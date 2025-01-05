@@ -4,11 +4,11 @@
 
 Open Prices is a crowdsourced platform for tracking real-world prices of everyday products. The goal is to provide a more accurate, transparent, and uncorruptible record of current and historical prices. Right now the focus is grocery (and soon restaurant) prices.
 
-This is a new project under early development, being built in public, to the point I'm embarrassed about being vulnerable by showing it. Check out the live site at [openpricedata.com](https://openpricedata.com) ([openpricehistory.com](https://www.openpricehistory.com) is also an option). Tell me which site name you like better in the [poll in Issues 📝](https://github.com/codankra/openprices/issues/1)
+This is a new project under early development, being built in public, to the point I feel embarrassed and vulnerable by showing it. Check out the live site at [openpricedata.com](https://openpricedata.com) ([cpipal.com](https://www.cpipal.com) is also an option). Tell me which site name you like better in the [poll in Discussions 📝](https://github.com/codankra/openprices/discussions/2)
 
 ## 🛠 Built With
 
-- [React](https://reactjs.org/) & [Remix](https://remix.run/)
+- [React](https://reactjs.org/) & [React Router](https://reactrouter.com/)
 - [TypeScript](https://www.typescriptlang.org/)
 - [LibSQL](https://github.com/libsql/libsql)
 - [AWS S3](https://aws.amazon.com/s3/) via [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/)
@@ -32,38 +32,33 @@ I try to keep things simple. This should be familiar 😇
 
    ```
    git clone https://github.com/codankra/openprices.git
-   ```
-
-2. Navigate to the project directory:
-
-   ```
    cd openprices
    ```
 
-3. Install dependencies:
+2. Install dependencies:
 
    ```
    npm install
    ```
 
-4. Start the development server:
+3. Start the development server:
 
    ```
    npm run dev
    ```
 
-5. Open your browser and visit `http://localhost:3000`
+4. Open your browser and visit `http://localhost:3000`
 
 ### Cloudflare Tunnel Setup (Optional)
 
-This project includes a `cloudflared.yml` configuration file for setting up a Cloudflare Tunnel. This is useful for testing mobile or device-specific features locally. To use it:
+This project includes a `cloudflared.yml` configuration file for setting up a Cloudflare Tunnel. This is useful for testing mobile or device-specific features in development. To use it:
 
 1. Install cloudflared CLI tool from [Cloudflare's documentation](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)
 
 2. Create a tunnel in your Cloudflare account:
 
    ```bash
-   cloudflared tunnel create my-tunnel
+   cloudflared tunnel create your-tunnel-name
    ```
 
 3. Update the `cloudflared.yml` file with your values:
@@ -84,7 +79,7 @@ The tunnel will now proxy requests from your Cloudflare hostname to your local d
 I'd love your help in making Open Price even better! If you have an awesome idea, or notice any bug or area of improvement, here's how you can contribute:
 
 1. Open a Pull Request or
-2. Feel free to reach out here, or [here](https://x.com/thedanktoday)
+2. Feel free to reach out here on GitHub, or [here](https://x.com/thedanktoday)
 
 ## 📜 License
 
