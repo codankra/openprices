@@ -224,15 +224,11 @@ const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
         processingErrors: tj.processingError,
       };
       return receipt;
-    } else if (storeName === "HEB") {
+    } else if (storeName === "H-E-B") {
       const heb = parseHEBReceipt(lines, blocks);
       let receipt: ParsedReceipt = {
-        storeBrandName: "HEB",
-        storeLocation: determineReceiptLocation(
-          "HEB",
-          heb.storeNumber,
-          heb.storeAddress
-        ),
+        storeBrandName: "H-E-B",
+        storeLocation: determineReceiptLocation("H-E-B", "", ""),
         rawOcrText: text,
         purchaseDate: heb.datePurchased,
         totalAmount: heb.totalAmount,

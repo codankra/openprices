@@ -173,7 +173,7 @@ export async function createNewReceiptItemPriceEntry(
     const productBrandsMap: Record<string, string> = {
       "Trader Joe's": "Trader Joe's",
       "Costco Wholesale": "Kirkland Signature",
-      HEB: "HEB",
+      "H-E-B": "H-E-B",
     };
     const productBrand =
       productBrandsMap[receiptInfo.storeBrandName ?? ""] || null;
