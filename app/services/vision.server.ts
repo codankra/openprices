@@ -228,7 +228,7 @@ const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
       const heb = parseHEBReceipt(lines, blocks);
       let receipt: ParsedReceipt = {
         storeBrandName: "H-E-B",
-        storeLocation: determineReceiptLocation("H-E-B", "", ""),
+        storeLocation: "H-E-B",
         rawOcrText: text,
         purchaseDate: heb.datePurchased,
         totalAmount: heb.totalAmount,

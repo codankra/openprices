@@ -45,7 +45,8 @@ export function determineReceiptLocation(
   storeAddress: string
 ) {
   // At the moment of writing, all the app expects is a descriptive string.
-  return `${storeBrandName} ${storeNumber} - ${storeAddress}`;
+  const storeAddressTemplate = storeAddress ? `- ${storeAddress}` : "";
+  return `${storeBrandName} ${storeNumber} ${storeAddressTemplate}`;
 }
 
 export async function getReceiptByID(
