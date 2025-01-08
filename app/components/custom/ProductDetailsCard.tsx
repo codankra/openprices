@@ -1,5 +1,9 @@
 import { Link } from "react-router";
-import { FaArrowRight, FaArrowTrendUp } from "react-icons/fa6";
+import {
+  FaArrowRight,
+  FaArrowTrendDown,
+  FaArrowTrendUp,
+} from "react-icons/fa6";
 import { ProductPreview } from "~/lib/data";
 
 type ProductDetailsProps = {
@@ -11,25 +15,33 @@ export default function ProductDetailsCard(props: ProductDetailsProps) {
   return (
     <div
       key={product.id}
-      className="bg-stone-100 border-black border-1 rounded-lg shadow-md overflow-hidden flex flex-col p-4 hover:shadow-xl transition-shadow transform hover:scale-105 relative"
+      className="bg-stone-100 border-black border-1 rounded-lg shadow-md overflow-hidden flex flex-col hover:shadow-xl transition-shadow transform hover:scale-105 relative"
     >
-      <div className="absolute top-2 right-2 flex items-center">
-        {product.trend === "up" && (
-          <span className="font-semibold text-ogfore flex items-center space-x-1">
-            <span>{product.trendPc && `${product.trendPc}%`}</span>
-            <FaArrowTrendUp className="text-ogfore" />
-          </span>
-        )}
-        {product.trend === "stable" && (
-          <span className="font-semibold text-black text-sm flex items-center space-x-1">
-            <span>Stable</span>
-          </span>
-        )}
-      </div>
+      {" "}
       <Link
         to={`/product/${product.id}`}
-        className="flex flex-grow items-center justify-center w-full text-inherit no-underline"
+        className="flex flex-grow items-center justify-center w-full text-inherit no-underline p-4"
       >
+        <div className="absolute top-2 right-2 flex items-center ">
+          {product.trend === "up" && (
+            <span className="font-semibold text-ogfore flex items-center space-x-1">
+              <span>{product.trendPc && `${product.trendPc}%`}</span>
+              <FaArrowTrendUp />
+            </span>
+          )}
+          {product.trend === "stable" && (
+            <span className="font-semibold text-black text-sm flex items-center space-x-1">
+              <span>Stable</span>
+            </span>
+          )}
+          {product.trend === "down" && (
+            <span className="font-semibold text-green-600 flex items-center space-x-1">
+              <span>{product.trendPc && `${product.trendPc}%`}</span>
+              <FaArrowTrendDown />
+            </span>
+          )}
+        </div>
+
         <div className="relative mt-4 mr-2 w-24 h-22 flex-shrink-0">
           <img
             src={product.prodImg}
