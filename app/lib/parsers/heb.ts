@@ -116,11 +116,7 @@ const parseType = (line: string): string | undefined => {
 
 const shouldStopProcessing = (line: string): boolean => {
   const trimmed = line.trim();
-  return (
-    trimmed.includes("*****") ||
-    trimmed.includes("ITEMS PURCHASED") ||
-    /\*{5,}/.test(trimmed)
-  );
+  return trimmed.includes("****") || trimmed.includes("ITEMS PURCHASED");
 };
 
 const shouldSkipLine = (line: string): boolean => {
@@ -139,6 +135,7 @@ const shouldSkipLine = (line: string): boolean => {
     /^Total Sale$/,
     /^ITEMS PURCHASED:/,
     /^[*]+$/,
+    /orig/,
   ];
   return skipPatterns.some((pattern) => pattern.test(trimmed));
 };
@@ -207,7 +204,32 @@ function getItemCount(lines: string[]): number {
   const match = itemLine.match(/ITEMS PURCHASED: (\d+)/);
   return match ? parseInt(match[1]) : 0;
 }
+const getTotalAmount = (lines: string[]): number => {
+  let foundTotalSale = false;
 
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Check if we found the "Total Sale" text
+    if (trimmed.includes("Total Sale")) {
+      foundTotalSale = true;
+
+      // Check if the price is on the same line
+      const priceMatch = trimmed.match(/-?(\d+\.\d{2})/);
+      if (priceMatch) {
+        return parseFloat(priceMatch[1]);
+      }
+      continue;
+    }
+
+    // If we previously found "Total Sale", look for the next price
+    if (foundTotalSale && isPrice(trimmed)) {
+      return parsePrice(trimmed);
+    }
+  }
+
+  return 0;
+};
 const processLine = (state: ParserState, line: string): boolean => {
   if (state.debug) {
     console.log("\nProcessing line:", line);
@@ -339,7 +361,7 @@ export function parseHEBReceipt(
     storeNumber: "",
     datePurchased: new Date().toISOString(),
     taxAmount: 0,
-    totalAmount: 0,
+    totalAmount: getTotalAmount(normalizedLines),
     items: [],
     totalItemsCount: getItemCount(normalizedLines),
     processingError: null,
