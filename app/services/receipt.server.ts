@@ -104,7 +104,9 @@ export async function getReceiptItemsByReceiptID(receiptId: number) {
     const draftItemsList = await db
       .select()
       .from(draftItems)
-      .where(eq(draftItems.receiptId, receiptId));
+      .where(
+        and(eq(draftItems.receiptId, receiptId), eq(draftItems.isVisible, true))
+      );
 
     return draftItemsList;
   } catch (error) {
@@ -255,7 +257,7 @@ export async function processReceiptItems(
                 minY: item.minY,
                 isVisible: item.shouldDraftItem,
               });
-              results.unmatched++;
+              if (!!item.shouldDraftItem) results.unmatched++;
               continue;
             }
 
