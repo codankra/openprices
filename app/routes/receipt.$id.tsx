@@ -142,7 +142,7 @@ const ReceiptReview = (props: ReceiptData) => {
           </div>
           <div>
             <p className="text-sm text-gray-500">Items</p>
-            <p>{receiptItems.length} items</p>
+            <p>{receiptItems.length} prices found</p>
           </div>
         </div>
         {receipt.imageUrl && (
