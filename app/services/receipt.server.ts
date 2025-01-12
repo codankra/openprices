@@ -16,6 +16,7 @@ import { createJob, removeJob, emitJobUpdate } from "~/services/job.server";
 const supportedBrands = [
   { label: "TRADER JOE'S", brandName: "Trader Joe's" },
   { label: "H-E-B", brandName: "H-E-B" },
+  { label: "Central Markst", brandName: "Central Market" },
   // { label: "Costco", brandName: "Costco Wholesale" },
 ];
 

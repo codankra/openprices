@@ -337,7 +337,8 @@ const parseReceiptItems = (lines: string[], debug: boolean = false): Item[] => {
       unitPrice: item.unitPrice,
       type: item.type,
     };
-    result.shouldDraftItem = result.price >= 0.01 && !isPrice(result.name);
+    result.shouldDraftItem =
+      result.price >= 0.01 && !isPrice(result.name) && result.name.length > 4;
     result.confidence = calculateConfidence(result);
     items.push(result);
     if (debug) console.log("Created result item:", result);

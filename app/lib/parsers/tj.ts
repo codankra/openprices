@@ -162,7 +162,8 @@ function parseItem(
   if (item.price === 0 || item.unitQuantity === 0) {
     item.confidence *= 0.5;
   }
-  item.shouldDraftItem == !item.name.match(/^\$\d+\.\d{2}$/);
+  item.shouldDraftItem == !item.name.match(/^\$\d+\.\d{2}$/) &&
+    item.name.length > 4;
 
   return item;
 }

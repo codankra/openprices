@@ -203,7 +203,10 @@ const rateLimitedExtractProductInfo = rateLimiter.wrapWithRateLimit(
 
 const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
   const lines = text.split("\n").map((line) => line.trim());
-  const storeName = determineReceiptBrand(lines[0].trim());
+  const storeName =
+    determineReceiptBrand(lines[0].trim()) ||
+    determineReceiptBrand(`${lines[0].trim()} ${lines[1]?.trim() || ""}`);
+  console.log(lines);
   if (storeName) {
     console.log("Detected Receipt from supported store ", storeName);
     if (storeName === "Trader Joe's") {
