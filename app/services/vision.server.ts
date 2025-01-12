@@ -203,13 +203,16 @@ const rateLimitedExtractProductInfo = rateLimiter.wrapWithRateLimit(
 
 const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
   const lines = text.split("\n").map((line) => line.trim());
-  const storeName =
+  const receiptBrand =
     determineReceiptBrand(lines[0].trim()) ||
     determineReceiptBrand(`${lines[0].trim()} ${lines[1]?.trim() || ""}`);
   console.log(lines);
-  if (storeName) {
-    console.log("Detected Receipt from supported store ", storeName);
-    if (storeName === "Trader Joe's") {
+  if (!!receiptBrand) {
+    console.log(
+      "Detected Receipt from supported store ",
+      receiptBrand.brandName
+    );
+    if (receiptBrand.parser === "Trader Joe's") {
       const tj = parseTraderJoesReceipt(lines, blocks);
       let receipt: ParsedReceipt = {
         storeBrandName: "Trader Joe's",
@@ -227,11 +230,11 @@ const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
         processingErrors: tj.processingError,
       };
       return receipt;
-    } else if (storeName === "H-E-B") {
-      const heb = parseHEBReceipt(lines, blocks);
+    } else if (receiptBrand.parser === "heb") {
+      const heb = parseHEBReceipt(lines, receiptBrand.brandName, blocks);
       let receipt: ParsedReceipt = {
-        storeBrandName: "H-E-B",
-        storeLocation: "H-E-B",
+        storeBrandName: receiptBrand.brandName,
+        storeLocation: heb.storeLocation,
         rawOcrText: text,
         purchaseDate: heb.datePurchased,
         totalAmount: heb.totalAmount,
@@ -245,12 +248,15 @@ const parseReceiptText = (text: string, blocks: any[]): ParsedReceipt => {
       let msg =
         "Error Determining Store: Could not determine store, or processing receipts from this store is not yet supported.";
       console.error(msg);
+      console.error("Detected Brand: ");
+      console.error(receiptBrand);
       throw new Error(msg);
     }
   } else {
     let msg =
       "Error Determining Store: Could not determine store, or processing receipts from this store is not yet supported.";
     console.error(msg);
+    console.error("First line of receipt OCR: ", lines[0], "\n");
     throw new Error(msg);
   }
 };

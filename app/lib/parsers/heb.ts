@@ -2,8 +2,7 @@ import Queue from "../structs/queue";
 
 interface ReceiptData {
   storeName: string;
-  storeAddress: string;
-  storeNumber: string;
+  storeLocation: string;
   datePurchased: string;
   taxAmount: number;
   totalAmount: number;
@@ -230,6 +229,68 @@ const getTotalAmount = (lines: string[]): number => {
 
   return 0;
 };
+
+export function findReceiptDate(lines: string[]): string {
+  // Search from bottom up for date pattern
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const match = lines[i].match(
+      /(\d{2})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})(P|A|PM|AM)?/
+    );
+    if (!match) continue;
+
+    try {
+      const [_, month, day, year, hours, minutes, period] = match;
+      let hour = parseInt(hours);
+
+      // Handle PM times
+      if (period?.toUpperCase().includes("P") && hour !== 12) {
+        hour += 12;
+      } else if (period?.toUpperCase().includes("A") && hour === 12) {
+        hour = 0;
+      }
+
+      return new Date(
+        2000 + parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        hour,
+        parseInt(minutes)
+      ).toISOString();
+    } catch (e) {
+      console.error("Error parsing date:", e);
+    }
+  }
+  // fallback: current date
+  return new Date().toISOString();
+}
+
+export function findStoreLocation(lines: string[], brandName: string): string {
+  const locatableStores = ["Central Market"];
+  if (!locatableStores.includes(brandName)) {
+    return brandName;
+  }
+
+  // First look for the store line with a number
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line = lines[i].trim();
+    if (line.includes(brandName)) {
+      const storeNumber = line.match(/\d{3,}/)?.[0];
+      if (!storeNumber) continue; // Skip if no store number on this line
+
+      let location = `${brandName} #${storeNumber}`;
+
+      // Now check next line for address
+      const nextLine = lines[i + 1].trim();
+      if (/^\d+\s+[A-Za-z]/.test(nextLine)) {
+        location += ` - ${nextLine}`;
+      }
+
+      return location;
+    }
+  }
+  return brandName;
+}
+
 const processLine = (state: ParserState, line: string): boolean => {
   if (state.debug) {
     console.log("\nProcessing line:", line);
@@ -349,6 +410,7 @@ const parseReceiptItems = (lines: string[], debug: boolean = false): Item[] => {
 
 export function parseHEBReceipt(
   ocrLines: string[],
+  brandName: string,
   blocks: any[]
 ): ReceiptData {
   // Normalize lines by removing empty lines and trimming whitespace
@@ -357,10 +419,9 @@ export function parseHEBReceipt(
     .filter((line) => line.length > 0);
 
   const receiptData: ReceiptData = {
-    storeName: "H-E-B",
-    storeAddress: "",
-    storeNumber: "",
-    datePurchased: new Date().toISOString(),
+    storeName: brandName,
+    storeLocation: findStoreLocation(ocrLines, brandName),
+    datePurchased: findReceiptDate(ocrLines),
     taxAmount: 0,
     totalAmount: getTotalAmount(normalizedLines),
     items: [],

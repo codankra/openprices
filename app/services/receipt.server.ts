@@ -13,11 +13,20 @@ import { createR2URL, deleteFromR2, uploadToR2 } from "./r2.server";
 import { detectReceiptText } from "./vision.server";
 import { createJob, removeJob, emitJobUpdate } from "~/services/job.server";
 
-const supportedBrands = [
-  { label: "TRADER JOE'S", brandName: "Trader Joe's" },
-  { label: "H-E-B", brandName: "H-E-B" },
-  { label: "Central Markst", brandName: "Central Market" },
-  // { label: "Costco", brandName: "Costco Wholesale" },
+type supportedBrandsType = {
+  label: string;
+  parser: string;
+  brandName: string;
+}[];
+
+const supportedBrands: supportedBrandsType = [
+  { label: "TRADER JOE'S", brandName: "Trader Joe's", parser: "Trader Joe's" },
+  { label: "H-E-B", brandName: "H-E-B", parser: "heb" },
+  { label: "Central Markst", brandName: "Central Market", parser: "heb" },
+  { label: "H-E-B Plus!", brandName: "H-E-B Plus!", parser: "heb" },
+  { label: "MI TIENDA", brandName: "Mi Tienda", parser: "heb" },
+  { label: "Joe V's", brandName: "Joe V's Smart Shop", parser: "heb" },
+  // { label: "Costco", brandName: "Costco Wholesale" parser: "Costco" },
 ];
 
 export function determineReceiptBrand(header: string) {
@@ -25,7 +34,7 @@ export function determineReceiptBrand(header: string) {
   let bestScore = 0.75; // 75% similarity threshold
   for (let brand of supportedBrands) {
     if (brand.label === header) {
-      bestBrand = brand.brandName;
+      bestBrand = brand;
       break;
     }
     const score =
@@ -33,7 +42,7 @@ export function determineReceiptBrand(header: string) {
       damerauLevenshtein(header.toLowerCase(), brand.label.toLowerCase()) /
         Math.max(header.length, brand.label.length);
     if (score > bestScore) {
-      bestBrand = brand.brandName;
+      bestBrand = brand;
       bestScore = score;
     }
   }
