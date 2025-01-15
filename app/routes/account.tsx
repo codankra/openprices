@@ -1,5 +1,5 @@
 import type { MetaFunction, LoaderFunctionArgs } from "react-router";
-import { Await, Form, useLoaderData } from "react-router";
+import { Await, Form, Link, useLoaderData } from "react-router";
 import { requireAuth } from "../services/auth.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import { getUserContributionsById } from "~/services/user.server";
@@ -12,6 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Receipt, Tag } from "lucide-react";
 import { priceEntries, receipts } from "~/db/schema";
+import { PiReceipt } from "react-icons/pi";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const user = await requireAuth(request);
@@ -81,9 +82,29 @@ export default function UserAccount() {
         </div>
 
         <div>
-          <div className="flex space-x-2">
-            <h2 className="text-xl font-bold">Contribution History</h2>
-            <h3 className="text-lg font-normal text-stone-500">past 30 days</h3>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+            <div className="flex space-x-2">
+              <h2 className="text-xl font-bold">Contribution History</h2>
+              <h3 className="text-lg font-normal text-stone-500">
+                past 30 days
+              </h3>
+            </div>
+            <div className="w-full sm:w-auto flex gap-2 text-sm">
+              <Link
+                to="/upload-receipt"
+                className="px-2 py-1 bg-ogfore text-white font-bold rounded hover:bg-ogfore-hover transition-colors duration-200 flex items-center gap-2"
+              >
+                <PiReceipt className="w-4 h-4" />
+                Scan Receipt
+              </Link>{" "}
+              <Link
+                to="/price-entry"
+                className="px-2 py-1 bg-ogfore text-white font-bold rounded hover:bg-ogfore-hover transition-colors duration-200 flex items-center gap-2"
+              >
+                <Tag className="w-4 h-4" />
+                Log Price
+              </Link>
+            </div>
           </div>
           <div className="flex flex-col ">
             <Suspense
@@ -150,14 +171,14 @@ export default function UserAccount() {
                   return allContributions.length > 0 ? (
                     <div className="relative space-y-8 pl-8">
                       {/* Vertical Timeline Line */}
-                      <div className="absolute left-[11px] top-4 bottom-0 w-[2px] bg-stone-200" />
+                      <div className="absolute left-[11px] top-4 bottom-0 w-[2px] bg-stone-300" />
 
                       {Object.entries(groupedContributions).map(
                         ([date, contributions], index) => (
                           <div key={date} className="relative">
                             {/* Date Header with Dot */}
                             <div className="flex items-center mb-4 -ml-8">
-                              <div className="w-6 h-6 rounded-full bg-stone-100 border-2 border-stone-300 z-10" />
+                              <div className="w-6 h-6 rounded-full bg-stone-100 border-2 border-stone-400 z-10" />
                               <h3 className="text-lg font-semibold text-stone-700 ml-2">
                                 {date}
                               </h3>
@@ -171,7 +192,7 @@ export default function UserAccount() {
                                   className="relative pl-6"
                                 >
                                   {/* Small connector line */}
-                                  <div className="absolute left-[-12px] top-1/2 w-4 h-[2px] bg-stone-200" />
+                                  <div className="absolute left-[-6px] top-1/2 w-4 h-[2px] bg-stone-300" />
 
                                   {contribution.type === "receipt" ? (
                                     <ReceiptItem receipt={contribution} />

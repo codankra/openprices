@@ -1,6 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Receipt,
   Tag,
   Calendar,
   MapPin,
@@ -9,6 +8,7 @@ import {
   CheckCircle2,
   Image,
 } from "lucide-react";
+import { PiReceipt } from "react-icons/pi";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { receipts, priceEntries } from "~/db/schema";
@@ -25,7 +25,7 @@ export const EmptyState = () => (
   <div className="flex flex-col items-center justify-center py-12 text-center">
     <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mb-4">
       <div className="relative">
-        <Receipt className="w-6 h-6 text-stone-400" />
+        <PiReceipt className="w-6 h-6 text-stone-400" />
         <Tag className="w-4 h-4 text-stone-400 absolute -bottom-1 -right-1" />
       </div>
     </div>
@@ -51,7 +51,7 @@ export const ReceiptItem = ({
           {/* Icon Column */}
           <div className="flex-shrink-0">
             <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-              <Receipt className="w-5 h-5 text-blue-600" />
+              <PiReceipt className="w-5 h-5 text-blue-600" />
             </div>
           </div>
 
@@ -76,16 +76,16 @@ export const ReceiptItem = ({
                 {receipt.status}
               </Badge>
             </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="flex items-center text-stone-600">
-                <MapPin className="w-3 h-3 mr-1" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 text-sm">
+              <div className="flex items-center text-stone-600 min-w-0">
+                <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
                 <span className="truncate">{receipt.storeLocation}</span>
               </div>
               <div className="flex items-center text-stone-600">
-                <Calendar className="w-3 h-3 mr-1" />
+                <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
                 <span>{format(new Date(receipt.purchaseDate), "MMM d")}</span>
               </div>
-              <div className="ml-auto font-medium text-stone-800">
+              <div className="sm:ml-auto font-medium text-stone-800">
                 {formatCurrency(receipt.totalAmount!)}
               </div>
             </div>
@@ -135,16 +135,16 @@ export const PriceEntryItem = ({
                 {entry.entrySource}
               </Badge>
             </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="flex items-center text-stone-600">
-                <MapPin className="w-3 h-3 mr-1" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 text-sm">
+              <div className="flex items-center text-stone-600 min-w-0">
+                <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
                 <span className="truncate">{entry.storeLocation}</span>
               </div>
               <div className="flex items-center text-stone-600">
-                <Calendar className="w-3 h-3 mr-1" />
+                <Calendar className="w-3 h-3 mr-1 flex-shrink-0" />
                 <span>{format(new Date(entry.date), "MMM d")}</span>
               </div>
-              <div className="ml-auto font-medium text-stone-800">
+              <div className="sm:ml-auto font-medium text-stone-800">
                 {formatCurrency(entry.price)}
               </div>
             </div>
