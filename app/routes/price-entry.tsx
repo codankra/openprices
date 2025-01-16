@@ -283,12 +283,12 @@ export default function NewPricePoint() {
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbPage className=" font-bold">
-                By Manual Entry&nbsp;&nbsp;
+                Entering Prices Manually&nbsp;&nbsp;
               </BreadcrumbPage>
               <span> |</span>
               <Link to={"/upload-receipt"}>
-                <BreadcrumbPage className="underline hover:bg-black/10 px-2 py-1 rounded transition-colors ml-0">
-                  By Receipt Detection{" "}
+                <BreadcrumbPage className="underline decoration-dotted underline-offset-4 hover:bg-black/10 px-2 py-1 rounded transition-colors ml-0">
+                  Use a Receipt{" "}
                 </BreadcrumbPage>
               </Link>
             </BreadcrumbItem>

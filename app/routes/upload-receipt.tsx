@@ -30,6 +30,7 @@ import {
   ReceiptProcessResultsData,
 } from "~/services/receipt.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
+import { FaExternalLinkSquareAlt } from "react-icons/fa";
 
 interface UploadState {
   preview: string | null;
@@ -43,7 +44,7 @@ interface StatusItem {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Upload Receipt to Add Prices" },
+    { title: "Receipt Price Detector" },
     {
       name: "description",
       content: "Upload the Store Receipt to Add Grocery Price History Data",
@@ -180,12 +181,12 @@ export default function UploadReceipt() {
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbPage className=" font-bold">
-                By Receipt Detection&nbsp;&nbsp;
+                Using a Receipt&nbsp;&nbsp;
               </BreadcrumbPage>
               <span> |</span>
               <Link to={"/price-entry"}>
-                <BreadcrumbPage className="underline hover:bg-black/10 px-2 py-1 rounded transition-colors ml-0">
-                  By Manual Entry
+                <BreadcrumbPage className="underline decoration-dotted underline-offset-4 hover:bg-black/10 px-2 py-1 rounded transition-colors ml-0">
+                  Enter Price Manually
                 </BreadcrumbPage>
               </Link>
             </BreadcrumbItem>
@@ -362,18 +363,25 @@ export default function UploadReceipt() {
         {(!processingStatus.length || uploadState.error) && (
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-lg font-semibold mb-4">
-              Instructions to upload a clear receipt photo:
+              Instructions to get the best receipt detection:
             </h2>
             <ul className="list-disc list-inside space-y-2 text-stone-600">
-              <li>
-                ONLY the following stores are currently supported:{" "}
-                <span className="font-bold text-[#d21242]">Trader Joe's</span>
-                {", "}
-                <span className="font-bold text-[#ee2824]">H-E-B</span>
+              <li className="flex flex-wrap gap-1">
+                The receipt must be from one of our{" "}
+                <Link
+                  to="/supported-stores"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className="text-ogfore hover:text-ogfore-hover underline decoration-dotted flex gap-1">
+                    supported stores{" "}
+                    <FaExternalLinkSquareAlt className="w-4 h-4" />
+                  </span>
+                </Link>{" "}
               </li>
-              <li>Please make sure all items and prices are visible 😊</li>
+              <li>Please make sure all items and prices are visible 🕵️</li>
               <li>Supported formats: JPEG, PNG, GIF, WebP 🖼️</li>
-              <li>Maximum file size: 3MB 🌐</li>
+              <li>Maximum image file size: 3MB 🌐</li>
             </ul>
           </div>
         )}
