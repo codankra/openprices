@@ -58,7 +58,7 @@ export default function ProductSearch() {
       </header>
 
       <main className="h-full flex-grow bg-ogprime">
-        <section className="py-8 px-6 rounded-md shadow-sm  max-w-6xl mx-auto ">
+        <section className="py-8 px-6 rounded-md max-w-6xl mx-auto ">
           <div id="search-bar" className="relative">
             <Input
               type="text"
