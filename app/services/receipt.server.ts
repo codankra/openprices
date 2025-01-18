@@ -6,7 +6,7 @@ import {
   draftItems,
   receipts,
 } from "~/db/schema";
-import { eq, and, inArray, gte } from "drizzle-orm";
+import { eq, and, inArray, gte, sql } from "drizzle-orm";
 import { damerauLevenshtein } from "~/lib/utils";
 import type { ReceiptItem } from "~/lib/types";
 import { createR2URL, deleteFromR2, uploadToR2 } from "./r2.server";
@@ -93,7 +93,18 @@ export async function getReceiptsByContributorID(
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
     const receipts_list = await db
-      .select()
+      .select({
+        id: receipts.id,
+        status: receipts.status,
+        imageUrl: receipts.imageUrl,
+        storeBrandName: receipts.storeBrandName,
+        storeLocation: receipts.storeLocation,
+        purchaseDate: receipts.purchaseDate,
+        totalAmount: receipts.totalAmount,
+        userId: receipts.userId,
+        createdAt: receipts.createdAt,
+        type: sql<string>`'receipt'`,
+      })
       .from(receipts)
       .where(
         and(

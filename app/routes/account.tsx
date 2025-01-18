@@ -9,9 +9,7 @@ import {
   PriceEntryItem,
   ReceiptItem,
 } from "~/components/custom/receipt/ContributionHistory";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Receipt, Tag } from "lucide-react";
-import { priceEntries, receipts } from "~/db/schema";
+import { Tag } from "lucide-react";
 import { PiReceipt } from "react-icons/pi";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -92,16 +90,16 @@ export default function UserAccount() {
             <div className="w-full sm:w-auto flex gap-2 text-sm">
               <Link
                 to="/upload-receipt"
-                className="px-2 py-1 bg-ogfore text-white font-bold rounded hover:bg-ogfore-hover transition-colors duration-200 flex items-center gap-2"
+                className="px-2 py-1 bg-ogfore text-white font-bold rounded hover:bg-ogfore-hover transition-colors duration-200 flex items-center gap-1"
               >
-                <PiReceipt className="w-4 h-4" />
+                + <PiReceipt className="w-4 h-4 mt-1" />
                 Scan Receipt
               </Link>{" "}
               <Link
                 to="/price-entry"
-                className="px-2 py-1 bg-ogfore text-white font-bold rounded hover:bg-ogfore-hover transition-colors duration-200 flex items-center gap-2"
+                className="px-2 py-1 bg-ogfore text-white font-bold rounded hover:bg-ogfore-hover transition-colors duration-200 flex items-center gap-1"
               >
-                <Tag className="w-4 h-4" />
+                + <Tag className="w-3 h-3 mt-1" />
                 Log Price
               </Link>
             </div>
@@ -117,29 +115,9 @@ export default function UserAccount() {
                 errorElement={<div>Error loading Contributions</div>}
               >
                 {(resolvedUserContributions) => {
-                  type ReceiptWithType = typeof receipts.$inferInsert & {
-                    type: "receipt";
-                  };
-
-                  type PriceEntryWithType = typeof priceEntries.$inferInsert & {
-                    type: "price";
-                  };
-
-                  type Contribution = ReceiptWithType | PriceEntryWithType;
-
-                  const allContributions: Contribution[] = [
-                    ...(resolvedUserContributions.userReceipts || []).map(
-                      (receipt): ReceiptWithType => ({
-                        ...receipt,
-                        type: "receipt",
-                      })
-                    ),
-                    ...(resolvedUserContributions.userPriceEntries || []).map(
-                      (entry): PriceEntryWithType => ({
-                        ...entry,
-                        type: "price",
-                      })
-                    ),
+                  const allContributions = [
+                    ...resolvedUserContributions.userReceipts,
+                    ...resolvedUserContributions.userPriceEntries,
                   ].sort((a, b) => {
                     const dateA = a.createdAt
                       ? new Date(a.createdAt)
@@ -174,7 +152,7 @@ export default function UserAccount() {
                       <div className="absolute left-[11px] top-4 bottom-0 w-[2px] bg-stone-300" />
 
                       {Object.entries(groupedContributions).map(
-                        ([date, contributions], index) => (
+                        ([date, contributions]) => (
                           <div key={date} className="relative">
                             {/* Date Header with Dot */}
                             <div className="flex items-center mb-4 -ml-8">
@@ -195,8 +173,10 @@ export default function UserAccount() {
                                   <div className="absolute left-[-6px] top-1/2 w-4 h-[2px] bg-stone-300" />
 
                                   {contribution.type === "receipt" ? (
+                                    // @ts-ignore
                                     <ReceiptItem receipt={contribution} />
                                   ) : (
+                                    // @ts-ignore
                                     <PriceEntryItem entry={contribution} />
                                   )}
                                 </div>

@@ -7,7 +7,7 @@ import {
   products,
 } from "~/db/schema";
 import { db } from "~/db/index";
-import { eq, desc, gte, and } from "drizzle-orm";
+import { eq, desc, gte, and, sql } from "drizzle-orm";
 import { priceEntriesCache } from "~/db/cache";
 import { withRetry } from "~/lib/utils";
 
@@ -71,8 +71,14 @@ export async function getPriceEntriesByContributorID(
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - days);
 
-      const cached: (typeof priceEntries.$inferSelect)[] | undefined =
-        await priceEntriesCache.get(`contributor-${id}-days-${days}`);
+      const cached:
+        | (typeof priceEntries.$inferSelect & {
+            productName: string;
+            type: "price";
+          })[]
+        | undefined = await priceEntriesCache.get(
+        `contributor-${id}-days-${days}`
+      );
       if (cached) return cached;
       else {
         const daysAgo = new Date();
@@ -89,8 +95,11 @@ export async function getPriceEntriesByContributorID(
             proof: priceEntries.proof,
             storeLocation: priceEntries.storeLocation,
             createdAt: priceEntries.createdAt,
+            productName: products.name,
+            type: sql<string>`'price'`,
           })
           .from(priceEntries)
+          .innerJoin(products, eq(priceEntries.productId, products.id))
           .where(
             and(
               eq(priceEntries.contributorId, id),

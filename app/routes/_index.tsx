@@ -65,7 +65,7 @@ export default function Index() {
           <div className="container mx-auto">
             <div className="flex flex-col lg:flex-row items-center">
               <div className="w-full lg:w-1/2 text-center lg:text-left mb-8 lg:mb-0 px-10">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl xl:text-5xl font-bold mb-6">
+                <h2 className="text-3xl  md:text-4xl xl:text-4xl font-bold mb-6">
                   How Have Prices Really Changed?
                 </h2>
                 <p className="text-lg sm:text-xl md:text-2xl text-stone-600 mb-8">
@@ -119,7 +119,7 @@ export default function Index() {
                     </AreaChart>
                   </ChartContainer>
                 </div>
-                <p className="text-center text-ogfore text-xs sm:ml-4 lg:ml-16 w-5/6 sm:w-full mx-auto">
+                <p className="text-center text-ogfore text-xs sm:ml-4 lg:ml-8 w-4/6 sm:w-full mx-auto">
                   <AnimatedText
                     hold={1500}
                     transition={500}

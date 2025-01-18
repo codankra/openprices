@@ -3,7 +3,6 @@ import {
   Tag,
   Calendar,
   MapPin,
-  DollarSign,
   AlertCircle,
   CheckCircle2,
   Image,
@@ -42,7 +41,7 @@ export const EmptyState = () => (
 export const ReceiptItem = ({
   receipt,
 }: {
-  receipt: typeof receipts.$inferInsert;
+  receipt: typeof receipts.$inferInsert & { type: "receipt" };
 }) => (
   <Link to={`/receipt/${receipt.id}`}>
     <Card className="hover:shadow-md transition-all group">
@@ -98,7 +97,10 @@ export const ReceiptItem = ({
 export const PriceEntryItem = ({
   entry,
 }: {
-  entry: typeof priceEntries.$inferInsert;
+  entry: typeof priceEntries.$inferInsert & {
+    type: "price";
+    productName: string;
+  };
 }) => {
   const navigate = useNavigate();
 
@@ -123,14 +125,18 @@ export const PriceEntryItem = ({
 
           {/* Main Content */}
           <div className="flex-grow min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-sm text-stone-500">Spotted price for</span>
-              <span className="font-medium text-stone-800">
-                Product #{entry.productId}
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-0.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm text-stone-500 flex-shrink-0">
+                  Spotted price for
+                </span>
+                <span className="font-medium text-stone-800 truncate">
+                  {entry.productName}
+                </span>
+              </div>
               <Badge
                 variant={entry.verified ? "default" : "secondary"}
-                className="ml-auto text-xs"
+                className="flex-shrink-0 text-xs self-start sm:self-auto"
               >
                 {entry.entrySource}
               </Badge>
