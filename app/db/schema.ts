@@ -47,33 +47,45 @@ export const users = sqliteTable(
   }
 );
 
-export const productBrands = sqliteTable("ProductBrands", {
-  name: text("name").primaryKey().notNull(),
-  description: text("description"),
-  isStoreOwner: integer("is_storeowner", { mode: "boolean" }),
-  headquarters: text("headquarters"),
-  website: text("website"),
-  image: text("image"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-export const storeBrands = sqliteTable("StoreBrands", {
-  name: text("name").primaryKey().notNull(),
-  description: text("description"),
-  headquarters: text("headquarters"),
-  website: text("website"),
-  image: text("image"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const productBrands = sqliteTable(
+  "ProductBrands",
+  {
+    name: text("name").primaryKey().notNull(),
+    description: text("description"),
+    isStoreOwner: integer("is_storeowner", { mode: "boolean" }).default(false),
+    headquarters: text("headquarters"),
+    website: text("website"),
+    image: text("image"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    nameIdx: index("product_brands_name_idx").on(table.name),
+  })
+);
+export const storeBrands = sqliteTable(
+  "StoreBrands",
+  {
+    name: text("name").primaryKey().notNull(),
+    description: text("description"),
+    headquarters: text("headquarters"),
+    website: text("website"),
+    image: text("image"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    nameIdx: index("store_brands_name_idx").on(table.name),
+  })
+);
 
 export const priceEntries = sqliteTable(
   "PriceEntries",

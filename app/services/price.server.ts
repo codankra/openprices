@@ -5,6 +5,7 @@ import {
   productReceiptIdentifiers,
   draftItems,
   products,
+  productBrands,
 } from "~/db/schema";
 import { db } from "~/db/index";
 import { eq, desc, gte, and, sql } from "drizzle-orm";
@@ -158,15 +159,12 @@ export async function addNewPriceEntry(
   return 0;
 }
 
-// If unitpriced, we'll need to mark the item matched, but confirm quantity before inserting the priceEntry.
-// insertMatchedUnitpricedEntry()
-
-// all other items are drafts. what I want to do is get the couple closest productReceiptIdentifiers that exist and suggest them. if the product does not exist, the user will need to create the product, and we'll then do 4 things: add the product, add the price entry, add the productReceiptIdentifier, and mark the draftItem as complete.
 export async function createNewReceiptItemPriceEntry(
   receiptInfo: typeof receipts.$inferSelect,
   createItemData: {
     receiptText: string;
     name: string;
+    productBrandName: string;
     upc: string;
     category: string;
     unitQty: number;
@@ -179,13 +177,17 @@ export async function createNewReceiptItemPriceEntry(
   draftItemId: number
 ) {
   return await db.transaction(async (tx) => {
-    const productBrandsMap: Record<string, string> = {
-      "Trader Joe's": "Trader Joe's",
-      "Costco Wholesale": "Kirkland Signature",
-      "H-E-B": "",
-    };
-    const productBrand =
-      productBrandsMap[receiptInfo.storeBrandName ?? ""] || null;
+    // Insert product brand if provided, using insertOrIgnore
+    if (createItemData.productBrandName) {
+      await tx
+        .insert(productBrands)
+        .values({
+          name: createItemData.productBrandName,
+          isStoreOwner: false,
+        })
+        .onConflictDoNothing({ target: productBrands.name });
+    }
+
     const [newProduct] = await tx
       .insert(products)
       .values({
@@ -197,7 +199,7 @@ export async function createNewReceiptItemPriceEntry(
         unitPricing: createItemData.unitPricing,
         unitQty: createItemData.unitQty,
         unitType: createItemData.unitType,
-        productBrandName: productBrand,
+        productBrandName: createItemData.productBrandName,
         image: productImageUrl,
         active: true,
       })

@@ -45,6 +45,7 @@ interface CreateItemData {
   unitPricing: boolean;
   upc: string;
   productImage?: File;
+  productBrandName: string;
 }
 interface ReceiptItemProcessorProps {
   item: DraftItem;
@@ -101,6 +102,7 @@ const ReceiptItemProcessor = ({
     unitType: UnitType.COUNT,
     pricePerUnit: item.unitPrice || item.price,
     unitPricing: false,
+    productBrandName: "",
   });
   const handleChange = <K extends keyof CreateItemData>(
     field: K,
@@ -139,6 +141,7 @@ const ReceiptItemProcessor = ({
           unitQty: data.productInfo.unitQuantity,
           unitType: data.productInfo.unitType,
           unitPricing: data.productInfo.isUnitPriced,
+          productBrandName: data.productInfo.productBrandName,
         }));
       }
     } catch (error) {
@@ -574,6 +577,20 @@ const ReceiptItemProcessor = ({
                         disabled={isProcessingImage}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="productBrandName">Brand Name</Label>
+                      <Input
+                        id="productBrandName"
+                        value={formData.productBrandName}
+                        onChange={(e) =>
+                          handleChange("productBrandName", e.target.value)
+                        }
+                        placeholder="e.g., Trader Joe's, Kraft"
+                        disabled={isProcessingImage}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="category">Category</Label>
                       <Input

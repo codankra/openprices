@@ -152,11 +152,11 @@ const rateLimitedExtractProductInfo = rateLimiter.wrapWithRateLimit(
 
 {
   "productName": string, // Full product name excluding brand (e.g., "Organic Half & Half" not "Trader Joe's Organic Half & Half")
-  "productBrandName": string, // Brand name only (e.g., "Trader Joe's")
+  "productBrandName": string, // Brand name only (e.g., "Trader Joe's", "Boar's Head", "Kraft")
   "category": string, // Specific product described in 1-3 words (e.g., "Black Beans", "Mango", "Half & Half")
   "unitType": string, // Must be one of: [${availableUnitTypeValues}].
   "unitQuantity": number, // One numerical quantity only, no units (e.g., 11.5 for 11.5oz)
-  "isUnitPriced": boolean // true if product is specifically priced by custom weight/volume (like deli items), false for all standard packaged items.
+  "isUnitPriced": boolean // true for some fresh deli meats/cheeses, bulk items, produce sold by weight, meat/seafood counter items, or any items typically price labeled by weight/volume at checkout, false for almost all other standard packaged grocery items.
 }
 `;
 
