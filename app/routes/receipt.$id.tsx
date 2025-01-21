@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import ReceiptItemProcessor from "~/components/custom/receipt/ReceiptItemProcessor";
 import { CompletedItemsList } from "~/components/custom/receipt/CompletedItemsList";
 import { IgnoredItemsList } from "~/components/custom/receipt/IgnoredItemsList";
+import MatchedItemsList from "~/components/custom/receipt/MatchedItemsList";
 
 export const meta: MetaFunction = () => {
   return [
@@ -80,6 +81,20 @@ export default function ReceiptPage() {
 
 const ReceiptReview = (props: ReceiptData) => {
   const { receipt, receiptItems } = props;
+
+  const handleIgnoreItem = async (
+    itemId: number,
+    currentStatus: typeof draftItems.$inferSelect.status
+  ) => {
+    updateItemStatus(itemId, currentStatus, "ignored");
+
+    const formData = new FormData();
+    formData.append("id", itemId.toString());
+    await fetch(`/draftItem/ignore`, {
+      method: "POST",
+      body: formData,
+    }).catch((error) => console.error("Failed to send ignore request:", error));
+  };
   const [itemsByStatus, setItemsByStatus] = useState(() => {
     const groups = {
       pending: [] as (typeof draftItems.$inferSelect)[],
@@ -172,6 +187,31 @@ const ReceiptReview = (props: ReceiptData) => {
       <ReceiptSummary />
 
       <div className="space-y-8">
+        <MatchedItemsList
+          items={itemsByStatus.matched}
+          onIgnore={handleIgnoreItem}
+          onQuantitySubmit={async (itemId: number, quantityPrice: number) => {
+            const item = itemsByStatus.matched.find((i) => i.id === itemId);
+            if (!item) return;
+
+            const formData = new FormData();
+            formData.append("productId", item.productId!.toString());
+            formData.append("draftItemId", itemId.toString());
+            formData.append("price", quantityPrice.toString());
+            formData.append("receiptId", receipt.id.toString());
+
+            try {
+              await fetch("/draftItem/verifyQuantity", {
+                method: "POST",
+                body: formData,
+              });
+              updateItemStatus(itemId, item.status, "completed");
+            } catch (error) {
+              console.error("Failed to submit quantity:", error);
+              // TODO: show error toast
+            }
+          }}
+        />
         {itemsByStatus.pending.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Pending Items</h2>
@@ -182,6 +222,7 @@ const ReceiptReview = (props: ReceiptData) => {
                 imageUrl={receipt.imageUrl}
                 storeBrand={receipt.storeBrandName}
                 onSubmit={async (createItemData) => {
+                  // New Item
                   const { productImage, ...itemData } = createItemData;
                   const formData = new FormData();
 
@@ -208,20 +249,9 @@ const ReceiptReview = (props: ReceiptData) => {
                     // TODO: show error toast
                   }
                 }}
-                onIgnore={async () => {
-                  updateItemStatus(item.id, item.status, "ignored");
-
-                  const formData = new FormData();
-                  formData.append("id", item.id.toString());
-                  await fetch(`/draftItem/ignore`, {
-                    method: "POST",
-                    body: formData,
-                  }).catch((error) =>
-                    console.error("Failed to send ignore request:", error)
-                  );
-                }}
+                onIgnore={() => handleIgnoreItem(item.id, item.status)}
                 onReceiptTextMatch={async (productId, quantityPrice) => {
-                  // if matched after fixing receipt text:
+                  // if found after fixing receipt text:
                   // just do priceEntry for productId of the right receipt text
                   const formData = new FormData();
                   formData.append("productId", productId.toString());
@@ -244,7 +274,7 @@ const ReceiptReview = (props: ReceiptData) => {
                   }
                 }}
                 onBarcodeMatch={async (productId, quantityPrice) => {
-                  // if matched after UPC found:
+                  // if found after UPC found:
                   // Link future receipt texts with this productId (and do priceEntry)
                   const formData = new FormData();
                   formData.append("productId", productId.toString());
@@ -253,7 +283,6 @@ const ReceiptReview = (props: ReceiptData) => {
                   formData.append("receiptText", item.receiptText);
                   formData.append("price", quantityPrice.toString());
 
-                  // we need to find out if it's weighted (if so, mark it matched otherwise completed && include price entry)
                   try {
                     const response = await fetch("/draftItem/barcodeMatch", {
                       method: "POST",
