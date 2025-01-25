@@ -6,7 +6,7 @@ import {
   requestedEdits,
 } from "~/db/schema";
 import { db } from "~/db/index";
-import { and, eq, like, desc } from "drizzle-orm";
+import { and, eq, like, desc, inArray } from "drizzle-orm";
 import {
   productInfoCache,
   productSearchCache,
@@ -44,6 +44,40 @@ export async function getProductById(id: string) {
     }
     return null;
   }
+}
+
+export async function getAllReceiptProducts(
+  receiptNumber: number,
+  productIds: number[]
+) {
+  const cacheKey = `receipt-${receiptNumber}`;
+  const cached: (typeof products.$inferSelect)[] | undefined =
+    await productInfoCache.get(cacheKey);
+
+  if (cached) return cached;
+
+  const result = await db
+    .select({
+      id: products.id,
+      name: products.name,
+      category: products.category,
+      latestPrice: products.latestPrice,
+      unitPricing: products.unitPricing,
+      unitQty: products.unitQty,
+      unitType: products.unitType,
+      productBrandName: products.productBrandName,
+      upc: products.upc,
+      image: products.image,
+    })
+    .from(products)
+    .where(inArray(products.id, productIds))
+    .limit(100);
+
+  if (result.length > 0) {
+    await productInfoCache.set(cacheKey, result, 1000 * 60 * 60 * 24);
+    return result;
+  }
+  return [];
 }
 
 export async function getProductsByUpc(upc: string) {

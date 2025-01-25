@@ -13,12 +13,13 @@ import {
 } from "@/components/ui/breadcrumb";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import { getReceiptDetails } from "~/services/receipt.server";
-import { draftItems, receipts } from "~/db/schema";
+import { draftItems, products, receipts } from "~/db/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import ReceiptItemProcessor from "~/components/custom/receipt/ReceiptItemProcessor";
 import { CompletedItemsList } from "~/components/custom/receipt/CompletedItemsList";
 import { IgnoredItemsList } from "~/components/custom/receipt/IgnoredItemsList";
 import MatchedItemsList from "~/components/custom/receipt/MatchedItemsList";
+import { getAllReceiptProducts } from "~/services/product.server";
 
 export const meta: MetaFunction = () => {
   return [
@@ -33,20 +34,33 @@ export const meta: MetaFunction = () => {
 type ReceiptData = {
   receipt: typeof receipts.$inferSelect;
   receiptItems: (typeof draftItems.$inferSelect)[];
+  matchedDraftProductsPromise: Promise<(typeof products.$inferInsert)[]>;
 };
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const user = await requireAuth(request, `/receipt/${params.id}`);
   // else return receipt. but first check if user is owner of the receipt. otherwise redirect to receipt upload page
-  const result = await getReceiptDetails(parseInt(params.id!), user.id);
-  if (!result) throw redirect("/upload-receipt");
+  const receiptResult = await getReceiptDetails(parseInt(params.id!), user.id);
+  if (!receiptResult) throw redirect("/upload-receipt");
   else {
-    return { receipt: result.receipt, receiptItems: result.receiptItems };
+    const matchedProductIDs = receiptResult.receiptItems
+      .filter((item) => item.status === "matched")
+      .map((item) => item.productId!);
+    const matchedDraftProductsPromise = getAllReceiptProducts(
+      parseInt(params.id!),
+      matchedProductIDs
+    );
+    return {
+      receipt: receiptResult.receipt,
+      receiptItems: receiptResult.receiptItems,
+      matchedDraftProductsPromise,
+    };
   }
 };
 
 export default function ReceiptPage() {
-  const { receipt, receiptItems } = useLoaderData<typeof loader>();
+  const { receipt, receiptItems, matchedDraftProductsPromise } =
+    useLoaderData<typeof loader>();
 
   return (
     <div className="font-sans bg-ogprime min-h-screen">
@@ -73,6 +87,7 @@ export default function ReceiptPage() {
         <ReceiptReview
           receipt={JSON.parse(JSON.stringify(receipt))}
           receiptItems={JSON.parse(JSON.stringify(receiptItems))}
+          matchedDraftProductsPromise={matchedDraftProductsPromise}
         />
       </div>
     </div>
@@ -80,7 +95,7 @@ export default function ReceiptPage() {
 }
 
 const ReceiptReview = (props: ReceiptData) => {
-  const { receipt, receiptItems } = props;
+  const { receipt, receiptItems, matchedDraftProductsPromise } = props;
 
   const handleIgnoreItem = async (
     itemId: number,
