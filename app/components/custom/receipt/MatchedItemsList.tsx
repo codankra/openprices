@@ -5,16 +5,34 @@ import { Label } from "@/components/ui/label";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { FaWeightScale } from "react-icons/fa6";
 import { draftItems, products, UnitType } from "~/db/schema";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { Await } from "react-router";
+
+const MatchedProducts = ({
+  matchedProducts,
+}: {
+  matchedProducts: (typeof products.$inferInsert)[];
+}) => {
+  return (
+    <div className="mb-4 p-4 bg-white rounded-lg shadow">
+      <h3 className="text-lg font-semibold mb-2">Matched Products Data:</h3>
+      <pre className="whitespace-pre-wrap overflow-auto max-h-48 text-sm">
+        {JSON.stringify(matchedProducts, null, 2)}
+      </pre>
+    </div>
+  );
+};
 
 const MatchedItemsList = ({
   items,
+  matchedDraftProductsPromise,
   onQuantitySubmit,
   onIgnore,
 }: {
   items: (typeof draftItems.$inferSelect & {
     product?: typeof products.$inferSelect;
   })[];
+  matchedDraftProductsPromise: Promise<(typeof products.$inferInsert)[]>;
   onQuantitySubmit: (itemId: number, quantityPrice: number) => Promise<void>;
   onIgnore: (
     itemId: number,
@@ -100,6 +118,14 @@ const MatchedItemsList = ({
           Just Enter How Much You Purchased
         </p>
       </div>
+
+      <Suspense fallback={<div>Loading matched products...</div>}>
+        <Await resolve={matchedDraftProductsPromise} errorElement="-">
+          {(matchedProducts) => (
+            <MatchedProducts matchedProducts={matchedProducts} />
+          )}
+        </Await>
+      </Suspense>
 
       {items.map((item) => (
         <Card key={item.id} className="border-ogfore-hover bg-orange-50">

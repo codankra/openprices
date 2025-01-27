@@ -204,6 +204,7 @@ const ReceiptReview = (props: ReceiptData) => {
       <div className="space-y-8">
         <MatchedItemsList
           items={itemsByStatus.matched}
+          matchedDraftProductsPromise={matchedDraftProductsPromise}
           onIgnore={handleIgnoreItem}
           onQuantitySubmit={async (itemId: number, quantityPrice: number) => {
             const item = itemsByStatus.matched.find((i) => i.id === itemId);
