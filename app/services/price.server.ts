@@ -187,7 +187,12 @@ export async function createNewReceiptItemPriceEntry(
         })
         .onConflictDoNothing({ target: productBrands.name });
     }
-
+    let itemData = { ...createItemData };
+    if (createItemData.unitPricing) {
+      itemData.pricePerUnit =
+        (1 / createItemData.unitQty) * createItemData.pricePerUnit;
+      itemData.unitQty = 1 / createItemData.unitQty;
+    }
     const [newProduct] = await tx
       .insert(products)
       .values({

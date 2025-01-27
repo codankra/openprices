@@ -4,7 +4,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   server: {
-    allowedHosts: [process.env.SITE_NAME!.replace(/^https?:\/\//, "")],
+    allowedHosts: [(process.env.SITE_NAME || "").replace(/^https?:\/\//, "")],
     port: 3000,
   },
   css: {
