@@ -106,8 +106,9 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
               placeholder="Enter barcode number"
               value={manualInput}
               onChange={(e) => setManualInput(e.target.value)}
-              className="flex-1"
+              className="flex-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               disabled={isDisabled}
+              type="number"
             />
             <Button
               onClick={handleManualInput}
