@@ -10,14 +10,14 @@ import { Await } from "react-router";
 
 const ItemCard = ({
   item,
-  matchedProducts,
+  matchedProduct,
   isExpanded,
   onToggle,
   onQuantitySubmit,
   onIgnore,
 }: {
   item: typeof draftItems.$inferSelect;
-  matchedProducts: (typeof products.$inferInsert)[];
+  matchedProduct?: typeof products.$inferInsert;
   isExpanded: boolean;
   onToggle: () => void;
   onQuantitySubmit: (itemId: number, quantityPrice: number) => Promise<void>;
@@ -29,8 +29,7 @@ const ItemCard = ({
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState(item.price);
 
-  const product = matchedProducts.find((p) => p.id === item.productId);
-  const unitType = product?.unitType as UnitType | undefined;
+  const unitType = matchedProduct?.unitType as UnitType | undefined;
 
   const handleQuantityChange = (value: string) => {
     if (value === "") {
@@ -62,10 +61,10 @@ const ItemCard = ({
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center w-8 h-8">
-            {product?.image ? (
+            {matchedProduct?.image ? (
               <img
-                src={product.image}
-                alt={product.name}
+                src={matchedProduct.image}
+                alt={matchedProduct.name}
                 className="w-full h-full object-contain"
               />
             ) : (
@@ -73,10 +72,14 @@ const ItemCard = ({
             )}
           </div>
           <div className="flex-grow">
-            <p className="font-medium">{product?.name || item.receiptText}</p>
-            <p className="text-sm text-stone-500">
-              Original Receipt Text: {item.receiptText}
+            <p className="font-medium">
+              {matchedProduct?.name || item.receiptText}
             </p>
+            {matchedProduct?.name && (
+              <p className="text-sm text-stone-500">
+                Original Receipt Text: {item.receiptText}
+              </p>
+            )}
             <p className="text-sm text-stone-500">
               Original Total: ${item.price.toFixed(2)}
             </p>
@@ -208,28 +211,48 @@ const MatchedItemsList = ({
           Just Enter How Much You Purchased
         </p>
       </div>
-
-      <Suspense fallback={<div>Loading matched products...</div>}>
-        <Await resolve={matchedDraftProductsPromise} errorElement="-">
-          {(matchedProducts) => (
-            <>
-              <div className="space-y-4">
-                {items.map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    matchedProducts={matchedProducts}
-                    isExpanded={expandedItems.has(item.id)}
-                    onToggle={() => toggleItem(item.id)}
-                    onQuantitySubmit={onQuantitySubmit}
-                    onIgnore={onIgnore}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </Await>
-      </Suspense>
+      <div className="space-y-4">
+        {items.map((item) => (
+          <Suspense
+            key={item.id}
+            fallback={
+              <ItemCard
+                item={item}
+                isExpanded={expandedItems.has(item.id)}
+                onToggle={() => toggleItem(item.id)}
+                onQuantitySubmit={onQuantitySubmit}
+                onIgnore={onIgnore}
+              />
+            }
+          >
+            <Await
+              resolve={matchedDraftProductsPromise}
+              errorElement={
+                <ItemCard
+                  item={item}
+                  isExpanded={expandedItems.has(item.id)}
+                  onToggle={() => toggleItem(item.id)}
+                  onQuantitySubmit={onQuantitySubmit}
+                  onIgnore={onIgnore}
+                />
+              }
+            >
+              {(matchedProducts) => (
+                <ItemCard
+                  item={item}
+                  matchedProduct={matchedProducts.find(
+                    (p) => p.id === item.productId
+                  )}
+                  isExpanded={expandedItems.has(item.id)}
+                  onToggle={() => toggleItem(item.id)}
+                  onQuantitySubmit={onQuantitySubmit}
+                  onIgnore={onIgnore}
+                />
+              )}
+            </Await>
+          </Suspense>
+        ))}
+      </div>{" "}
     </div>
   );
 };
