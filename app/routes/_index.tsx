@@ -66,10 +66,11 @@ export default function Index() {
             <div className="flex flex-col lg:flex-row items-center">
               <div className="w-full lg:w-1/2 text-center lg:text-left mb-8 lg:mb-0 px-10">
                 <h2 className="text-3xl  md:text-4xl xl:text-4xl font-bold mb-6">
-                  How Have Prices Really Changed?
+                  The Crowdsourced Grocery Price Index{" "}
                 </h2>
                 <p className="text-lg sm:text-xl md:text-2xl text-stone-600 mb-8">
-                  See the True Everyday Costs Reported in your Community{" "}
+                  Track fine-grained price changes of the products actually
+                  important to you{" "}
                 </p>
                 <Form
                   method="get"
