@@ -61,17 +61,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const user = await requireAuth(request, "/upload-receipt");
   const formData = await request.formData();
   const receipt = formData.get("receipt");
+  console.log(receipt);
 
   if (!(receipt instanceof File)) {
-    return data({ error: "No valid file uploaded" }, { status: 400 });
+    console.error("User tried to upload invalid receipt file - Rejected");
+    return data(
+      { error: "Please share a valid receipt image" },
+      { status: 400 }
+    );
   }
 
   if (receipt.size > 3 * 1024 * 1024) {
-    return data({ error: "File size exceeds 3MB limit" }, { status: 400 });
+    console.error("User tried to upload 3MB+ receipt image - Rejected");
+    return data({ error: "File size exceeds the 3MB limit" }, { status: 400 });
   }
 
   const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
   if (!allowedTypes.includes(receipt.type)) {
+    console.error("User tried to upload invalid receipt image type - Rejected");
     return data(
       {
         error: "Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed",
@@ -110,6 +117,13 @@ export default function UploadReceipt() {
 
   const actionData = useActionData<typeof action>();
   useEffect(() => {
+    // Handle action errors
+    if (actionData && "error" in actionData) {
+      setUploadState((prev) => ({ ...prev, error: actionData.error }));
+      return;
+    }
+
+    // Handle successful job start
     if (actionData && "jobId" in actionData) {
       const eventSource = new EventSource(`/sse/${actionData.jobId}`);
       eventSource.onmessage = (event) => {
