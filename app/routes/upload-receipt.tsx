@@ -71,9 +71,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     );
   }
 
-  if (receipt.size > 3 * 1024 * 1024) {
-    console.error("User tried to upload 3MB+ receipt image - Rejected");
-    return data({ error: "File size exceeds the 3MB limit" }, { status: 400 });
+  if (receipt.size > 5 * 1024 * 1024) {
+    console.error("User tried to upload 5MB+ receipt image - Rejected");
+    return data({ error: "File size exceeds the 5MB limit" }, { status: 400 });
   }
 
   const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -395,7 +395,7 @@ export default function UploadReceipt() {
               </li>
               <li>Please make sure all items and prices are visible 🕵️</li>
               <li>Supported formats: JPEG, PNG, GIF, WebP 🖼️</li>
-              <li>Maximum image file size: 3MB 🌐</li>
+              <li>Maximum image file size: 5MB 🌐</li>
             </ul>
           </div>
         )}

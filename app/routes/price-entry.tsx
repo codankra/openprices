@@ -154,8 +154,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const uploadFiles = async (files: File[], path: string) => {
       const urls = [];
       for (const file of files) {
-        if (file.size > 3 * 1024 * 1024) {
-          throw new Error(`File ${file.name} is too large (max 3MB)`);
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`File ${file.name} is too large (max 5MB)`);
         }
         if (
           !["image/jpeg", "image/png", "image/gif", "image/webp"].includes(
