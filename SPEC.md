@@ -1,37 +1,16 @@
 # OpenPrices Implementation Specification
-
-  
-
 This document provides a comprehensive implementation specification for the **OpenPrices** project, a crowdsourced platform designed to track real-world prices of everyday products, with an initial focus on groceries and plans to expand to restaurant prices. The goal of this spec is to make the codebase more approachable, understandable, and maintainable for developers by outlining its architecture, key modules, data flows, and development practices.
 
-  
-
 ---
-
 ## Overview
-
-  
-
 **OpenPrices** enables users to contribute price data through receipt uploads or manual price entries and provides a transparent record of current and historical prices. It leverages modern web technologies to deliver a seamless full-stack experience, integrating external services for image processing and storage, and is built with scalability and type safety in mind.
-
-  
-
 - **Live Site**: [openpricedata.com](https://openpricedata.com) or [cpipal.com](https://www.cpipal.com)
-  
 - **Repository**: [github.com/codankra/openprices](https://github.com/codankra/openprices)
-  
 - **License**: MIT (see LICENSE.md)
-  
-
 ---
 
 ## Technology Stack
-
-  
-
 The application is a full-stack React-based web app with server-side capabilities, built using the following technologies:
-
-  
 
 ### Frontend
 - **React**: Core UI framework (react, react-dom)
@@ -71,6 +50,7 @@ The application uses React Router with file-based routing and supports server-si
 
 ### Directory Structure
 
+```txt
 ├── app                    # Core application code
 │   ├── components        # React components
 │   │   ├── custom        # Custom UI components
@@ -87,6 +67,7 @@ The application uses React Router with file-based routing and supports server-si
 ├── fly.toml              # Fly.io deployment config
 ├── package.json          # Dependencies and scripts
 └── tailwind.config.ts    # Tailwind CSS configuration
+```
 
 ## Key Modules
 
