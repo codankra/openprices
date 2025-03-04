@@ -34,7 +34,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
-    "drizzle-orm": "^0.33.0",
+    "drizzle-orm": "^0.40.0",
     "isbot": "^4.1.0",
     "lucide-react": "^0.437.0",
     "react": "^18.2.0",
