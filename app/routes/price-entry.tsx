@@ -57,7 +57,14 @@ import { addNewPriceEntry } from "~/services/price.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import { PiBarcode } from "react-icons/pi";
 import { Card, CardContent } from "@/components/ui/card";
-import { X, Plus, ChevronUp, Sparkles, Camera, CheckCircle2 } from "lucide-react";
+import {
+  X,
+  Plus,
+  ChevronUp,
+  Sparkles,
+  Camera,
+  CheckCircle2,
+} from "lucide-react";
 import BarcodeScanner from "~/components/custom/product/CaptureBarcode";
 
 export const meta: MetaFunction = () => {
@@ -246,7 +253,9 @@ export default function NewPricePoint() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
   );
-  const [currentStep, setCurrentStep] = useState<ProcessingStep>(ProcessingStep.INITIAL);
+  const [currentStep, setCurrentStep] = useState<ProcessingStep>(
+    ProcessingStep.INITIAL
+  );
   const [selectedProduct, setSelectedProduct] = useState<
     typeof products.$inferInsert | null
   >(existingProduct || null);
@@ -314,7 +323,8 @@ export default function NewPricePoint() {
         `/draftItem/upc/?upc=${encodeURIComponent(upc)}`
       );
       if (response.ok) {
-        const data: { products?: (typeof products.$inferSelect)[] } = await response.json();
+        const data: { products?: (typeof products.$inferSelect)[] } =
+          await response.json();
         if (data.products?.length === 1) {
           // Single product found
           setSelectedProduct(data.products[0]);
@@ -370,7 +380,8 @@ export default function NewPricePoint() {
           unitQty: data.productInfo.unitQuantity || prev.unitQty,
           unitType: data.productInfo.unitType || prev.unitType,
           unitPricing: data.productInfo.isUnitPriced || prev.unitPricing,
-          productBrandName: data.productInfo.productBrandName || prev.productBrandName,
+          productBrandName:
+            data.productInfo.productBrandName || prev.productBrandName,
         }));
       }
     } catch (error) {
@@ -391,10 +402,11 @@ export default function NewPricePoint() {
     return (
       <div
         className={`
-          ${isTransitioning
-          ? "opacity-0"
-          : "transition-opacity duration-300 opacity-100 ease-in"
-        }`}
+          ${
+            isTransitioning
+              ? "opacity-0"
+              : "transition-opacity duration-300 opacity-100 ease-in"
+          }`}
       >
         {(() => {
           switch (currentStep) {
@@ -405,8 +417,8 @@ export default function NewPricePoint() {
                     Add a New Price
                   </h1>
                   <div className="flex flex-col space-y-4 items-center">
-                    <Button 
-                      onClick={() => setCurrentStep(ProcessingStep.BARCODE)} 
+                    <Button
+                      onClick={() => setCurrentStep(ProcessingStep.BARCODE)}
                       className="w-full sm:max-w-md flex justify-center items-center gap-2"
                     >
                       <PiBarcode className="w-5 h-5" />
@@ -429,7 +441,7 @@ export default function NewPricePoint() {
                         className="mt-2 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
                       />
                     </div>
-                    
+
                     {searchResults.length > 0 && (
                       <div className="mt-4 w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {searchResults.map((product) => (
@@ -457,7 +469,8 @@ export default function NewPricePoint() {
                                 {product.name}
                               </h3>
                               <p className="text-sm text-stone-600 truncate">
-                                ${product.latestPrice?.toFixed(2)} • {product.category}
+                                ${product.latestPrice?.toFixed(2)} •{" "}
+                                {product.category}
                               </p>
                             </div>
                           </div>
@@ -512,7 +525,9 @@ export default function NewPricePoint() {
                         </div>
                       )}
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{selectedProduct.name}</h3>
+                        <h3 className="font-semibold text-lg">
+                          {selectedProduct.name}
+                        </h3>
                         <p className="text-sm text-stone-600">
                           UPC: {selectedProduct.upc}
                         </p>
@@ -540,9 +555,9 @@ export default function NewPricePoint() {
                       onClick={() => {
                         setCurrentStep(ProcessingStep.PRICE_DETAILS);
                         if (selectedProduct.latestPrice) {
-                          setFormData(prev => ({
+                          setFormData((prev) => ({
                             ...prev,
-                            pricePerUnit: selectedProduct.latestPrice || 0
+                            pricePerUnit: selectedProduct.latestPrice || 0,
                           }));
                         }
                       }}
@@ -561,7 +576,7 @@ export default function NewPricePoint() {
                   <h1 className="text-xl font-bold text-center">
                     New Product Details
                   </h1>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Label htmlFor="productImage">
@@ -601,7 +616,7 @@ export default function NewPricePoint() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="upc">UPC/Barcode</Label>
@@ -613,7 +628,7 @@ export default function NewPricePoint() {
                         disabled={isProcessingImage}
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="name">Product Name</Label>
                       <Input
@@ -623,7 +638,7 @@ export default function NewPricePoint() {
                         disabled={isProcessingImage}
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="productBrandName">Brand Name</Label>
                       <div className="mt-1">
@@ -633,7 +648,7 @@ export default function NewPricePoint() {
                               type="text"
                               id="productBrandName"
                               value={formData.productBrandName}
-                              onChange={(e) => 
+                              onChange={(e) =>
                                 handleChange("productBrandName", e.target.value)
                               }
                               className="mt-1 w-full"
@@ -647,18 +662,21 @@ export default function NewPricePoint() {
                                 type="text"
                                 id="productBrandName"
                                 value={formData.productBrandName}
-                                onChange={(e) => 
-                                  handleChange("productBrandName", e.target.value)
+                                onChange={(e) =>
+                                  handleChange(
+                                    "productBrandName",
+                                    e.target.value
+                                  )
                                 }
                                 className="mt-1 w-full"
                               />
                             }
                           >
                             {(resolvedProductBrandsList) => (
-                              <Select 
+                              <Select
                                 name="productBrandName"
                                 value={formData.productBrandName}
-                                onValueChange={(value) => 
+                                onValueChange={(value) =>
                                   handleChange("productBrandName", value)
                                 }
                               >
@@ -670,7 +688,10 @@ export default function NewPricePoint() {
                                     <b>**</b>Other Brand (Not Listed)<b>**</b>
                                   </SelectItem>
                                   {resolvedProductBrandsList.map((brand) => (
-                                    <SelectItem key={brand.name} value={brand.name}>
+                                    <SelectItem
+                                      key={brand.name}
+                                      value={brand.name}
+                                    >
                                       {brand.name}
                                     </SelectItem>
                                   ))}
@@ -681,25 +702,27 @@ export default function NewPricePoint() {
                         </Suspense>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="category">Category</Label>
                       <Input
                         id="category"
                         value={formData.category}
-                        onChange={(e) => handleChange("category", e.target.value)}
+                        onChange={(e) =>
+                          handleChange("category", e.target.value)
+                        }
                         placeholder="What is the core item? (1-2 words)"
                         disabled={isProcessingImage}
                       />
                     </div>
                   </div>
-                  
+
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="unitType">Unit Type</Label>
-                      <Select 
+                      <Select
                         value={formData.unitType}
-                        onValueChange={(value) => 
+                        onValueChange={(value) =>
                           handleChange("unitType", value as UnitType)
                         }
                         disabled={isProcessingImage}
@@ -718,14 +741,14 @@ export default function NewPricePoint() {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="unitQty">Quantity of Unit</Label>
                       <Input
                         id="unitQty"
                         type="number"
                         value={formData.unitQty}
-                        onChange={(e) => 
+                        onChange={(e) =>
                           handleChange("unitQty", Number(e.target.value))
                         }
                         min="0"
@@ -734,7 +757,7 @@ export default function NewPricePoint() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="unitPricing"
@@ -746,7 +769,7 @@ export default function NewPricePoint() {
                     />
                     <Label htmlFor="unitPricing">Priced by Weight/Volume</Label>
                   </div>
-                  
+
                   <div className="pt-2 flex justify-between">
                     <Button
                       variant="outline"
@@ -756,7 +779,9 @@ export default function NewPricePoint() {
                       Back
                     </Button>
                     <Button
-                      onClick={() => setCurrentStep(ProcessingStep.PRICE_DETAILS)}
+                      onClick={() =>
+                        setCurrentStep(ProcessingStep.PRICE_DETAILS)
+                      }
                       disabled={isProcessingImage || !formData.name}
                     >
                       Continue to Price Entry
@@ -775,10 +800,14 @@ export default function NewPricePoint() {
                   <h1 className="text-xl font-bold text-center">
                     Price Details
                   </h1>
-                  
+
                   {selectedProduct ? (
                     <>
-                      <input type="hidden" name="productId" value={selectedProduct.id} />
+                      <input
+                        type="hidden"
+                        name="productId"
+                        value={selectedProduct.id}
+                      />
                       <div className="bg-stone-50 p-3 rounded-lg flex items-center gap-3">
                         {selectedProduct.image ? (
                           <img
@@ -792,9 +821,12 @@ export default function NewPricePoint() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold truncate">{selectedProduct.name}</h3>
+                          <h3 className="font-semibold truncate">
+                            {selectedProduct.name}
+                          </h3>
                           <p className="text-sm text-stone-600 truncate">
-                            {selectedProduct.category} • {selectedProduct.unitQty} {selectedProduct.unitType}
+                            {selectedProduct.category} •{" "}
+                            {selectedProduct.unitQty} {selectedProduct.unitType}
                           </p>
                         </div>
                         <Button
@@ -812,12 +844,32 @@ export default function NewPricePoint() {
                     <>
                       <input type="hidden" name="name" value={formData.name} />
                       <input type="hidden" name="upc" value={formData.upc} />
-                      <input type="hidden" name="unitQty" value={formData.unitQty} />
-                      <input type="hidden" name="unitType" value={formData.unitType} />
-                      <input type="hidden" name="unitPricing" value={formData.unitPricing ? "on" : ""} />
-                      <input type="hidden" name="category" value={formData.category} />
-                      <input type="hidden" name="productBrandName" value={formData.productBrandName} />
-                      
+                      <input
+                        type="hidden"
+                        name="unitQty"
+                        value={formData.unitQty}
+                      />
+                      <input
+                        type="hidden"
+                        name="unitType"
+                        value={formData.unitType}
+                      />
+                      <input
+                        type="hidden"
+                        name="unitPricing"
+                        value={formData.unitPricing ? "on" : ""}
+                      />
+                      <input
+                        type="hidden"
+                        name="category"
+                        value={formData.category}
+                      />
+                      <input
+                        type="hidden"
+                        name="productBrandName"
+                        value={formData.productBrandName}
+                      />
+
                       {formData.productImage && (
                         <div className="hidden">
                           <input
@@ -828,7 +880,7 @@ export default function NewPricePoint() {
                           />
                         </div>
                       )}
-                      
+
                       <div className="bg-stone-50 p-3 rounded-lg flex items-center gap-3">
                         {formData.productImage ? (
                           <img
@@ -842,16 +894,21 @@ export default function NewPricePoint() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold truncate">{formData.name}</h3>
+                          <h3 className="font-semibold truncate">
+                            {formData.name}
+                          </h3>
                           <p className="text-sm text-stone-600 truncate">
-                            {formData.category} • {formData.unitQty} {formData.unitType}
+                            {formData.category} • {formData.unitQty}{" "}
+                            {formData.unitType}
                           </p>
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           type="button"
-                          onClick={() => setCurrentStep(ProcessingStep.PRODUCT_DETAILS)}
+                          onClick={() =>
+                            setCurrentStep(ProcessingStep.PRODUCT_DETAILS)
+                          }
                           className="text-stone-500"
                         >
                           <X className="w-4 h-4" />
@@ -859,7 +916,7 @@ export default function NewPricePoint() {
                       </div>
                     </>
                   )}
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="price" className="font-semibold">
@@ -873,21 +930,23 @@ export default function NewPricePoint() {
                         min="0"
                         placeholder="0.00"
                         value={formData.pricePerUnit || ""}
-                        onChange={(e) => handleChange("pricePerUnit", Number(e.target.value))}
+                        onChange={(e) =>
+                          handleChange("pricePerUnit", Number(e.target.value))
+                        }
                         required
                         className="w-full"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label
-                        htmlFor="datepickerPE"
-                        className="font-semibold"
-                      >
+                      <Label htmlFor="datepickerPE" className="font-semibold">
                         Date of Purchase
                       </Label>
                       <div id="datepickerPE" className="w-full">
-                        <DatePicker date={selectedDate} setDate={setSelectedDate} />
+                        <DatePicker
+                          date={selectedDate}
+                          setDate={setSelectedDate}
+                        />
                       </div>
                       <input
                         type="hidden"
@@ -895,12 +954,9 @@ export default function NewPricePoint() {
                         value={selectedDate?.toISOString()}
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label
-                        htmlFor="storeLocation"
-                        className="font-semibold"
-                      >
+                      <Label htmlFor="storeLocation" className="font-semibold">
                         Store Location
                       </Label>
                       <Input
@@ -909,13 +965,18 @@ export default function NewPricePoint() {
                         name="storeLocation"
                         placeholder="Store Name and City/State"
                         value={formData.storeLocation}
-                        onChange={(e) => handleChange("storeLocation", e.target.value)}
+                        onChange={(e) =>
+                          handleChange("storeLocation", e.target.value)
+                        }
                         className="w-full"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="proof" className="font-semibold flex items-center gap-1">
+                      <Label
+                        htmlFor="proof"
+                        className="font-semibold flex items-center gap-1"
+                      >
                         <span>Image Proof (Optional) </span>
                         <TooltipProvider>
                           <Tooltip>
@@ -924,7 +985,8 @@ export default function NewPricePoint() {
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>
-                                Verifying your price entry adds a verification badge!
+                                Verifying your price entry adds a verification
+                                badge!
                               </p>
                             </TooltipContent>
                           </Tooltip>
@@ -940,7 +1002,7 @@ export default function NewPricePoint() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="pt-4 flex justify-between space-x-3">
                     <Button
                       type="button"
@@ -958,7 +1020,10 @@ export default function NewPricePoint() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={navigation.state === "submitting" || !formData.pricePerUnit}
+                      disabled={
+                        navigation.state === "submitting" ||
+                        !formData.pricePerUnit
+                      }
                       className="flex-1 bg-ogfore hover:bg-ogfore-hover"
                     >
                       {navigation.state === "submitting"
@@ -1012,9 +1077,7 @@ export default function NewPricePoint() {
         </Breadcrumb>
 
         <Card className="mb-4 shadow-md">
-          <CardContent className="p-6">
-            {renderStepContent()}
-          </CardContent>
+          <CardContent className="p-6">{renderStepContent()}</CardContent>
         </Card>
 
         {actionData && "errors" in actionData && (
@@ -1043,3 +1106,4 @@ export default function NewPricePoint() {
     </div>
   );
 }
+

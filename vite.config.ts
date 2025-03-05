@@ -13,4 +13,7 @@ export default defineConfig({
     },
   },
   plugins: [reactRouter(), tsconfigPaths()],
+  ssr: {
+    noExternal: ["react-router", "@react-router/node", "@react-router/dev"],
+  },
 });
