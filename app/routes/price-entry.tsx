@@ -238,6 +238,7 @@ enum ProcessingStep {
   PRODUCT_DETAILS = "product_details",
   PRICE_DETAILS = "price_details",
   CONTRIBUTOR_THANKS = "contributor_thanks",
+  WRONG_PRODUCT = "wrong_product",
 }
 
 export default function NewPricePoint() {
@@ -274,6 +275,7 @@ export default function NewPricePoint() {
     storeLocation: "",
     productBrandName: "",
     productImage: undefined as File | undefined,
+    editNotes: "",
   });
 
   useEffect(() => {
@@ -398,6 +400,32 @@ export default function NewPricePoint() {
     clearSearch();
   };
 
+  const handleEditRequest = async () => {
+    if (!selectedProduct?.upc || !formData.editNotes) {
+      return;
+    }
+
+    try {
+      const formDataObj = new FormData();
+      formDataObj.append("upc", selectedProduct.upc);
+      formDataObj.append("editNotes", formData.editNotes);
+      formDataObj.append("editType", "price-entry-mismatch");
+
+      const response = await fetch("/draftItem/editRequest", {
+        method: "POST",
+        body: formDataObj,
+      });
+
+      if (response.ok) {
+        resetForm();
+      } else {
+        console.error("Failed to submit edit request");
+      }
+    } catch (error) {
+      console.error("Error submitting edit request:", error);
+    }
+  };
+
   const renderStepContent = () => {
     return (
       <div
@@ -417,20 +445,24 @@ export default function NewPricePoint() {
                     Add a New Price
                   </h1>
                   <div className="flex flex-col space-y-4 items-center">
+                    <Label htmlFor="barcodeSearch" className="text-stone-600 ">
+                      Scan a Barcode to Find or Create a Product
+                    </Label>
+
                     <Button
+                      id="barcodeSearch"
                       onClick={() => setCurrentStep(ProcessingStep.BARCODE)}
                       className="w-full sm:max-w-md flex justify-center items-center gap-2"
                     >
                       <PiBarcode className="w-5 h-5" />
-                      Scan Product Barcode
+                      Scan or Enter Product Barcode
                     </Button>
-                    <p className="text-stone-600">OR</p>
-                    <div className="w-full sm:max-w-md">
-                      <Label
-                        htmlFor="productSearch"
-                        className="text-stone-700 font-semibold"
-                      >
-                        Search for Product
+                    <p className="text-stone-600">
+                      -{"  "}OR{"  "}-
+                    </p>
+                    <div className="w-full sm:max-w-md flex flex-col items-center">
+                      <Label htmlFor="productSearch" className="text-stone-600">
+                        Search Product Database
                       </Label>
                       <Input
                         type="text"
@@ -483,18 +515,23 @@ export default function NewPricePoint() {
 
             case ProcessingStep.BARCODE:
               return (
-                <div className="space-y-4">
-                  <h1 className="text-xl font-bold text-center">
-                    Scan Barcode
+                <div>
+                  <h1 className="text-xl font-bold text-center mb-2 flex items-center justify-center">
+                    <PiBarcode className="w-5 h-5 mr-2" />
+                    Scan Product Barcode
                   </h1>
-                  <div className="mb-4">
+                  <p className="text-center text-sm text-stone-600 mb-4">
+                    We'll look for this product or help you create a new one if
+                    it doesn't exist
+                  </p>
+                  <div className="mb-10">
                     <BarcodeScanner
                       onBarcodeDetected={handleBarcodeDetected}
                       shouldDisable={isScanning}
                     />
                   </div>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     onClick={() => setCurrentStep(ProcessingStep.INITIAL)}
                     disabled={isScanning}
                     className="w-full"
@@ -545,7 +582,9 @@ export default function NewPricePoint() {
                   <div className="flex gap-3">
                     <Button
                       variant="outline"
-                      onClick={resetForm}
+                      onClick={() =>
+                        setCurrentStep(ProcessingStep.WRONG_PRODUCT)
+                      }
                       className="flex-1"
                     >
                       <X className="w-4 h-4 mr-2" />
@@ -573,9 +612,14 @@ export default function NewPricePoint() {
             case ProcessingStep.PRODUCT_DETAILS:
               return (
                 <div className="space-y-5">
-                  <h1 className="text-xl font-bold text-center">
-                    New Product Details
-                  </h1>
+                  <div>
+                    <h1 className="text-xl font-bold text-center">
+                      New Product Details
+                    </h1>
+                    <h2 className="text-sm text-stone-600 text-center">
+                      Barcode: {formData.upc}
+                    </h2>
+                  </div>
 
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -1034,6 +1078,76 @@ export default function NewPricePoint() {
                 </Form>
               );
 
+            case ProcessingStep.WRONG_PRODUCT:
+              if (!selectedProduct) return null;
+              return (
+                <div className="space-y-5">
+                  <h1 className="text-xl font-bold text-center">
+                    Report Wrong Product Match
+                  </h1>
+                  <div className="bg-stone-50 p-4 rounded-lg">
+                    <div className="flex gap-4 items-center">
+                      {selectedProduct.image ? (
+                        <img
+                          src={selectedProduct.image}
+                          alt={selectedProduct.name}
+                          className="w-24 h-24 object-contain bg-stone-900 rounded"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-stone-200 rounded flex items-center justify-center text-stone-400">
+                          No Image
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">
+                          {selectedProduct.name}
+                        </h3>
+                        <p className="text-sm text-stone-600">
+                          UPC: {selectedProduct.upc}
+                        </p>
+                        <p className="text-sm text-stone-600">
+                          {selectedProduct.unitQty} {selectedProduct.unitType}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="editNotes">
+                      What's wrong with this match?
+                    </Label>
+                    <textarea
+                      id="editNotes"
+                      className="w-full h-32 p-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-500"
+                      placeholder="Please describe what's wrong with this match (e.g., wrong product name, wrong brand, wrong size, etc.)"
+                      value={formData.editNotes}
+                      onChange={(e) =>
+                        handleChange("editNotes", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setCurrentStep(ProcessingStep.PRODUCT_CONFIRM)
+                      }
+                      className="flex-1"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleEditRequest}
+                      className="flex-1"
+                      disabled={!formData.editNotes}
+                    >
+                      Submit Report
+                    </Button>
+                  </div>
+                </div>
+              );
+
             case ProcessingStep.CONTRIBUTOR_THANKS:
               return (
                 <div className="bg-green-100 transition-opacity ease-out duration-1000 py-20 px-4 text-center rounded opacity-0 animate-[fadeIn_0.5s_ease-out_forwards,fadeOut_0.5s_ease-out_1s_forwards]">
@@ -1106,4 +1220,3 @@ export default function NewPricePoint() {
     </div>
   );
 }
-

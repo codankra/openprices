@@ -14,10 +14,13 @@ export async function action({ request }: ActionFunctionArgs) {
     );
 
   const formData = await request.formData();
-  const draftItemId = Number(formData.get("draftItemId"));
+  const draftItemId = Number(formData.get("draftItemId") || 0);
   const upc = formData.get("upc")?.toString();
   const editNotes = formData.get("editNotes")?.toString();
-  if (isNaN(draftItemId) || !editNotes || !upc) {
+  const editType = formData.get("editType")?.toString() || "receipt-mismatch";
+  
+  // Allow requests from price-entry flow without draftItemId
+  if ((draftItemId === 0 && editType !== "price-entry-mismatch") || !editNotes || !upc) {
     return Response.json(
       data({
         success: false,
@@ -30,9 +33,13 @@ export async function action({ request }: ActionFunctionArgs) {
   const createdEditRequest = await requestProductEdit(
     upc,
     editNotes,
-    "receipt-mismatch"
+    editType
   );
-  completeProductDraftItem(draftItemId);
+  
+  // Only update draft item if it's from receipt flow
+  if (draftItemId !== 0) {
+    await completeProductDraftItem(draftItemId);
+  }
 
   return Response.json(
     data({
