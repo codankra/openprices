@@ -51,12 +51,21 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-
 import { FaCircleInfo } from "react-icons/fa6";
 import { uploadToR2 } from "~/services/r2.server";
 import { addNewPriceEntry } from "~/services/price.server";
 import HeaderLinks from "~/components/custom/HeaderLinks";
 import { PiBarcode } from "react-icons/pi";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  X,
+  Plus,
+  ChevronUp,
+  Sparkles,
+  Camera,
+  CheckCircle2,
+} from "lucide-react";
+import BarcodeScanner from "~/components/custom/product/CaptureBarcode";
 
 export const meta: MetaFunction = () => {
   return [
@@ -221,6 +230,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
+// Enum for our different form steps
+enum ProcessingStep {
+  INITIAL = "initial",
+  BARCODE = "barcode",
+  PRODUCT_CONFIRM = "product_confirm",
+  PRODUCT_DETAILS = "product_details",
+  PRICE_DETAILS = "price_details",
+  CONTRIBUTOR_THANKS = "contributor_thanks",
+  WRONG_PRODUCT = "wrong_product",
+}
+
 export default function NewPricePoint() {
   const {
     searchResults,
@@ -234,15 +254,37 @@ export default function NewPricePoint() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
   );
-  const [isNewProduct, setIsNewProduct] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [currentStep, setCurrentStep] = useState<ProcessingStep>(
+    ProcessingStep.INITIAL
+  );
   const [selectedProduct, setSelectedProduct] = useState<
     typeof products.$inferInsert | null
   >(existingProduct || null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [formData, setFormData] = useState({
+    upc: "",
+    name: "",
+    category: "",
+    unitQty: 1,
+    unitType: UnitType.COUNT,
+    unitPricing: false,
+    pricePerUnit: 0,
+    storeLocation: "",
+    productBrandName: "",
+    productImage: undefined as File | undefined,
+    editNotes: "",
+  });
+
   useEffect(() => {
     // Only set on initial load
-    setSelectedProduct(existingProduct);
-  }, []);
+    if (existingProduct) {
+      setSelectedProduct(existingProduct);
+      setCurrentStep(ProcessingStep.PRICE_DETAILS);
+    }
+  }, [existingProduct]);
 
   const clearSearch = useCallback(() => {
     setSearchTerm("");
@@ -267,11 +309,864 @@ export default function NewPricePoint() {
     }
   };
 
+  const handleChange = <K extends keyof typeof formData>(
+    field: K,
+    value: (typeof formData)[K]
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleBarcodeDetected = async (upc: string) => {
+    setIsScanning(true);
+    handleChange("upc", upc);
+
+    try {
+      const response = await fetch(
+        `/draftItem/upc/?upc=${encodeURIComponent(upc)}`
+      );
+      if (response.ok) {
+        const data: { products?: (typeof products.$inferSelect)[] } =
+          await response.json();
+        if (data.products?.length === 1) {
+          // Single product found
+          setSelectedProduct(data.products[0]);
+          setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
+        } else if (data.products && data.products.length > 1) {
+          // Multiple products found (not handling in this simplified version)
+          setSelectedProduct(data.products[0]);
+          setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
+        } else {
+          // No products found, go to product details entry
+          setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
+        }
+      } else {
+        console.log("Request for UPC returned status ", response.status);
+        setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
+      }
+    } catch (error) {
+      console.error("Failed to check product:", error);
+      setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingImage(true);
+    try {
+      handleChange("productImage", file);
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch("/vision/parseProductImage", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to process image");
+      }
+
+      const data = await response.json();
+
+      if (data.productInfo) {
+        // Auto-fill the form with the extracted information
+        setFormData((prev) => ({
+          ...prev,
+          name: data.productInfo.productName || prev.name,
+          category: data.productInfo.category || prev.category,
+          unitQty: data.productInfo.unitQuantity || prev.unitQty,
+          unitType: data.productInfo.unitType || prev.unitType,
+          unitPricing: data.productInfo.isUnitPriced || prev.unitPricing,
+          productBrandName:
+            data.productInfo.productBrandName || prev.productBrandName,
+        }));
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
+  const resetForm = () => {
+    setSelectedProduct(null);
+    setSearchTerm("");
+    setCurrentStep(ProcessingStep.INITIAL);
+    clearSearch();
+  };
+
+  const handleEditRequest = async () => {
+    if (!selectedProduct?.upc || !formData.editNotes) {
+      return;
+    }
+
+    try {
+      const formDataObj = new FormData();
+      formDataObj.append("upc", selectedProduct.upc);
+      formDataObj.append("editNotes", formData.editNotes);
+      formDataObj.append("editType", "price-entry-mismatch");
+
+      const response = await fetch("/draftItem/editRequest", {
+        method: "POST",
+        body: formDataObj,
+      });
+
+      if (response.ok) {
+        resetForm();
+      } else {
+        console.error("Failed to submit edit request");
+      }
+    } catch (error) {
+      console.error("Error submitting edit request:", error);
+    }
+  };
+
+  const renderStepContent = () => {
+    return (
+      <div
+        className={`
+          ${
+            isTransitioning
+              ? "opacity-0"
+              : "transition-opacity duration-300 opacity-100 ease-in"
+          }`}
+      >
+        {(() => {
+          switch (currentStep) {
+            case ProcessingStep.INITIAL:
+              return (
+                <div className="space-y-6">
+                  <h1 className="text-xl font-bold text-center">
+                    Add a New Price
+                  </h1>
+                  <div className="flex flex-col space-y-4 items-center">
+                    <Label htmlFor="barcodeSearch" className="text-stone-600 ">
+                      Scan a Barcode to Find or Create a Product
+                    </Label>
+
+                    <Button
+                      id="barcodeSearch"
+                      onClick={() => setCurrentStep(ProcessingStep.BARCODE)}
+                      className="w-full sm:max-w-md flex justify-center items-center gap-2"
+                    >
+                      <PiBarcode className="w-5 h-5" />
+                      Scan or Enter Product Barcode
+                    </Button>
+                    <p className="text-stone-600">
+                      -{"  "}OR{"  "}-
+                    </p>
+                    <div className="w-full sm:max-w-md flex flex-col items-center">
+                      <Label htmlFor="productSearch" className="text-stone-600">
+                        Search Product Database
+                      </Label>
+                      <Input
+                        type="text"
+                        id="productSearch"
+                        value={searchTerm}
+                        onChange={(e) => handleSearch(e.target.value)}
+                        placeholder="Search by name, brand, category..."
+                        className="mt-2 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
+                      />
+                    </div>
+
+                    {searchResults.length > 0 && (
+                      <div className="mt-4 w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {searchResults.map((product) => (
+                          <div
+                            key={product.id}
+                            className="bg-white border border-stone-200 rounded-md p-3 cursor-pointer hover:bg-stone-50 transition-colors ease-in-out flex gap-3 items-center"
+                            onClick={() => {
+                              setSelectedProduct(product);
+                              setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
+                            }}
+                          >
+                            {product.image ? (
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-12 h-12 object-contain bg-stone-100 rounded"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-stone-100 rounded flex items-center justify-center text-stone-400">
+                                <span>No img</span>
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-stone-800 truncate">
+                                {product.name}
+                              </h3>
+                              <p className="text-sm text-stone-600 truncate">
+                                ${product.latestPrice?.toFixed(2)} •{" "}
+                                {product.category}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+
+            case ProcessingStep.BARCODE:
+              return (
+                <div>
+                  <h1 className="text-xl font-bold text-center mb-2 flex items-center justify-center">
+                    <PiBarcode className="w-5 h-5 mr-2" />
+                    Scan Product Barcode
+                  </h1>
+                  <p className="text-center text-sm text-stone-600 mb-4">
+                    We'll look for this product or help you create a new one if
+                    it doesn't exist
+                  </p>
+                  <div className="mb-10">
+                    <BarcodeScanner
+                      onBarcodeDetected={handleBarcodeDetected}
+                      shouldDisable={isScanning}
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCurrentStep(ProcessingStep.INITIAL)}
+                    disabled={isScanning}
+                    className="w-full"
+                  >
+                    Back to Search
+                  </Button>
+                </div>
+              );
+
+            case ProcessingStep.PRODUCT_CONFIRM:
+              if (!selectedProduct) return null;
+              return (
+                <div className="space-y-5">
+                  <h1 className="text-xl font-bold text-center">
+                    Confirm Product
+                  </h1>
+                  <div className="bg-stone-50 p-4 rounded-lg">
+                    <div className="flex gap-4 items-center">
+                      {selectedProduct.image ? (
+                        <img
+                          src={selectedProduct.image}
+                          alt={selectedProduct.name}
+                          className="w-24 h-24 object-contain bg-stone-900 rounded"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-stone-200 rounded flex items-center justify-center text-stone-400">
+                          No Image
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">
+                          {selectedProduct.name}
+                        </h3>
+                        <p className="text-sm text-stone-600">
+                          UPC: {selectedProduct.upc}
+                        </p>
+                        <p className="text-sm text-stone-600">
+                          {selectedProduct.unitQty} {selectedProduct.unitType}
+                        </p>
+                        {selectedProduct.productBrandName && (
+                          <p className="text-sm text-stone-600">
+                            Brand: {selectedProduct.productBrandName}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setCurrentStep(ProcessingStep.WRONG_PRODUCT)
+                      }
+                      className="flex-1"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Wrong Product
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setCurrentStep(ProcessingStep.PRICE_DETAILS);
+                        if (selectedProduct.latestPrice) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            pricePerUnit: selectedProduct.latestPrice || 0,
+                          }));
+                        }
+                      }}
+                      className="flex-1"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Confirm
+                    </Button>
+                  </div>
+                </div>
+              );
+
+            case ProcessingStep.PRODUCT_DETAILS:
+              return (
+                <div className="space-y-5">
+                  <div>
+                    <h1 className="text-xl font-bold text-center">
+                      New Product Details
+                    </h1>
+                    <h2 className="text-sm text-stone-600 text-center">
+                      Barcode: {formData.upc}
+                    </h2>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="productImage">
+                        {isProcessingImage
+                          ? "Scanning Image..."
+                          : "Product Image"}
+                      </Label>
+                      <Sparkles
+                        className={`w-4 h-4 transition-colors ${
+                          isProcessingImage
+                            ? "text-purple-600 animate-[pulse_1s_ease-in-out_infinite]"
+                            : "text-stone-400"
+                        }`}
+                      />
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="productImage"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
+                      />
+                      <div className="border-2 border-dashed border-stone-300 rounded-lg p-4 text-center hover:border-stone-400 transition-colors">
+                        {formData.productImage ? (
+                          <img
+                            src={URL.createObjectURL(formData.productImage)}
+                            alt="Product preview"
+                            className="max-h-24 mx-auto"
+                          />
+                        ) : (
+                          <div className="text-stone-500">
+                            <Camera className="w-6 h-6 mx-auto mb-2" />
+                            <p className="text-sm">Click or drag image here</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="upc">UPC/Barcode</Label>
+                      <Input
+                        id="upc"
+                        value={formData.upc}
+                        onChange={(e) => handleChange("upc", e.target.value)}
+                        placeholder="Enter barcode number"
+                        disabled={isProcessingImage}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Product Name</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => handleChange("name", e.target.value)}
+                        disabled={isProcessingImage}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="productBrandName">Brand Name</Label>
+                      <div className="mt-1">
+                        <Suspense
+                          fallback={
+                            <Input
+                              type="text"
+                              id="productBrandName"
+                              value={formData.productBrandName}
+                              onChange={(e) =>
+                                handleChange("productBrandName", e.target.value)
+                              }
+                              className="mt-1 w-full"
+                            />
+                          }
+                        >
+                          <Await
+                            resolve={productBrandsList}
+                            errorElement={
+                              <Input
+                                type="text"
+                                id="productBrandName"
+                                value={formData.productBrandName}
+                                onChange={(e) =>
+                                  handleChange(
+                                    "productBrandName",
+                                    e.target.value
+                                  )
+                                }
+                                className="mt-1 w-full"
+                              />
+                            }
+                          >
+                            {(resolvedProductBrandsList) => (
+                              <Select
+                                name="productBrandName"
+                                value={formData.productBrandName}
+                                onValueChange={(value) =>
+                                  handleChange("productBrandName", value)
+                                }
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Select a brand" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem key="NotListed-1" value="___">
+                                    <b>**</b>Other Brand (Not Listed)<b>**</b>
+                                  </SelectItem>
+                                  {resolvedProductBrandsList.map((brand) => (
+                                    <SelectItem
+                                      key={brand.name}
+                                      value={brand.name}
+                                    >
+                                      {brand.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </Await>
+                        </Suspense>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="category">Category</Label>
+                      <Input
+                        id="category"
+                        value={formData.category}
+                        onChange={(e) =>
+                          handleChange("category", e.target.value)
+                        }
+                        placeholder="What is the core item? (1-2 words)"
+                        disabled={isProcessingImage}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="unitType">Unit Type</Label>
+                      <Select
+                        value={formData.unitType}
+                        onValueChange={(value) =>
+                          handleChange("unitType", value as UnitType)
+                        }
+                        disabled={isProcessingImage}
+                      >
+                        <SelectTrigger id="unitType">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(UnitType).map(([key, value]) => (
+                            <SelectItem key={value} value={value}>
+                              {`${key[0]}${key
+                                .substring(1)
+                                .toLowerCase()} (${value})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="unitQty">Quantity of Unit</Label>
+                      <Input
+                        id="unitQty"
+                        type="number"
+                        value={formData.unitQty}
+                        onChange={(e) =>
+                          handleChange("unitQty", Number(e.target.value))
+                        }
+                        min="0"
+                        step="0.01"
+                        disabled={isProcessingImage}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="unitPricing"
+                      checked={formData.unitPricing}
+                      onCheckedChange={(checked) =>
+                        handleChange("unitPricing", checked === true)
+                      }
+                      disabled={isProcessingImage}
+                    />
+                    <Label htmlFor="unitPricing">Priced by Weight/Volume</Label>
+                  </div>
+
+                  <div className="pt-2 flex justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentStep(ProcessingStep.BARCODE)}
+                      disabled={isProcessingImage}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        setCurrentStep(ProcessingStep.PRICE_DETAILS)
+                      }
+                      disabled={isProcessingImage || !formData.name}
+                    >
+                      Continue to Price Entry
+                    </Button>
+                  </div>
+                </div>
+              );
+
+            case ProcessingStep.PRICE_DETAILS:
+              return (
+                <Form
+                  method="post"
+                  encType="multipart/form-data"
+                  className="space-y-5"
+                >
+                  <h1 className="text-xl font-bold text-center">
+                    Price Details
+                  </h1>
+
+                  {selectedProduct ? (
+                    <>
+                      <input
+                        type="hidden"
+                        name="productId"
+                        value={selectedProduct.id}
+                      />
+                      <div className="bg-stone-50 p-3 rounded-lg flex items-center gap-3">
+                        {selectedProduct.image ? (
+                          <img
+                            src={selectedProduct.image}
+                            alt={selectedProduct.name}
+                            className="w-12 h-12 object-contain bg-stone-900 rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-stone-200 rounded flex items-center justify-center text-stone-400">
+                            No Image
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold truncate">
+                            {selectedProduct.name}
+                          </h3>
+                          <p className="text-sm text-stone-600 truncate">
+                            {selectedProduct.category} •{" "}
+                            {selectedProduct.unitQty} {selectedProduct.unitType}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          onClick={resetForm}
+                          className="text-stone-500"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <input type="hidden" name="name" value={formData.name} />
+                      <input type="hidden" name="upc" value={formData.upc} />
+                      <input
+                        type="hidden"
+                        name="unitQty"
+                        value={formData.unitQty}
+                      />
+                      <input
+                        type="hidden"
+                        name="unitType"
+                        value={formData.unitType}
+                      />
+                      <input
+                        type="hidden"
+                        name="unitPricing"
+                        value={formData.unitPricing ? "on" : ""}
+                      />
+                      <input
+                        type="hidden"
+                        name="category"
+                        value={formData.category}
+                      />
+                      <input
+                        type="hidden"
+                        name="productBrandName"
+                        value={formData.productBrandName}
+                      />
+
+                      {formData.productImage && (
+                        <div className="hidden">
+                          <input
+                            type="file"
+                            id="productImage"
+                            name="productImage"
+                            className="hidden"
+                          />
+                        </div>
+                      )}
+
+                      <div className="bg-stone-50 p-3 rounded-lg flex items-center gap-3">
+                        {formData.productImage ? (
+                          <img
+                            src={URL.createObjectURL(formData.productImage)}
+                            alt="Product preview"
+                            className="w-12 h-12 object-contain bg-stone-900 rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-stone-200 rounded flex items-center justify-center text-stone-400">
+                            No Image
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold truncate">
+                            {formData.name}
+                          </h3>
+                          <p className="text-sm text-stone-600 truncate">
+                            {formData.category} • {formData.unitQty}{" "}
+                            {formData.unitType}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          onClick={() =>
+                            setCurrentStep(ProcessingStep.PRODUCT_DETAILS)
+                          }
+                          className="text-stone-500"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="price" className="font-semibold">
+                        Price (USD)
+                      </Label>
+                      <Input
+                        type="number"
+                        id="price"
+                        name="price"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={formData.pricePerUnit || ""}
+                        onChange={(e) =>
+                          handleChange("pricePerUnit", Number(e.target.value))
+                        }
+                        required
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="datepickerPE" className="font-semibold">
+                        Date of Purchase
+                      </Label>
+                      <div id="datepickerPE" className="w-full">
+                        <DatePicker
+                          date={selectedDate}
+                          setDate={setSelectedDate}
+                        />
+                      </div>
+                      <input
+                        type="hidden"
+                        name="date"
+                        value={selectedDate?.toISOString()}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="storeLocation" className="font-semibold">
+                        Store Location
+                      </Label>
+                      <Input
+                        type="text"
+                        id="storeLocation"
+                        name="storeLocation"
+                        placeholder="Store Name and City/State"
+                        value={formData.storeLocation}
+                        onChange={(e) =>
+                          handleChange("storeLocation", e.target.value)
+                        }
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="proof"
+                        className="font-semibold flex items-center gap-1"
+                      >
+                        <span>Image Proof (Optional) </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger type="button">
+                              <FaCircleInfo />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                Verifying your price entry adds a verification
+                                badge!
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </Label>
+                      <Input
+                        type="file"
+                        multiple
+                        id="proofFiles"
+                        name="proofFiles"
+                        accept="image/*"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex justify-between space-x-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        if (selectedProduct) {
+                          setCurrentStep(ProcessingStep.PRODUCT_CONFIRM);
+                        } else {
+                          setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
+                        }
+                      }}
+                      className="flex-1"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={
+                        navigation.state === "submitting" ||
+                        !formData.pricePerUnit
+                      }
+                      className="flex-1 bg-ogfore hover:bg-ogfore-hover"
+                    >
+                      {navigation.state === "submitting"
+                        ? "Submitting..."
+                        : "Save Price"}
+                    </Button>
+                  </div>
+                </Form>
+              );
+
+            case ProcessingStep.WRONG_PRODUCT:
+              if (!selectedProduct) return null;
+              return (
+                <div className="space-y-5">
+                  <h1 className="text-xl font-bold text-center">
+                    Report Wrong Product Match
+                  </h1>
+                  <div className="bg-stone-50 p-4 rounded-lg">
+                    <div className="flex gap-4 items-center">
+                      {selectedProduct.image ? (
+                        <img
+                          src={selectedProduct.image}
+                          alt={selectedProduct.name}
+                          className="w-24 h-24 object-contain bg-stone-900 rounded"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-stone-200 rounded flex items-center justify-center text-stone-400">
+                          No Image
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">
+                          {selectedProduct.name}
+                        </h3>
+                        <p className="text-sm text-stone-600">
+                          UPC: {selectedProduct.upc}
+                        </p>
+                        <p className="text-sm text-stone-600">
+                          {selectedProduct.unitQty} {selectedProduct.unitType}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="editNotes">
+                      What's wrong with this match?
+                    </Label>
+                    <textarea
+                      id="editNotes"
+                      className="w-full h-32 p-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-500"
+                      placeholder="Please describe what's wrong with this match (e.g., wrong product name, wrong brand, wrong size, etc.)"
+                      value={formData.editNotes}
+                      onChange={(e) =>
+                        handleChange("editNotes", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setCurrentStep(ProcessingStep.PRODUCT_CONFIRM)
+                      }
+                      className="flex-1"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={handleEditRequest}
+                      className="flex-1"
+                      disabled={!formData.editNotes}
+                    >
+                      Submit Report
+                    </Button>
+                  </div>
+                </div>
+              );
+
+            case ProcessingStep.CONTRIBUTOR_THANKS:
+              return (
+                <div className="bg-green-100 transition-opacity ease-out duration-1000 py-20 px-4 text-center rounded opacity-0 animate-[fadeIn_0.5s_ease-out_forwards,fadeOut_0.5s_ease-out_1s_forwards]">
+                  <h2 className="text-xl font-semibold">
+                    Thank you for Contributing!
+                  </h2>
+                </div>
+              );
+          }
+        })()}
+      </div>
+    );
+  };
+
   return (
     <div className="font-sans bg-ogprime min-h-screen">
       <header className="">
         <HeaderLinks />
-      </header>{" "}
+      </header>
       <div className="max-w-3xl mx-auto space-y-6 p-4">
         <Breadcrumb>
           <BreadcrumbList>
@@ -282,7 +1177,7 @@ export default function NewPricePoint() {
             <BreadcrumbItem>Contribute Prices</BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage className=" font-bold">
+              <BreadcrumbPage className="font-bold">
                 Entering Prices Manually&nbsp;&nbsp;
               </BreadcrumbPage>
               <span> |</span>
@@ -295,423 +1190,10 @@ export default function NewPricePoint() {
           </BreadcrumbList>
         </Breadcrumb>
 
-        <Form
-          method="post"
-          encType="multipart/form-data"
-          className="space-y-6 bg-stone-100 p-8 rounded-lg shadow-md "
-        >
-          <h1 className="text-2xl font-bold mb-4 text-center">
-            New Price Entry
-          </h1>
+        <Card className="mb-4 shadow-md">
+          <CardContent className="p-6">{renderStepContent()}</CardContent>
+        </Card>
 
-          {!selectedProduct && !isNewProduct && (
-            <div className="bg-white p-6 rounded-md shadow-sm">
-              <h2 className="text-xl font-semibold mb-4">Product Details</h2>
-              <Label
-                htmlFor="productSearch"
-                className="text-stone-700 font-semibold"
-              >
-                Search for Existing Product
-              </Label>
-              <Input
-                type="text"
-                id="productSearch"
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Search for a product"
-                className="mt-2 w-full max-w-md border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-              />
-              <div className="flex items-center space-x-4 mt-4">
-                <p className="text-stone-600">Or</p>{" "}
-                <Button
-                  type="button"
-                  onClick={() => setIsNewProduct(true)}
-                  className="bg-stone-600 hover:bg-stone-700 text-white"
-                >
-                  Create New Product
-                </Button>
-              </div>
-              {searchResults.length > 0 && (
-                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {searchResults.map((product) => (
-                    <div
-                      key={product.id}
-                      className="bg-white border border-stone-200 rounded-md p-4 cursor-pointer hover:bg-stone-50 transition duration-150 ease-in-out"
-                      onClick={() => {
-                        setSelectedProduct(product);
-                        setSearchTerm(product.name);
-                      }}
-                    >
-                      <h3 className="font-bold text-stone-800">
-                        {product.name}
-                      </h3>
-                      <p className="text-stone-600">
-                        Price: ${product.latestPrice?.toFixed(2)}
-                      </p>
-                      <p className="text-stone-500">
-                        Category: {product.category}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {selectedProduct && (
-            <div className="bg-white border border-stone-200 rounded-md p-6 shadow-sm relative">
-              <h2 className="text-xl font-semibold mb-4">Product Details</h2>
-
-              <button
-                onClick={() => {
-                  // Reset all states in a single batch update
-                  React.startTransition(() => {
-                    clearSearch();
-                    setIsNewProduct(false);
-                    setSelectedProduct(null);
-                  });
-                }}
-                type="button"
-                className="absolute top-2 right-2 text-stone-500 hover:text-stone-700"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-              <input
-                type="hidden"
-                name="productId"
-                value={selectedProduct.id}
-              />
-              <Link
-                className="w-full hover:bg-stone-400"
-                to={`/product/${selectedProduct.id}`}
-              >
-                {" "}
-                <h3 className="font-bold text-stone-800 text-xl mb-2">
-                  {selectedProduct.name}
-                </h3>
-                {selectedProduct.image && (
-                  <img
-                    src={selectedProduct.image}
-                    alt={selectedProduct.name}
-                    className="w-32 h-32 object-cover mt-2 rounded-md shadow-sm"
-                  />
-                )}
-                <p className="text-stone-600">
-                  Category: {selectedProduct.category}
-                </p>
-                {selectedProduct.unitPricing && (
-                  <p className="text-stone-600">
-                    Unit: {selectedProduct.unitQty} {selectedProduct.unitType}
-                  </p>
-                )}
-                {selectedProduct.productBrandName && (
-                  <p className="text-stone-600">
-                    Brand: {selectedProduct.productBrandName}
-                  </p>
-                )}
-              </Link>
-            </div>
-          )}
-          {isNewProduct && (
-            <div className="bg-white p-6 rounded-md shadow-sm space-y-4">
-              <h2 className="text-xl font-semibold mb-4">Product Details</h2>
-
-              <div className="flex flex-col justify-center space-y-4 w-full md:w-1/2">
-                <Button
-                  type="button"
-                  onClick={() => setIsNewProduct(false)}
-                  className="bg-stone-600 hover:bg-stone-700 text-white"
-                >
-                  Search for Existing Product
-                </Button>
-                <p className="text-stone-600">Or</p>{" "}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <Label
-                    htmlFor="upc"
-                    className="text-stone-700 font-semibold flex gap-1"
-                  >
-                    Product UPC Barcode <PiBarcode />
-                  </Label>
-                  <Input
-                    type="text"
-                    id="upc"
-                    name="upc"
-                    required
-                    className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                  />
-                </div>
-                <div>
-                  <Label
-                    htmlFor="name"
-                    className="text-stone-700 font-semibold"
-                  >
-                    Product Name
-                  </Label>
-                  <Input
-                    type="text"
-                    id="name"
-                    name="name"
-                    required
-                    className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                  />
-                </div>
-                <div>
-                  <Label
-                    htmlFor="productBrandName"
-                    className="text-stone-700 font-semibold"
-                  >
-                    Brand Name
-                  </Label>
-                  <div className="mt-1">
-                    <Suspense
-                      fallback={
-                        <Input
-                          type="text"
-                          id="productBrandName"
-                          name="productBrandName"
-                          required
-                          className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                        />
-                      }
-                    >
-                      <Await
-                        resolve={productBrandsList}
-                        errorElement={
-                          <Input
-                            type="text"
-                            id="productBrandName"
-                            name="productBrandName"
-                            required
-                            className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                          />
-                        }
-                      >
-                        {(resolvedProductBrandsList) => (
-                          <Select name="productBrandName">
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select a brand" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {" "}
-                              <SelectItem key="NotListed-1" value="___">
-                                <b>**</b>Other Brand (Not Listed)<b>**</b>
-                              </SelectItem>
-                              {resolvedProductBrandsList.map((brand) => (
-                                <SelectItem key={brand.name} value={brand.name}>
-                                  {brand.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </Await>
-                    </Suspense>
-                  </div>
-                </div>
-                <div>
-                  <Label
-                    htmlFor="category"
-                    className="text-stone-700 font-semibold"
-                  >
-                    Category
-                  </Label>
-                  <Input
-                    type="text"
-                    id="category"
-                    name="category"
-                    placeholder="What is the core item? (1-2 words)"
-                    className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                  />
-                </div>
-                <div>
-                  <Label
-                    htmlFor="proofFiles"
-                    className="text-stone-700 font-semibold"
-                  >
-                    Product Image
-                  </Label>
-                  <Input
-                    type="file"
-                    id="productImage"
-                    name="productImage"
-                    accept="image/*"
-                    className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                  />{" "}
-                </div>{" "}
-                <div className="mt-6 mb-0 md:col-span-2">
-                  <h3 className="text-lg font-semibold mb-2">
-                    Packaging Details
-                  </h3>
-                  <p className="text-sm text-stone-600">
-                    Most packages will have a label at the front describing the
-                    amount of the product being sold per package by its weight
-                    or volume. Examples: 12 fl. oz. water bottles, or 2 lb bags
-                    of rice.
-                  </p>
-                </div>
-                <div>
-                  <Label
-                    htmlFor="unitType"
-                    className="text-stone-700 font-semibold"
-                  >
-                    Unit Type
-                  </Label>
-
-                  <div className="mt-1">
-                    <Select name="unitType">
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select unit type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(UnitType).map((unitTypes) => (
-                          <SelectItem key={unitTypes[1]} value={unitTypes[1]}>
-                            {`${unitTypes[0][0]}${unitTypes[0]
-                              .substring(1)
-                              .toLowerCase()} (${unitTypes[1]})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div>
-                  <Label
-                    htmlFor="unitQty"
-                    className="text-stone-700 font-semibold"
-                  >
-                    Quantity of Unit
-                  </Label>
-                  <Input
-                    type="number"
-                    id="unitQty"
-                    name="unitQty"
-                    step="0.01"
-                    min="0"
-                    className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                  />
-                </div>
-                <div className="flex self-center space-x-2 md:col-span-2">
-                  <Checkbox id="unitPricing" name="unitPricing" />
-                  <div className="flex flex-col space-y-1">
-                    {" "}
-                    <Label
-                      htmlFor="unitPricing"
-                      className="text-stone-700 font-semibold"
-                    >
-                      Is it Priced by Weight/Volume?{" "}
-                    </Label>
-                    <p className="text-sm text-stone-600">
-                      (Common with deli-prepared foods)
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="bg-white p-6 rounded-md shadow-sm space-y-4">
-            <h2 className="text-xl font-semibold">Price Entry</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <Label htmlFor="price" className="text-stone-700 font-semibold">
-                  Price (USD)
-                </Label>
-                <Input
-                  type="number"
-                  id="price"
-                  name="price"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  defaultValue={selectedProduct?.latestPrice ?? undefined}
-                  required
-                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                />
-              </div>
-              <div>
-                <Label
-                  htmlFor="datepickerPE"
-                  className="text-stone-700 font-semibold"
-                >
-                  Date of Purchase
-                </Label>
-                <div id="datepickerPE" className="mt-1 w-full">
-                  <DatePicker date={selectedDate} setDate={setSelectedDate} />
-                </div>
-                <input
-                  type="hidden"
-                  name="date"
-                  value={selectedDate?.toISOString()}
-                />
-              </div>
-              <div>
-                <Label
-                  htmlFor="storeLocation"
-                  className="text-stone-700 font-semibold"
-                >
-                  Store Location
-                </Label>
-                <Input
-                  type="text"
-                  id="storeLocation"
-                  name="storeLocation"
-                  placeholder="Store Name and City/State"
-                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="proof" className="text-stone-700 font-semibold">
-                  <span>Image Proof (Optional) </span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger type="button">
-                        <FaCircleInfo />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>
-                          Verifying your price entry adds a verification badge!
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </Label>
-                <Input
-                  type="file"
-                  multiple
-                  id="proofFiles"
-                  name="proofFiles"
-                  accept="image/*"
-                  className="mt-1 w-full border-stone-300 focus:ring-stone-500 focus:border-stone-500"
-                />
-              </div>
-              <Button
-                type="submit"
-                disabled={navigation.state === "submitting"}
-                className="w-full mt-6 bg-ogfore hover:bg-ogfore-hover text-white font-semibold py-2 px-4 rounded-md transition duration-150 ease-in-out"
-              >
-                {navigation.state === "submitting"
-                  ? "Submitting..."
-                  : "Save Price"}
-              </Button>
-            </div>
-          </div>
-        </Form>
         {actionData && "errors" in actionData && (
           <div className="mt-4 text-red-500">
             <ul>
