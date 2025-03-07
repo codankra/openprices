@@ -6,7 +6,7 @@ import {
   requestedEdits,
 } from "~/db/schema";
 import { db } from "~/db/index";
-import { and, eq, like, desc, inArray } from "drizzle-orm";
+import { and, eq, like, desc, inArray, isNull, gte, lte } from "drizzle-orm";
 import {
   productInfoCache,
   productSearchCache,
@@ -136,22 +136,74 @@ export async function getProductIDByReceiptText(
 
 export async function getProductsBySearch(
   searchTerm: string,
-  maxResults: number = 12
+  maxResults: number = 12,
+  options: {
+    brandFilters?: string[];
+    priceFilterType?: "unknown" | "range" | null;
+    minPrice?: number;
+    maxPrice?: number;
+  } = {}
 ) {
-  const cached: (typeof products.$inferSelect)[] | undefined =
-    await productSearchCache.get(searchTerm);
-  if (cached) return cached;
-  else {
-    const searchResults = await db
-      .select()
-      .from(products)
-      .where(like(products.name, `%${searchTerm}%`))
-      .limit(maxResults);
-    await productSearchCache.set(searchTerm, searchResults);
-    return searchResults;
+  // Only use cache for simple searches without filters
+  if (
+    !options ||
+    ((!options.brandFilters || options.brandFilters.length === 0) &&
+      !options.priceFilterType)
+  ) {
+    const cached: (typeof products.$inferSelect)[] | undefined =
+      await productSearchCache.get(searchTerm);
+    if (cached) return cached;
   }
-}
+  // Initialize an array to hold all conditions
+  const conditions = [];
 
+  // Add search term filter if provided
+  if (searchTerm.length > 0) {
+    conditions.push(like(products.name, `%${searchTerm}%`));
+  }
+
+  // Add brand filters if provided
+  if (options.brandFilters && options.brandFilters.length > 0) {
+    conditions.push(inArray(products.productBrandName, options.brandFilters));
+  }
+
+  // Add price filters based on type
+  if (options.priceFilterType === "unknown") {
+    conditions.push(isNull(products.latestPrice));
+  } else if (options.priceFilterType === "range") {
+    if (options.minPrice !== undefined && options.maxPrice !== undefined) {
+      conditions.push(
+        and(
+          gte(products.latestPrice, options.minPrice),
+          lte(products.latestPrice, options.maxPrice)
+        )
+      );
+    } else if (options.minPrice !== undefined) {
+      conditions.push(gte(products.latestPrice, options.minPrice));
+    } else if (options.maxPrice !== undefined) {
+      conditions.push(lte(products.latestPrice, options.maxPrice));
+    }
+  }
+
+  // Build the query with a single where clause
+  const query = db
+    .select()
+    .from(products)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .limit(maxResults);
+
+  const searchResults = await query;
+  // Only cache if no filters were applied
+  if (
+    !options ||
+    ((!options.brandFilters || options.brandFilters.length === 0) &&
+      !options.priceFilterType)
+  ) {
+    await productSearchCache.set(searchTerm, searchResults);
+  }
+
+  return searchResults;
+}
 export async function getProductBrandInfo(brandName: string) {
   const cached: typeof productBrands.$inferSelect | undefined =
     await productBrandsCache.get(brandName);
