@@ -14,6 +14,7 @@ import {
 } from "~/db/cache";
 
 const ALL_BRANDS_CACHE_KEY = "_system_search_all_brands";
+const SEARCH_CACHE_ENCODING_VERSION = "v1";
 
 export async function getProductById(id: string) {
   const cached: typeof products.$inferSelect | undefined =
@@ -144,16 +145,34 @@ export async function getProductsBySearch(
     maxPrice?: number;
   } = {}
 ) {
-  // Only use cache for simple searches without filters
-  if (
-    !options ||
-    ((!options.brandFilters || options.brandFilters.length === 0) &&
-      !options.priceFilterType)
-  ) {
-    const cached: (typeof products.$inferSelect)[] | undefined =
-      await productSearchCache.get(searchTerm);
-    if (cached) return cached;
+  // Build cache key components
+  const keyParts = [SEARCH_CACHE_ENCODING_VERSION];
+  keyParts.push(`term:${searchTerm}`);
+  keyParts.push(`max:${maxResults}`);
+
+  if (options.brandFilters && options.brandFilters.length > 0) {
+    const sortedBrands = [...options.brandFilters].sort();
+    keyParts.push(`brands:${sortedBrands.join(",")}`);
   }
+
+  if (options.priceFilterType) {
+    keyParts.push(`ptype:${options.priceFilterType}`);
+
+    if (options.priceFilterType === "range") {
+      if (options.minPrice !== undefined) {
+        keyParts.push(`pmin:${options.minPrice}`);
+      }
+      if (options.maxPrice !== undefined) {
+        keyParts.push(`pmax:${options.maxPrice}`);
+      }
+    }
+  }
+
+  const cacheKey = keyParts.join("|");
+
+  const cached: (typeof products.$inferSelect)[] | undefined =
+    await productSearchCache.get(cacheKey);
+  if (cached) return cached;
   // Initialize an array to hold all conditions
   const conditions = [];
 
@@ -193,15 +212,8 @@ export async function getProductsBySearch(
     .limit(maxResults);
 
   const searchResults = await query;
-  // Only cache if no filters were applied
-  if (
-    !options ||
-    ((!options.brandFilters || options.brandFilters.length === 0) &&
-      !options.priceFilterType)
-  ) {
-    await productSearchCache.set(searchTerm, searchResults);
-  }
 
+  await productSearchCache.set(cacheKey, searchResults);
   return searchResults;
 }
 export async function getProductBrandInfo(brandName: string) {
