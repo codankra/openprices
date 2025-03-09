@@ -61,25 +61,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
+const DEFAULT_BRAND_OPTIONS = ["H-E-B", "Trader Joe's"];
+
 export default function ProductSearch() {
   const { trendingProducts, searchResults, appliedFilters } =
     useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState(searchParams.get("q") ?? "");
 
-  // Initialize brand filters from URL params
+  // Initialize brand filter checkboxes from URL params
   const [selectedBrands, setSelectedBrands] = useState<string[]>(() => {
     const brands = appliedFilters.brands || [];
-    return brands.filter(
-      (brand) => brand === "HEB" || brand === "Trader Joe's"
-    );
+    return brands.filter((brand) => DEFAULT_BRAND_OPTIONS.includes(brand));
   });
-
-  // Initialize custom brand from URL params (any brand that's not HEB or Trader Joe's)
+  // Initialize custom brand from URL params (any brand that's not a hardcoded checkbox)
   const [customBrand, setCustomBrand] = useState<string>(() => {
     const brands = appliedFilters.brands || [];
     const customBrand = brands.find(
-      (brand) => brand !== "HEB" && brand !== "Trader Joe's"
+      (brand) => !DEFAULT_BRAND_OPTIONS.includes(brand)
     );
     return customBrand || "";
   });
@@ -311,26 +310,22 @@ export default function ProductSearch() {
               <div className="mb-6">
                 <h3 className="text-md font-semibold mb-2">Brand</h3>
                 <div className="flex flex-col gap-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="heb"
-                      checked={selectedBrands.includes("HEB")}
-                      onCheckedChange={(checked) =>
-                        handleBrandChange("HEB", checked as boolean)
-                      }
-                    />
-                    <Label htmlFor="heb">HEB</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="trader-joes"
-                      checked={selectedBrands.includes("Trader Joe's")}
-                      onCheckedChange={(checked) =>
-                        handleBrandChange("Trader Joe's", checked as boolean)
-                      }
-                    />
-                    <Label htmlFor="trader-joes">Trader Joe's</Label>
-                  </div>
+                  {DEFAULT_BRAND_OPTIONS.map((brand) => (
+                    <div key={brand} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={brand.toLowerCase().replace(/[^a-z0-9]/g, "-")}
+                        checked={selectedBrands.includes(brand)}
+                        onCheckedChange={(checked) =>
+                          handleBrandChange(brand, checked as boolean)
+                        }
+                      />
+                      <Label
+                        htmlFor={brand.toLowerCase().replace(/[^a-z0-9]/g, "-")}
+                      >
+                        {brand}
+                      </Label>
+                    </div>
+                  ))}
                   <div className="flex items-center space-x-2">
                     <Label htmlFor="custom-brand">Custom:</Label>
                     <Input
