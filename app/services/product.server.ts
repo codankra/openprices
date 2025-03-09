@@ -6,7 +6,7 @@ import {
   requestedEdits,
 } from "~/db/schema";
 import { db } from "~/db/index";
-import { and, eq, like, desc, inArray } from "drizzle-orm";
+import { and, eq, like, desc, inArray, isNull, gte, lte } from "drizzle-orm";
 import {
   productInfoCache,
   productSearchCache,
@@ -14,6 +14,7 @@ import {
 } from "~/db/cache";
 
 const ALL_BRANDS_CACHE_KEY = "_system_search_all_brands";
+const SEARCH_CACHE_ENCODING_VERSION = "v1";
 
 export async function getProductById(id: string) {
   const cached: typeof products.$inferSelect | undefined =
@@ -136,22 +137,85 @@ export async function getProductIDByReceiptText(
 
 export async function getProductsBySearch(
   searchTerm: string,
-  maxResults: number = 12
+  maxResults: number = 12,
+  options: {
+    brandFilters?: string[];
+    priceFilterType?: "unknown" | "range" | null;
+    minPrice?: number;
+    maxPrice?: number;
+  } = {}
 ) {
-  const cached: (typeof products.$inferSelect)[] | undefined =
-    await productSearchCache.get(searchTerm);
-  if (cached) return cached;
-  else {
-    const searchResults = await db
-      .select()
-      .from(products)
-      .where(like(products.name, `%${searchTerm}%`))
-      .limit(maxResults);
-    await productSearchCache.set(searchTerm, searchResults);
-    return searchResults;
-  }
-}
+  // Build cache key components
+  const keyParts = [SEARCH_CACHE_ENCODING_VERSION];
+  keyParts.push(`term:${searchTerm}`);
+  keyParts.push(`max:${maxResults}`);
 
+  if (options.brandFilters && options.brandFilters.length > 0) {
+    const sortedBrands = [...options.brandFilters].sort();
+    keyParts.push(`brands:${sortedBrands.join(",")}`);
+  }
+
+  if (options.priceFilterType) {
+    keyParts.push(`ptype:${options.priceFilterType}`);
+
+    if (options.priceFilterType === "range") {
+      if (options.minPrice !== undefined) {
+        keyParts.push(`pmin:${options.minPrice}`);
+      }
+      if (options.maxPrice !== undefined) {
+        keyParts.push(`pmax:${options.maxPrice}`);
+      }
+    }
+  }
+
+  const cacheKey = keyParts.join("|");
+
+  const cached: (typeof products.$inferSelect)[] | undefined =
+    await productSearchCache.get(cacheKey);
+  if (cached) return cached;
+  // Initialize an array to hold all conditions
+  const conditions = [];
+
+  // Add search term filter if provided
+  if (searchTerm.length > 0) {
+    conditions.push(like(products.name, `%${searchTerm}%`));
+  }
+
+  // Add brand filters if provided
+  if (options.brandFilters && options.brandFilters.length > 0) {
+    conditions.push(inArray(products.productBrandName, options.brandFilters));
+  }
+
+  // Add price filters based on type
+  if (options.priceFilterType === "unknown") {
+    conditions.push(isNull(products.latestPrice));
+  } else if (options.priceFilterType === "range") {
+    if (options.minPrice !== undefined && options.maxPrice !== undefined) {
+      conditions.push(
+        and(
+          gte(products.latestPrice, options.minPrice),
+          lte(products.latestPrice, options.maxPrice)
+        )
+      );
+    } else if (options.minPrice !== undefined) {
+      conditions.push(gte(products.latestPrice, options.minPrice));
+    } else if (options.maxPrice !== undefined) {
+      conditions.push(lte(products.latestPrice, options.maxPrice));
+    }
+  }
+
+  // Build the query with a single where clause
+  const query = db
+    .select()
+    .from(products)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .limit(maxResults);
+
+  const searchResults = await query;
+
+  await productSearchCache.set(cacheKey, searchResults);
+  return searchResults;
+}
 export async function getProductBrandInfo(brandName: string) {
   const cached: typeof productBrands.$inferSelect | undefined =
     await productBrandsCache.get(brandName);
