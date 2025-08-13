@@ -266,6 +266,26 @@ export const samplePriceData: PriceSample[] = [
     month: "Feb 2025",
     price: 620.645,
   },
+  {
+    month: "Mar 2025",
+    price: 629.89,
+  },
+  {
+    month: "Apr 2025",
+    price: 628.05,
+  },
+  {
+    month: "May 2025",
+    price: 629.62,
+  },
+  {
+    month: "Jun 2025",
+    price: 647.49,
+  },
+  {
+    month: "Jul 2025",
+    price: 666.71,
+  },
 ];
 
 export const products: ProductPreview[] = [
@@ -278,13 +298,13 @@ export const products: ProductPreview[] = [
     prodImg: "/homepage/hotdog.webp",
   },
   {
-    id: "4",
-    name: "Banana, each",
-    currentPrice: 0.23,
+    id: "3501",
+    name: "Cage Free Brown Eggs - Grade A Large",
+    currentPrice: 4.49,
     trend: "up",
-    trendPc: 17,
+    trendPc: 50,
     storeImg: "/homepage/traderjoes.png",
-    prodImg: "/homepage/banana.jpg",
+    prodImg: "/homepage/eggs.jpg",
   },
   {
     id: "3502",
@@ -296,13 +316,13 @@ export const products: ProductPreview[] = [
     prodImg: "/homepage/cc.jpeg",
   },
   {
-    id: "2",
-    name: "Dawn Platinum Liquid Dish Soap",
-    currentPrice: 11.99,
-    trend: "down",
-    trendPc: 8,
-    storeImg: "/homepage/costco.png",
-    prodImg: "/homepage/dawn.webp",
+    id: "4",
+    name: "Banana, each",
+    currentPrice: 0.23,
+    trend: "up",
+    trendPc: 17,
+    storeImg: "/homepage/traderjoes.png",
+    prodImg: "/homepage/banana.jpg",
   },
 ];
 

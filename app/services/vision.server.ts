@@ -141,7 +141,7 @@ const rateLimitedExtractProductInfo = rateLimiter.wrapWithRateLimit(
     });
 
     const model = vertex.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash-lite",
     });
 
     const availableUnitTypeValues = Object.values(UnitType)
@@ -182,14 +182,23 @@ const rateLimitedExtractProductInfo = rateLimiter.wrapWithRateLimit(
       });
 
       const response = result.response;
-      const textResponse = response.candidates?.[0].content.parts[0].text;
+      let textResponse = response.candidates?.[0].content.parts[0].text;
 
-      // Validate that response is pure JSON
-      if (
-        !textResponse ||
-        !textResponse.trim().startsWith("{") ||
-        !textResponse.trim().endsWith("}")
-      ) {
+      if (!textResponse) {
+        throw new Error("No response received");
+      }
+
+      textResponse = textResponse.trim();
+
+      // Strip markdown if present
+      if (textResponse.startsWith("```json") && textResponse.endsWith("```")) {
+        textResponse = textResponse.slice(7, -3).trim(); // Remove ```json and ```
+      }
+
+      // Validate JSON structure
+      if (!textResponse.startsWith("{") || !textResponse.endsWith("}")) {
+        console.error("Unexpected Response from product photo: ");
+        console.error(textResponse?.trim());
         throw new Error("Invalid response format");
       }
 
