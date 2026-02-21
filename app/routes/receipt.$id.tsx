@@ -97,6 +97,22 @@ export default function ReceiptPage() {
 const ReceiptReview = (props: ReceiptData) => {
   const { receipt, receiptItems, matchedDraftProductsPromise } = props;
 
+  // Helper function to safely format receipt date with fallback to createdAt
+  const formatReceiptDate = (purchaseDate: string, createdAt: string): string => {
+    const date = new Date(purchaseDate);
+    // Check if date is valid
+    if (!isNaN(date.getTime()) && purchaseDate && purchaseDate !== "") {
+      return date.toLocaleDateString();
+    }
+    // Fallback to createdAt
+    const fallbackDate = new Date(createdAt);
+    if (!isNaN(fallbackDate.getTime())) {
+      return fallbackDate.toLocaleDateString();
+    }
+    // Last resort fallback
+    return new Date().toLocaleDateString();
+  };
+
   const handleIgnoreItem = async (
     itemId: number,
     currentStatus: typeof draftItems.$inferSelect.status
@@ -164,7 +180,7 @@ const ReceiptReview = (props: ReceiptData) => {
           </div>
           <div>
             <p className="text-sm text-gray-500">Date</p>
-            <p>{new Date(receipt.purchaseDate).toLocaleDateString()}</p>
+            <p>{formatReceiptDate(receipt.purchaseDate, receipt.createdAt)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Total Amount</p>

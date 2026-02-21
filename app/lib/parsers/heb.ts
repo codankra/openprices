@@ -234,7 +234,7 @@ export function findReceiptDate(lines: string[]): string {
   // Search from bottom up for date pattern
   for (let i = lines.length - 1; i >= 0; i--) {
     const match = lines[i].match(
-      /(\d{2})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})(P|A|PM|AM)?/
+      /(\d{2})-(\d{2})-(\d{2,4})\s+(\d{1,2}):(\d{2})(P|A|PM|AM)?/
     );
     if (!match) continue;
 
@@ -249,8 +249,11 @@ export function findReceiptDate(lines: string[]): string {
         hour = 0;
       }
 
+      // Handle 2-digit year by prepending 2000, leave 4-digit years as-is
+      const fullYear = year.length === 2 ? 2000 + parseInt(year) : parseInt(year);
+
       return new Date(
-        2000 + parseInt(year),
+        fullYear,
         parseInt(month) - 1,
         parseInt(day),
         hour,

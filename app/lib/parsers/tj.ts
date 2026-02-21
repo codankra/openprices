@@ -85,14 +85,18 @@ function extractStoreNumber(line: string): string {
 
 function extractDate(ocrLines: string[]): string {
   for (const line of ocrLines) {
-    const match = line.match(/(\d{2})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
+    // Match both 2-digit year (MM-DD-YY) and 4-digit year (MM-DD-YYYY) formats
+    const match = line.match(/(\d{2})-(\d{2})-(\d{2,4})\s+(\d{1,2}):(\d{2})/);
     if (match) {
       const [, month, day, year, hours, minutes] = match;
-      const date = new Date(`20${year}-${month}-${day} ${hours}:${minutes}`);
-      return date.toISOString();
+      // Handle 2-digit year by prepending "20", leave 4-digit years as-is
+      const fullYear = year.length === 2 ? `20${year}` : year;
+      const date = new Date(`${fullYear}-${month}-${day}T${hours.padStart(2, "0")}:${minutes}:00`);
+      if (!isNaN(date.getTime())) return date.toISOString();
     }
   }
-  return "";
+  // Fallback to current date if no date found in receipt
+  return new Date().toISOString();
 }
 
 function parseItem(
