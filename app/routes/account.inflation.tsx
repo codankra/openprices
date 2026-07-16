@@ -8,7 +8,6 @@ import {
   type UserInflationStats,
   type ProductInflationStats,
 } from "~/services/inflation.server";
-import HeaderLinks from "~/components/custom/HeaderLinks";
 import InflationChart from "~/components/custom/InflationChart";
 import InflationSkeleton from "~/components/custom/InflationSkeleton";
 import {
@@ -23,9 +22,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const user = await requireAuth(request);
   // Don't await - this can be a heavier query over a user's full price
   // history, so we stream it in behind a Suspense boundary instead of
-  // blocking the initial response (see account.tsx for the same pattern).
+  // blocking the initial response.
   const inflationStatsPromise = getUserInflationStats(user.id);
-  return { user, inflationStats: inflationStatsPromise };
+  return { inflationStats: inflationStatsPromise };
 };
 
 export const meta: MetaFunction = () => {
@@ -43,32 +42,27 @@ export default function InflationPage() {
   const { inflationStats } = useLoaderData<typeof loader>();
 
   return (
-    <div className="font-sans bg-ogprime min-h-screen">
-      <header>
-        <HeaderLinks />
-      </header>
-      <div className="max-w-4xl mx-auto p-4 space-y-4">
-        <div>
-          <h1 className="text-3xl text-stone-900">Your Inflation Tracker</h1>
-          <p className="text-stone-600">
-            Built from the prices you&apos;ve personally logged, over time.
-          </p>
-        </div>
-
-        <Suspense fallback={<InflationSkeleton />}>
-          <Await
-            resolve={inflationStats}
-            errorElement={
-              <div className="bg-white rounded-lg shadow-md p-6 text-stone-700">
-                Something went wrong loading your inflation stats. Please try
-                refreshing the page.
-              </div>
-            }
-          >
-            {(stats) => <InflationDashboard stats={stats} />}
-          </Await>
-        </Suspense>
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-3xl text-stone-900">Your Inflation Tracker</h2>
+        <p className="text-stone-600">
+          Built from the prices you&apos;ve personally logged, over time.
+        </p>
       </div>
+
+      <Suspense fallback={<InflationSkeleton />}>
+        <Await
+          resolve={inflationStats}
+          errorElement={
+            <div className="bg-white rounded-lg shadow-md p-6 text-stone-700">
+              Something went wrong loading your inflation stats. Please try
+              refreshing the page.
+            </div>
+          }
+        >
+          {(stats) => <InflationDashboard stats={stats} />}
+        </Await>
+      </Suspense>
     </div>
   );
 }
@@ -80,7 +74,7 @@ function formatPct(value: number, digits = 1) {
 
 function pctColorClass(value: number | null) {
   if (value === null) return "text-stone-800";
-  if (value > 0) return "text-red-600";
+  if (value > 0) return "text-ogfore";
   if (value < 0) return "text-green-600";
   return "text-stone-800";
 }
@@ -100,9 +94,7 @@ function InflationDashboard({ stats }: { stats: UserInflationStats }) {
       .productId;
   }, [products]);
 
-  const [selectedId, setSelectedId] = useState<number | null>(
-    defaultProductId
-  );
+  const [selectedId, setSelectedId] = useState<number | null>(defaultProductId);
 
   if (products.length === 0) {
     return (
@@ -177,8 +169,8 @@ function BasketSummary({ basket }: { basket: UserInflationStats["basket"] }) {
           </p>
           <p className="text-sm text-stone-500 mt-2">
             Based on {eligibleProductCount} of {totalProductCount} tracked
-            product{totalProductCount === 1 ? "" : "s"} with at least a year
-            of history.{" "}
+            product{totalProductCount === 1 ? "" : "s"} with at least a year of
+            history.{" "}
             {basket.earliestDate && basket.latestDate && (
               <>
                 Data spans {formatDate(basket.earliestDate)} to{" "}
@@ -187,9 +179,9 @@ function BasketSummary({ basket }: { basket: UserInflationStats["basket"] }) {
             )}
           </p>
           <p className="text-xs text-stone-400 mt-2">
-            Equal-weighted per good: each eligible product&apos;s own
-            annualized rate is weighted by its baseline price (assuming you
-            buy 1 of each) and by how many years it&apos;s been tracked.
+            Equal-weighted per good: each eligible product&apos;s own annualized
+            rate is weighted by its baseline price (assuming you buy 1 of each)
+            and by how many years it&apos;s been tracked.
           </p>
         </>
       )}
@@ -202,7 +194,10 @@ function ProductMetrics({ product }: { product: ProductInflationStats }) {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-      <MetricCard label="First logged" value={`$${product.firstPrice.toFixed(2)}`} />
+      <MetricCard
+        label="First logged"
+        value={`$${product.firstPrice.toFixed(2)}`}
+      />
       <MetricCard label="Latest" value={`$${product.lastPrice.toFixed(2)}`} />
       <MetricCard
         label="Total change"
@@ -218,8 +213,14 @@ function ProductMetrics({ product }: { product: ProductInflationStats }) {
         }
         valueClassName={pctColorClass(product.lifetimeAnnualizedPct)}
       />
-      <MetricCard label="Tracked span" value={`${yearsTracked.toFixed(1)} yrs`} />
-      <MetricCard label="Discrete changes" value={String(product.changes.length)} />
+      <MetricCard
+        label="Tracked span"
+        value={`${yearsTracked.toFixed(1)} yrs`}
+      />
+      <MetricCard
+        label="Discrete changes"
+        value={String(product.changes.length)}
+      />
     </div>
   );
 }
