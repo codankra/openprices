@@ -4,6 +4,7 @@ let productSearchCache: MemoryCache;
 let productInfoCache: MemoryCache;
 let productBrandsCache: MemoryCache;
 let priceEntriesCache: MemoryCache;
+let userInflationStatsCache: MemoryCache;
 
 async function initializeCaches() {
   productSearchCache = await caching("memory", {
@@ -24,6 +25,10 @@ async function initializeCaches() {
     max: 100,
     ttl: 10 * 60 * 1000, // 10 minutes
   });
+  userInflationStatsCache = await caching("memory", {
+    max: 500,
+    ttl: 24 * 60 * 60 * 1000, // 24 hours
+  });
 }
 
 export async function ensureCachesInitialized() {
@@ -36,4 +41,5 @@ export {
   productSearchCache,
   productInfoCache,
   productBrandsCache,
+  userInflationStatsCache,
 };
