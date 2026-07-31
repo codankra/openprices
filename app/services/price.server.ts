@@ -36,7 +36,7 @@ export async function getPriceEntriesByProductID(id: string) {
     try {
       const cached: (typeof priceEntries.$inferSelect)[] | undefined =
         await priceEntriesCache.get(`product-${id}`);
-      if (cached) return cached;
+      if (cached) return [...cached];
       else {
         const result = await db
           .select({
@@ -53,7 +53,7 @@ export async function getPriceEntriesByProductID(id: string) {
           .orderBy(desc(priceEntries.date))
           .limit(10);
         await priceEntriesCache.set(`product-${id}`, result);
-        return result;
+        return [...result];
       }
     } catch (error) {
       console.error(`Error fetching price entries for product ${id}:`, error);
@@ -80,7 +80,7 @@ export async function getPriceEntriesByContributorID(
         | undefined = await priceEntriesCache.get(
         `contributor-${id}-days-${days}`
       );
-      if (cached) return cached;
+      if (cached) return [...cached];
       else {
         const daysAgo = new Date();
         daysAgo.setDate(daysAgo.getDate() - days);
@@ -109,7 +109,7 @@ export async function getPriceEntriesByContributorID(
           )
           .orderBy(desc(priceEntries.createdAt));
         await priceEntriesCache.set(`contributor-${id}-days-${days}`, result);
-        return result;
+        return [...result];
       }
     } catch (error) {
       console.error(
@@ -140,18 +140,13 @@ export async function addNewPriceEntry(
   if (newPriceEntry.length > 0) {
     const addedPriceEntry = newPriceEntry[0];
     const productId = addedPriceEntry.productId?.toString();
-    if (!!productId) {
-      const cached: (typeof priceEntries.$inferSelect)[] | undefined =
-        await priceEntriesCache.get(`product-${productId}`);
-
-      if (cached) {
-        await priceEntriesCache.set(`product-${productId}`, [
-          addedPriceEntry,
-          ...cached,
-        ]);
-      } else {
-        await priceEntriesCache.set(`product-${productId}`, [addedPriceEntry]);
-      }
+    if (productId) {
+      await priceEntriesCache.del(`product-${productId}`);
+    }
+    if (addedPriceEntry.contributorId) {
+      await priceEntriesCache.del(
+        `contributor-${addedPriceEntry.contributorId}-days-30`
+      );
     }
 
     return addedPriceEntry.id.toString();
@@ -248,6 +243,7 @@ export async function createNewReceiptItemPriceEntry(
 
     // Initialize cache for this product's price entries
     await priceEntriesCache.set(`product-${newProduct.id}`, [newPriceEntry]);
+    await priceEntriesCache.del(`contributor-${userId}-days-30`);
 
     return {
       productId: newProduct.id,

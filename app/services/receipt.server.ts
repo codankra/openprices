@@ -12,6 +12,7 @@ import type { ReceiptItem } from "~/lib/types";
 import { createR2URL, deleteFromR2, uploadToR2 } from "./r2.server";
 import { detectReceiptText } from "./vision.server";
 import { createJob, removeJob, emitJobUpdate } from "~/services/job.server";
+import { priceEntriesCache } from "~/db/cache";
 
 type supportedBrandsType = {
   label: string;
@@ -353,6 +354,22 @@ export async function processReceiptItems(
               `Inserting ${priceEntriesToInsert.length} price entries`
             );
             await tx.insert(priceEntries).values(priceEntriesToInsert);
+
+            const affectedProductIds = new Set(
+              priceEntriesToInsert
+                .map((e) => e.productId?.toString())
+                .filter(Boolean) as string[]
+            );
+            await Promise.all(
+              [...affectedProductIds].map((pid) =>
+                priceEntriesCache.del(`product-${pid}`)
+              )
+            );
+            if (receiptInfo.userId) {
+              await priceEntriesCache.del(
+                `contributor-${receiptInfo.userId}-days-30`
+              );
+            }
           } catch (error) {
             console.error("Error inserting price entries:", error);
             throw error;
