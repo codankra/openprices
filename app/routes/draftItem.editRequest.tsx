@@ -38,7 +38,7 @@ export async function action({ request }: ActionFunctionArgs) {
   
   // Only update draft item if it's from receipt flow
   if (draftItemId !== 0) {
-    await completeProductDraftItem(draftItemId);
+    await completeProductDraftItem(draftItemId, null);
   }
 
   return Response.json(

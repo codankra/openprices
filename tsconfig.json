@@ -14,7 +14,7 @@
       "ES2022"
     ],
     "types": [
-      "@remix-run/node",
+      "@react-router/node",
       "vite/client"
     ],
     "isolatedModules": true,
