@@ -19,7 +19,7 @@ import {
 } from "~/components/ui/select";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const user = await requireAuth(request);
+  const user = await requireAuth(request, "/account/inflation");
   // Don't await - this can be a heavier query over a user's full price
   // history, so we stream it in behind a Suspense boundary instead of
   // blocking the initial response.

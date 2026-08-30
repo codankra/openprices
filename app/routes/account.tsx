@@ -6,7 +6,7 @@ import { User, History, TrendingUp } from "lucide-react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Guard every child route under /account/* in one place.
-  await requireAuth(request);
+  await requireAuth(request, "/account");
   return null;
 };
 

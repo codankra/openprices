@@ -117,9 +117,8 @@ const formSchema = z
     }
   );
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
+export const loader = async ({ request, url }: LoaderFunctionArgs) => {
   const user = await requireAuth(request, "/price-entry");
-  const url = new URL(request.url);
 
   const searchTerm = url.searchParams.get("search") || "";
   let searchResults: (typeof products.$inferSelect)[] = [];

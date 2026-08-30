@@ -1,5 +1,9 @@
 import { PiCaretDoubleDown, PiCaretDoubleUp } from "react-icons/pi";
-import type { MetaFunction, LoaderFunctionArgs } from "react-router";
+import type {
+  ActionFunctionArgs,
+  MetaFunction,
+  LoaderFunctionArgs,
+} from "react-router";
 import { redirect } from "react-router";
 import { Await, Link, useLoaderData, useFetcher } from "react-router";
 import { Suspense, useState } from "react";
@@ -39,16 +43,16 @@ export async function loader({ params }: LoaderFunctionArgs) {
   }
 }
 
-export const meta: MetaFunction<typeof loader> = ({ data }) => {
-  const productName = data?.product.productInfo.name;
+export const meta: MetaFunction<typeof loader> = ({ loaderData }) => {
+  const productName = loaderData?.product.productInfo.name;
   return [
     { title: `${productName} - Open Price History` },
     { name: "description", content: "Open Price History of Your Product" },
   ];
 };
 
-export const action = async ({ request }: { request: Request }) => {
-  await requireAuth(request);
+export const action = async ({ request, url }: ActionFunctionArgs) => {
+  await requireAuth(request, url.pathname);
   const formData = await request.formData();
   const feedback = formData.get("feedback") as string;
   const upc = formData.get("upc") as string;
