@@ -7,9 +7,5 @@ const siteHost = process.env.SITE_NAME
 export default {
   prerender: ["/"],
   allowedActionOrigins: [...(siteHost ? [siteHost] : [])],
-  future: {
-    // These flags are retained for the planned React Router upgrade.
-    v8_splitRouteModules: true,
-    v8_viteEnvironmentApi: true,
-  },
+  splitRouteModules: true,
 } satisfies Config;

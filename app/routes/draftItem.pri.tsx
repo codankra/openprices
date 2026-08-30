@@ -5,11 +5,11 @@ import {
   getProductIDByReceiptText,
 } from "~/services/product.server";
 
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({ request, url }: LoaderFunctionArgs) {
   // Run auth check and param validation in parallel
-  const [user, url] = await Promise.all([
+  const [user, requestUrl] = await Promise.all([
     checkAuth(request),
-    Promise.resolve(new URL(request.url)),
+    Promise.resolve(url),
   ]);
 
   if (!user) {
@@ -19,8 +19,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
     );
   }
 
-  const text = url.searchParams.get("text");
-  const brand = url.searchParams.get("brand");
+  const text = requestUrl.searchParams.get("text");
+  const brand = requestUrl.searchParams.get("brand");
   if (!text || !brand) {
     return Response.json(
       data({

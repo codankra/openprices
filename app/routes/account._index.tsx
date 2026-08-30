@@ -3,7 +3,7 @@ import { Form, useLoaderData } from "react-router";
 import { requireAuth } from "~/services/auth.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const user = await requireAuth(request);
+  const user = await requireAuth(request, "/account");
   return { user };
 };
 

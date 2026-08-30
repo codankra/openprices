@@ -1,15 +1,13 @@
 import { redirect, type LoaderFunctionArgs } from "react-router";
 import { auth, sessionStorage } from "~/services/auth.server";
 
-export let loader = async ({ request }: LoaderFunctionArgs) => {
+export let loader = async ({ request, url }: LoaderFunctionArgs) => {
   const session = await sessionStorage.getSession(
     request.headers.get("cookie")
   );
 
   // Clear any existing flash messages
   session.unset("__flash_auth:error__");
-  const url = new URL(request.url);
-
   // Get the redirectTo from session or use default
   const redirectTo = session.get("redirectTo") || "/account";
 

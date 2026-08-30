@@ -12,7 +12,7 @@ import { Tag } from "lucide-react";
 import { PiReceipt } from "react-icons/pi";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const user = await requireAuth(request);
+  const user = await requireAuth(request, "/account/contribution-history");
   const userContributionsPromise = getUserContributionsById(user.id);
   return { userContributions: userContributionsPromise };
 };

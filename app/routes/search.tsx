@@ -23,9 +23,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const url = new URL(request.url);
-
+export const loader = async ({ url }: LoaderFunctionArgs) => {
   const searchTerm = url.searchParams.get("q") || "";
   const brands = url.searchParams.getAll("brands").filter(Boolean);
   const priceFilterType = url.searchParams.get("priceType") as

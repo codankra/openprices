@@ -21,7 +21,7 @@ Hosted on [Fly.io](https://fly.io/)
 
 ### Prerequisites
 
-- Your favorite between Deno 2, Bun, or Node.js v18 or later
+- Node.js v22.22 or later
 - Set up your own environment variables for Cloudflare, Google/Github Auth, and Turso
 
 ### Installation
