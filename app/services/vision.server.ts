@@ -141,7 +141,7 @@ const rateLimitedExtractProductInfo = rateLimiter.wrapWithRateLimit(
     });
 
     const model = vertex.getGenerativeModel({
-      model: "gemini-2.0-flash-lite",
+      model: process.env.VERTEX_MODEL || "gemini-3.1-flash-lite",
     });
 
     const availableUnitTypeValues = Object.values(UnitType)
