@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Plus, ChevronUp, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -104,6 +104,19 @@ const ReceiptItemProcessor = ({
     unitPricing: false,
     productBrandName: "",
   });
+  const [productImagePreviewUrl, setProductImagePreviewUrl] = useState("");
+
+  useEffect(() => {
+    if (!formData.productImage) {
+      setProductImagePreviewUrl("");
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(formData.productImage);
+    setProductImagePreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [formData.productImage]);
+
   const handleChange = <K extends keyof CreateItemData>(
     field: K,
     value: CreateItemData[K]
@@ -548,14 +561,14 @@ const ReceiptItemProcessor = ({
                       <Input
                         id="productImage"
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp"
                         onChange={handleImageUpload}
                         className="cursor-pointer opacity-0 absolute inset-0 w-full h-full z-10"
                       />
                       <div className="border-2 border-dashed border-stone-300 rounded-lg p-4 text-center hover:border-stone-400 transition-colors">
-                        {formData.productImage ? (
+                        {productImagePreviewUrl ? (
                           <img
-                            src={URL.createObjectURL(formData.productImage)}
+                            src={productImagePreviewUrl}
                             alt="Product preview"
                             className="max-h-24 mx-auto"
                           />
@@ -668,7 +681,11 @@ const ReceiptItemProcessor = ({
                         onClick={async () => {
                           setCurrentStep(ProcessingStep.CONTRIBUTOR_THANKS);
                           setTimeout(async () => {
-                            await onSubmit(formData);
+                            try {
+                              await onSubmit(formData);
+                            } catch {
+                              setCurrentStep(ProcessingStep.PRODUCT_DETAILS);
+                            }
                           }, 1000);
                         }}
                       >

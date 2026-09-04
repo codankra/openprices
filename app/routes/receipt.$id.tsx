@@ -48,7 +48,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       .map((item) => item.productId!);
     const matchedDraftProductsPromise = getAllReceiptProducts(
       parseInt(params.id!),
-      matchedProductIDs
+      matchedProductIDs,
     );
     return {
       receipt: receiptResult.receipt,
@@ -98,7 +98,10 @@ const ReceiptReview = (props: ReceiptData) => {
   const { receipt, receiptItems, matchedDraftProductsPromise } = props;
 
   // Helper function to safely format receipt date with fallback to createdAt
-  const formatReceiptDate = (purchaseDate: string, createdAt: string): string => {
+  const formatReceiptDate = (
+    purchaseDate: string,
+    createdAt: string,
+  ): string => {
     const date = new Date(purchaseDate);
     // Check if date is valid
     if (!isNaN(date.getTime()) && purchaseDate && purchaseDate !== "") {
@@ -115,7 +118,7 @@ const ReceiptReview = (props: ReceiptData) => {
 
   const handleIgnoreItem = async (
     itemId: number,
-    currentStatus: typeof draftItems.$inferSelect.status
+    currentStatus: typeof draftItems.$inferSelect.status,
   ) => {
     updateItemStatus(itemId, currentStatus, "ignored");
 
@@ -144,7 +147,7 @@ const ReceiptReview = (props: ReceiptData) => {
   const updateItemStatus = (
     itemId: number,
     oldStatus: typeof draftItems.$inferSelect.status,
-    newStatus: typeof draftItems.$inferSelect.status
+    newStatus: typeof draftItems.$inferSelect.status,
   ) => {
     setItemsByStatus((prevGroups) => {
       const newGroups = {
@@ -155,7 +158,7 @@ const ReceiptReview = (props: ReceiptData) => {
       };
 
       const index = newGroups[oldStatus].findIndex(
-        (item) => item.id === itemId
+        (item) => item.id === itemId,
       );
       if (index !== -1) {
         const [item] = newGroups[oldStatus].splice(index, 1);
@@ -271,14 +274,19 @@ const ReceiptReview = (props: ReceiptData) => {
                   formData.append("draftItemId", item.id.toString());
 
                   try {
-                    await fetch("/draftItem/create", {
+                    const response = await fetch("/draftItem/create", {
                       method: "POST",
                       body: formData,
                     });
+                    if (!response.ok) {
+                      throw new Error(
+                        `Failed to create product based on draftItem (${response.status})`,
+                      );
+                    }
                     updateItemStatus(item.id, item.status, "completed");
                   } catch (error) {
                     console.error("Failed to process receipt item:", error);
-                    // TODO: show error toast
+                    throw error;
                   }
                 }}
                 onIgnore={() => handleIgnoreItem(item.id, item.status)}
@@ -296,7 +304,7 @@ const ReceiptReview = (props: ReceiptData) => {
                       {
                         method: "POST",
                         body: formData,
-                      }
+                      },
                     );
                     await response.json();
                     updateItemStatus(item.id, item.status, "completed");
@@ -346,7 +354,7 @@ const ReceiptReview = (props: ReceiptData) => {
                   } catch (error) {
                     console.error(
                       "Failed to submit edit request for review: ",
-                      error
+                      error,
                     );
                     // TODO: show error toast
                   }

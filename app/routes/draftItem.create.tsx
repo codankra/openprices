@@ -1,4 +1,4 @@
-import { data, type ActionFunctionArgs } from "react-router";
+import { type ActionFunctionArgs } from "react-router";
 import { checkAuth } from "~/services/auth.server";
 import { createNewReceiptItemPriceEntry } from "~/services/price.server";
 import { verifyDraftItemStatus } from "~/services/product.server";
@@ -32,7 +32,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await checkAuth(request);
   if (!user)
     return Response.json(
-      data({ success: false, message: "Authentication Failure" }),
+      { success: false, message: "Authentication Failure" },
       { status: 401 }
     );
 
@@ -43,17 +43,17 @@ export async function action({ request }: ActionFunctionArgs) {
   // if null, error out 400
   if (isNaN(receiptId) || isNaN(draftItemId)) {
     return Response.json(
-      data({ success: false, message: "Critical item details are missing." }),
+      { success: false, message: "Critical item details are missing." },
       { status: 400 }
     );
   }
   const receiptInfo = await getReceiptByID(receiptId, user.id);
   if (receiptInfo === null) {
     return Response.json(
-      data({
+      {
         success: false,
         message: "Unable to find receipt details for your item.",
-      }),
+      },
       { status: 400 }
     );
   }
@@ -63,10 +63,10 @@ export async function action({ request }: ActionFunctionArgs) {
   );
   if (!verifiedItemStatus) {
     return Response.json(
-      data({
+      {
         success: false,
         message: "Please review the accuracy of the provided details.",
-      }),
+      },
       { status: 400 }
     );
   }
@@ -87,11 +87,11 @@ export async function action({ request }: ActionFunctionArgs) {
   );
 
   return Response.json(
-    data({
+    {
       success: true,
       message: "A new item was created, thank you for contributing!",
       result: { ...createdIds },
-    }),
+    },
     { status: 200 }
   );
 }
